@@ -20,14 +20,25 @@ button,input,select{font:inherit}button{cursor:pointer}.top{position:sticky;top:
 .detail{display:grid;grid-template-columns:1fr 1.25fr;gap:15px}.visual{min-height:380px;background:#e8e8e3;border:1px solid var(--line);border-radius:16px;display:grid;place-items:center;font-size:65px;font-weight:950;letter-spacing:-.08em}.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.field{display:grid;gap:6px}.field label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:900;color:var(--muted)}
 .drawerback,.modalback{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45)}.drawer{position:absolute;right:0;top:0;height:100%;width:min(390px,92vw);background:#fff;padding:18px;box-shadow:-20px 0 60px rgba(0,0,0,.2);overflow:auto}.drawer h2{letter-spacing:-.04em}.dir{display:grid;gap:7px;margin:12px 0}.dir button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px;text-align:left;font-weight:800}.dir button small{display:block;color:var(--muted);font-weight:500;margin-top:3px}.modalback{display:flex;align-items:center;justify-content:center;padding:15px}.modal{width:min(900px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:19px;box-shadow:0 25px 80px rgba(0,0,0,.3)}
 .notif{padding:14px 0;border-bottom:1px solid #eee}.notif.unread{background:#f7f7f4;margin:0 -8px;padding:14px 8px;border-radius:10px}.dot{width:8px;height:8px;background:#151515;border-radius:50%;display:inline-block;margin-right:6px}.toast{position:fixed;right:16px;bottom:16px;z-index:100;background:#151515;color:#fff;padding:12px 15px;border-radius:11px;display:none}.toast.show{display:block}
-.mainnav{display:flex;gap:4px;margin-left:auto;margin-right:10px}.mainnav button{border:0;background:transparent;padding:9px 12px;border-radius:9px;font-weight:800;cursor:pointer}.mainnav button.active{background:#151515;color:#fff}.queuewindow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}.queueitem{cursor:pointer;border:1px solid #ddd;border-radius:12px;padding:10px;background:#fff;min-width:0}.queueitem:hover{background:#f5f5f5;border-color:#aaa}.queueitem b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.queueitem .qprice{font-size:18px;font-weight:950;margin-top:6px}
+.mainnav{display:flex;gap:4px;margin-left:auto;margin-right:10px}.mainnav button{border:0;background:transparent;padding:9px 12px;border-radius:9px;font-weight:800;cursor:pointer}.mainnav button.active{background:#151515;color:#fff}.queuewindow{display:none}
+.queueoverlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.queuemodal{width:min(680px,100%);max-height:82vh;background:#fff;border-radius:22px 22px 16px 16px;box-shadow:0 18px 60px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
+.queuemodalhead{padding:18px 20px 14px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.queuebody{padding:14px 16px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.queueitem{cursor:pointer;border:1px solid #ddd;border-radius:14px;padding:13px;background:#fff;margin-bottom:9px}
+.queueitem.active{border-width:2px}
+.queueitem .qprice{font-size:18px;font-weight:950;margin-top:6px}
+.channelinfo{width:34px;height:34px;border:1px solid #ccc;border-radius:50%;background:#fff;font-weight:900;cursor:pointer}
+.channeltitle{display:flex;align-items:center;gap:9px}
+.channeltype{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.queuewindow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}.queueitem{cursor:pointer;border:1px solid #ddd;border-radius:12px;padding:10px;background:#fff;min-width:0}.queueitem:hover{background:#f5f5f5;border-color:#aaa}.queueitem b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.queueitem .qprice{font-size:18px;font-weight:950;margin-top:6px}
 .channelhero{padding:28px 0 18px}.channelhero h1{font-size:42px;letter-spacing:-.05em;margin:7px 0}.channelnav{display:flex;gap:7px;overflow:auto;padding-bottom:4px}.channelnav button{white-space:nowrap}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.detail{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.grid,.grid2,.formgrid{grid-template-columns:1fr}.hero{padding-top:32px}.hero h1{font-size:43px}.topin{flex-wrap:wrap}.brand{flex:1}.kpis{grid-template-columns:repeat(2,1fr)}}
 .live{font-weight:950}.table td:last-child{white-space:nowrap}.kpi b{font-variant-numeric:tabular-nums}</style>
 </head>
 <body>
 <header class="top"><div class="topin">
-<div class="brand">CONTINUUM <span>prototype</span></div>
+<div class="brand">CONTINUUM <span>prototype v1.2</span></div>
 <nav class="mainnav">
 <button id="navExplore" onclick="go('explore')">Explore</button>
 <button id="navAuctions" onclick="go('auctions')">Auctions</button>
@@ -102,17 +113,23 @@ function buildAuctions(){
   }
   return out;
 }
-let stored=JSON.parse(localStorage.getItem("cont_inv_v6")||"null");
+let stored=JSON.parse(localStorage.getItem("cont_inv_v8")||"null");
 let inv=stored||buildAuctions();
-let interests=JSON.parse(localStorage.getItem("cont_int_v6")||"null")||[
+let interests=JSON.parse(localStorage.getItem("cont_int_v8")||"null")||[
 {name:"Umbreon VMAX",set:"Evolving Skies",grade:"PSA 9–10",language:"English",variant:"Alternate Art",target:425,method:"Auction",created:"Aug 25"}
 ];
-let notifications=JSON.parse(localStorage.getItem("cont_notif_v6")||"null")||[
+let notifications=JSON.parse(localStorage.getItem("cont_notif_v8")||"null")||[
 {id:1,unread:true,type:"New opportunity",title:"Umbreon VMAX — PSA 10",body:"An auction opportunity matches your $425 maximum interest.",time:"Just now",targetId:1}
 ];
-let won=JSON.parse(localStorage.getItem("cont_won_v6")||"null")||[];
-let myBids=JSON.parse(localStorage.getItem("cont_bids_v6")||"null")||{};
-let manifest=JSON.parse(localStorage.getItem("cont_manifest_v6")||"null")||[];
+let won=JSON.parse(localStorage.getItem("cont_won_v8")||"null")||[];
+let myBids=JSON.parse(localStorage.getItem("cont_bids_v8")||"null")||{};
+let offers=JSON.parse(localStorage.getItem("cont_offers_v8")||"null")||[
+{id:100,itemId:1,buyer:"Buyer A",amount:425,createdAt:Date.now()-2*3600e3,expiresAt:Date.now()+22*3600e3,status:"active"},
+{id:101,itemId:2,buyer:"You",amount:118,createdAt:Date.now()-2*3600e3,expiresAt:Date.now()+22*3600e3,status:"active"},
+{id:102,itemId:2,buyer:"Buyer A",amount:121,createdAt:Date.now()-4*3600e3,expiresAt:Date.now()+20*3600e3,status:"active"},
+{id:103,itemId:2,buyer:"Buyer B",amount:125,createdAt:Date.now()-7*3600e3,expiresAt:Date.now()+17*3600e3,status:"active"}
+];
+let manifest=JSON.parse(localStorage.getItem("cont_manifest_v8")||"null")||[];
 let page="explore",selected=1,searchTerm="",filters={method:"All",grade:"All",language:"All"},channelName="Modern Chase Cards",sortMode="Popular";
 function initializeAuctionQueues(){
   for(const ch of channelDefs){
@@ -141,7 +158,7 @@ function initializeAuctionQueues(){
   }
 }
 initializeAuctionQueues();
-const save=()=>{localStorage.setItem("cont_inv_v6",JSON.stringify(inv));localStorage.setItem("cont_int_v6",JSON.stringify(interests));localStorage.setItem("cont_notif_v6",JSON.stringify(notifications));localStorage.setItem("cont_manifest_v6",JSON.stringify(manifest));localStorage.setItem("cont_won_v6",JSON.stringify(won));localStorage.setItem("cont_bids_v6",JSON.stringify(myBids))};
+const save=()=>{localStorage.setItem("cont_inv_v8",JSON.stringify(inv));localStorage.setItem("cont_int_v8",JSON.stringify(interests));localStorage.setItem("cont_notif_v8",JSON.stringify(notifications));localStorage.setItem("cont_manifest_v8",JSON.stringify(manifest));localStorage.setItem("cont_won_v8",JSON.stringify(won));localStorage.setItem("cont_bids_v8",JSON.stringify(myBids));localStorage.setItem("cont_offers_v8",JSON.stringify(offers))};
 const money=n=>"$"+Number(n||0).toLocaleString();
 const remaining=x=>Math.max(0,(x.auction?.endsAt||0)-Date.now());
 const timeLeft=x=>{let s=Math.ceil(remaining(x)/1000); if(s<=0)return "00:00"; return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
@@ -149,7 +166,7 @@ const activeAuctions=()=>inv.filter(x=>x.method==="Auction"&&x.auction?.active&&
 const ELASTIC_START=30;
 const ELASTIC_BASE=0.2;
 function highestPreBid(x){
-  return (x.interest||[]).map(r=>Number(r[0]||0)).filter(v=>v>0).reduce((a,b)=>Math.max(a,b),0);
+  return activeOffers(x.id).map(o=>Number(o.amount||0)).filter(v=>v>0).reduce((a,b)=>Math.max(a,b),0);
 }
 function modeLabel(x){
   return x.auctionMode==="Elastic"
@@ -228,7 +245,12 @@ function finishExpired(){
   }
 }
 
-function tick(){finishExpired();render();}
+function tick(){
+  activeOffers(1);
+  const live=inv.find(x=>x.id===selected&&x.method==="Auction"&&x.auction?.active);
+  const timer=document.getElementById("itemTimer");
+  if(live&&timer)timer.textContent=timeLeft(live);
+finishExpired();render();}
 const low=a=>Math.min(...a.map(x=>x[0])), high=a=>Math.max(...a.map(x=>x[0])), avg=a=>Math.round(a.reduce((s,x)=>s+x[0],0)/a.length);
 const initials=n=>n.split(/\s+/).map(w=>w[0]).join("").slice(0,3).toUpperCase();
 function go(p,id){page=p;if(id)selected=id;closeOverlay();render();scrollTo({top:0,behavior:"smooth"})}
@@ -259,146 +281,156 @@ function explore(){
 }
 function searchNow(){searchTerm=document.getElementById("search").value;render()}
 
+function activeOffers(itemId){
+  const now=Date.now();
+  offers.forEach(o=>{if(o.status==="active"&&o.expiresAt<=now)o.status="expired"});
+  return offers.filter(o=>o.itemId===itemId&&o.status==="active").sort((a,b)=>b.amount-a.amount);
+}
+function offerExpiryText(o){const ms=Math.max(0,o.expiresAt-Date.now());const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h?`${h}h ${m}m`:`${m}m`}
+function offerModal(id){let x=inv.find(z=>z.id===id);openModal(`<div class="sectionhead"><div><div class="eyebrow">Committed offer</div><h2>Make an offer</h2><div class="muted">${x.name} · Buy Now ${money(x.price)}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="notice">Your offer is a real, committal offer to purchase this item at the amount submitted. It remains active for 24 hours unless accepted, superseded, or the item sells. Another buyer may still purchase the item at the Buy Now price at any time.</div><div class="field" style="margin-top:14px"><label>Offer amount</label><input id="offerAmount" class="input" type="number" min="1" placeholder="e.g. 115"></div><div class="actions"><button class="btn primary" onclick="submitOffer(${id})">Submit offer</button></div>`)}
+function submitOffer(id){let x=inv.find(z=>z.id===id),p=Number(document.getElementById("offerAmount").value);if(!p){toast("Enter an offer amount.");return}if(p>=x.price){toast("Use Buy Now at the asking price or higher.");return}offers=offers.filter(o=>!(o.itemId===id&&o.buyer==="You"&&o.status==="active"));offers.push({id:Date.now(),itemId:id,buyer:"You",amount:p,createdAt:Date.now(),expiresAt:Date.now()+24*3600e3,status:"active"});notifications.unshift({id:Date.now()+2,unread:true,type:"Offer submitted",title:`${x.name} — ${money(p)}`,body:"Your committal offer is active for 24 hours.",time:"Just now",targetId:id});save();closeOverlay();render();toast("Offer submitted. It expires in 24 hours.")}
+function buyNowOfferSummary(id){const os=activeOffers(id),mine=os.find(o=>o.buyer==="You");return mine?`<div class="notice"><b>Your active offer: ${money(mine.amount)}</b> · expires in ${offerExpiryText(mine)}<br><small>The Buy Now price remains immediately available to other buyers.</small></div>`:""}
+function privateAuctionStatus(x){return x.privateAuction?.active?`<div class="notice"><b>Demand-Based Private Auction active</b> · participation price ${money(x.privateAuction.current)} · ${x.privateAuction.endsAt?`${Math.max(0,Math.ceil((x.privateAuction.endsAt-Date.now())/60000))}m left in wave ${x.privateAuction.wave||1}`:'live'}</div>`:""}
+function privateAuctionBuyerModal(id){let x=inv.find(z=>z.id===id),pa=x.privateAuction, mine=activeOffers(id).find(o=>o.buyer==="You");if(!pa)return;openModal(`<div class="sectionhead"><div><div class="eyebrow">Demand-Based Private Auction</div><h2>${x.name}</h2><div class="muted">Current participation price: ${money(pa.current)}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="notice">This private auction emerged from active buyer offers. Other buyers' offers, identities, and bidding amounts are never shown. Your participation remains a committal offer and expires after 24 hours.</div><div class="kpis" style="margin-top:12px"><div class="kpi"><span>Participation price</span><b>${money(pa.current)}</b></div><div class="kpi"><span>Wave ends</span><b>${Math.max(0,Math.ceil((pa.endsAt-Date.now())/60000))}m</b></div><div class="kpi"><span>Your offer</span><b>${mine?money(mine.amount):"—"}</b></div><div class="kpi"><span>Status</span><b>LIVE</b></div></div><div class="field" style="margin-top:12px"><label>Your counteroffer</label><input id="privateCounter" class="input" type="number" placeholder="${pa.current}"></div><div class="actions"><button class="btn primary" onclick="buyerCounterPrivate(${id})">Counter at your price</button><button class="btn" onclick="joinPrivateAuction(${id})">Enter at ${money(pa.current)}</button><button class="btn" onclick="closeOverlay();go('item',${id})">Back to item</button></div>`)}
+function joinPrivateAuction(id){let x=inv.find(z=>z.id===id),p=x.privateAuction.current;let existing=activeOffers(id).find(o=>o.buyer==="You");if(existing&&existing.amount>=p){closeOverlay();toast("You're already participating at the current price.");return}offers=offers.filter(o=>!(o.itemId===id&&o.buyer==="You"&&o.status==="active"));offers.push({id:Date.now(),itemId:id,buyer:"You",amount:p,createdAt:Date.now(),expiresAt:Date.now()+24*3600e3,status:"active"});save();closeOverlay();render();toast(`Entered private auction at ${money(p)}.`)}
+function sellerDemandActions(id){let x=inv.find(z=>z.id===id),os=activeOffers(id),pa=x.privateAuction?.active;openModal(`<div class="sectionhead"><div><div class="eyebrow">Seller demand</div><h2>${x.name}</h2><div class="muted">${pa?"Private Auction active":"Current method: "+x.method}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="kpis"><div class="kpi"><span>Active offers</span><b>${os.length}</b></div><div class="kpi"><span>Low</span><b>${os.length?money(Math.min(...os.map(o=>o.amount))):"—"}</b></div><div class="kpi"><span>Average</span><b>${os.length?money(Math.round(os.reduce((s,o)=>s+o.amount,0)/os.length)):"—"}</b></div><div class="kpi"><span>High</span><b>${os.length?money(Math.max(...os.map(o=>o.amount))):"—"}</b></div></div>${pa?`<div class="notice" style="margin-top:12px"><b>Private Auction</b> · participation price ${money(pa.current)} · wave ${pa.wave||1} · ${Math.max(0,Math.ceil((pa.endsAt-Date.now())/60000))}m remaining</div>`:""}<div class="panel" style="margin-top:12px"><div class="eyebrow">Aggregated active offers</div><table class="table"><thead><tr><th>Offer</th><th>Expires</th><th>Status</th></tr></thead><tbody>${os.map(o=>`<tr><td><b>${money(o.amount)}</b></td><td>${offerExpiryText(o)}</td><td>Active</td></tr>`).join("")||'<tr><td colspan="3">No active offers.</td></tr>'}</tbody></table></div><div class="actions">${os.length?`<button class="btn primary" onclick="sellerAcceptOffer(${id},${os[0].id})">Accept highest ${money(os[0].amount)}</button><button class="btn" onclick="sellerCounterAll(${id})">${pa?'Next counter wave':'Counter all'}</button>`:""}</div>${pa?`<div class="actions"><button class="btn" onclick="sellerEndPrivateAuction(${id})">End private auction</button></div>`:`<div class="actions"><button class="btn" onclick="closeOverlay();methodModal(${id})">Position item</button></div>`}`)}
+
+function sellerAcceptOffer(itemId,offerId){let x=inv.find(z=>z.id===itemId),o=offers.find(z=>z.id===offerId);if(!o||o.status!=="active"){toast("Offer is no longer active.");return}o.status="accepted";offers.filter(q=>q.itemId===itemId&&q.status==="active"&&q.id!==offerId).forEach(q=>q.status="closed");x.status="Sold via offer";x.soldPrice=o.amount;x.method="Sold";if(x.privateAuction)x.privateAuction.active=false;notifications.unshift({id:Date.now(),unread:true,type:"Offer accepted",title:`${x.name} — ${money(o.amount)}`,body:"The seller accepted the highest active offer.",time:"Just now",targetId:itemId});save();closeOverlay();render();toast("Offer accepted. Transaction completed.")}
+function sellerCounterAll(itemId){let x=inv.find(z=>z.id===itemId),os=activeOffers(itemId);if(!os.length){toast("No active offers to counter.");return}const pa=x.privateAuction?.active;openModal(`<div class="sectionhead"><div><div class="eyebrow">${pa?'Next counter wave':'Mass counter'}</div><h2>${pa?'Counter participating buyers':'Counter all active offers'}</h2><div class="muted">${x.name} · ${os.length} active participants</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="notice">One uniform counteroffer establishes the participation price for the next wave. Buyers may accept, counter, or let their participation lapse.</div><div class="field" style="margin-top:14px"><label>Uniform counteroffer</label><input id="counterAmount" class="input" type="number" value="${Math.max(...os.map(o=>o.amount))+10}"></div><div class="field" style="margin-top:10px"><label>Wave duration (minutes)</label><input id="waveMinutes" class="input" type="number" value="${pa?10:15}" min="1"></div><div class="actions"><button class="btn primary" onclick="${pa?'nextPrivateAuctionWave':'startPrivateAuction'}(${itemId})">${pa?'Open next wave':'Start private auction'}</button></div>`)}
+function nextPrivateAuctionWave(itemId){let x=inv.find(z=>z.id===itemId),os=activeOffers(itemId),p=Number(document.getElementById("counterAmount").value),mins=Math.max(1,Number(document.getElementById("waveMinutes").value)||10);if(!x.privateAuction?.active){toast("Private auction is no longer active.");return}if(!p||!os.length){toast("A valid counter and active offers are required.");return}if(p<=Math.max(...os.map(o=>o.amount))){toast("The next counter must exceed the highest active offer.");return}x.privateAuction.current=p;x.privateAuction.endsAt=Date.now()+mins*60000;x.privateAuction.wave=(x.privateAuction.wave||1)+1;notifications.unshift({id:Date.now(),unread:true,type:"Private auction wave",title:`${x.name} — ${money(p)}`,body:`Wave ${x.privateAuction.wave} is open at the new participation price.`,time:"Just now",targetId:itemId});save();closeOverlay();render();toast(`Wave ${x.privateAuction.wave} opened at ${money(p)}.`)}
+
+function startPrivateAuction(itemId){let x=inv.find(z=>z.id===itemId),os=activeOffers(itemId),p=Number(document.getElementById("counterAmount").value),mins=Math.max(1,Number(document.getElementById("waveMinutes").value)||15);if(!p||!os.length){toast("A valid counter and active offers are required.");return}if(p<=Math.max(...os.map(o=>o.amount))){toast("The mass counter must exceed the highest active offer.");return}x.privateAuction={active:true,current:p,endsAt:Date.now()+mins*60000,wave:1,returnMethod:x.method};x.method="Private Auction";x.status="Private auction active";notifications.unshift({id:Date.now(),unread:true,type:"Private auction",title:`${x.name} — ${money(p)} participation price`,body:"A demand-based private auction has begun from active offers.",time:"Just now",targetId:itemId});save();closeOverlay();render();toast("Private auction started from active demand.")}
+function sellerEndPrivateAuction(itemId){let x=inv.find(z=>z.id===itemId);if(!x?.privateAuction?.active){toast("No private auction is active.");return}const returnMethod=x.privateAuction.returnMethod||"Buy Now";x.privateAuction.active=false;x.privateAuction.endsAt=0;x.method=returnMethod;x.status=returnMethod==="Buy Now"?"Available now":"Auction queue";notifications.unshift({id:Date.now(),unread:true,type:"Private auction ended",title:x.name,body:`The demand-based private auction ended. Item returned to ${returnMethod}.`,time:"Just now",targetId:itemId});save();closeOverlay();render();toast(`Private auction ended. Item returned to ${returnMethod}.`)}
+
+function buyerCounterPrivate(id){let x=inv.find(z=>z.id===id),p=Number(document.getElementById("privateCounter").value);if(!x.privateAuction?.active||!p){toast("Enter a valid counter.");return}if(p<x.privateAuction.current){toast("Counter must meet the current participation price.");return}offers=offers.filter(o=>!(o.itemId===id&&o.buyer==="You"&&o.status==="active"));offers.push({id:Date.now(),itemId:id,buyer:"You",amount:p,createdAt:Date.now(),expiresAt:Date.now()+24*3600e3,status:"active"});save();closeOverlay();toast(`Counter submitted at ${money(p)}.`);render()}
 function item(id){
   finishExpired();
-  let x=inv.find(z=>z.id===id), mine=myBids[x.id];
+  let x=inv.find(z=>z.id===id),mine=myBids[x.id];
   if(!x)return "";
   if(x.method==="Auction"){
     return `<section class="section"><button class="btn ghost small" onclick="go('auctions')">← Auctions</button></section>
-    <div class="detail"><div class="visual">${initials(x.name)}</div>
-    <div class="panel">
-      <div class="eyebrow">${x.channel}</div>
-      <h1 style="font-size:40px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1>
-      <div class="muted">${x.set}</div>
-      <span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span>
-      <div class="sectionhead" style="margin-top:18px">
-        <div><div class="eyebrow">Auction format</div><h3>${modeLabel(x)}</h3></div>
-        <span class="tag">${x.auction?.active?"LIVE":"QUEUED"}</span>
-      </div>
+    <div class="detail"><div class="visual">${initials(x.name)}</div><div class="panel">
+      <div class="eyebrow">${x.channel}</div><h1 style="font-size:40px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1>
+      <div class="muted">${x.set}</div><span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span>
       ${x.auction?.active?`
-      <div class="kpis">
-        <div class="kpi"><span>Current bid</span><b>${money(x.auction.current)}</b></div>
-        <div class="kpi"><span>Bids</span><b>${Number(x.auction.bidCount||0)}</b></div>
-        <div class="kpi"><span>Time</span><b id="itemTimer">${timeLeft(x)}</b></div>
-      </div>
-      <div class="actions"><button class="btn primary" onclick="bidModal(${x.id})">Place bid</button></div>
+      <div class="kpis" style="margin-top:18px"><div class="kpi"><span>Current bid</span><b>${money(x.auction.current||1)}</b></div>
+      <div class="kpi"><span>Bids</span><b>${Number(x.auction.bidCount||0)}</b></div><div class="kpi"><span>Time</span><b id="itemTimer">${timeLeft(x)}</b></div></div>
+      <div class="notice" style="margin-top:12px"><b>${modeLabel(x)}</b> · 3:00 auction</div>
+      <div class="actions"><button class="btn primary" onclick="bidModal(${x.id})">Place bid</button><button class="btn" onclick="channelInfo('${x.channel.replace(/'/g,"\\'")}')">Channel info</button></div>
       ${mine?`<div class="notice">Your current bid: <b>${money(mine)}</b>.</div>`:""}
-      `:`<div class="notice">Queued at <b>$1</b>. This item becomes active when its channel reaches it.</div>`}
+      `:`<div class="notice" style="margin-top:18px">Queued at <b>$1</b>. This item becomes active when its channel reaches it.</div>
+      <div class="actions"><button class="btn" onclick="openQueue('${x.channel.replace(/'/g,"\\'")}')">Open queue</button></div>`}
     </div></div>`;
   }
-  return `<section class="section"><button class="btn ghost small" onclick="go('buynow')">← Buy Now</button></section><div class="detail"><div class="visual">${initials(x.name)}</div><div class="panel"><div class="eyebrow">Buy Now</div><h1 style="font-size:40px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1><div class="muted">${x.set}</div><span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span><div class="price">${money(x.price)}</div><div class="notice">Available for immediate purchase.</div><div class="actions"><button class="btn primary" onclick="toast('Purchase flow is represented in the prototype.')">Buy Now</button></div></div></div>`;
+  const pa=x.privateAuction?.active;
+  const os=activeOffers(x.id),mineOffer=os.find(o=>o.buyer==="You");
+  return `<section class="section"><button class="btn ghost small" onclick="go('buynow')">← Buy Now</button></section><div class="detail"><div class="visual">${initials(x.name)}</div><div class="panel"><div class="eyebrow">Buy Now</div><h1 style="font-size:40px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1><div class="muted">${x.set}</div><span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span><div class="price">${money(x.price)}</div><div class="notice">Available for immediate purchase. Active offers do not reserve the item; another buyer may still purchase it at the Buy Now price.</div>${buyNowOfferSummary(x.id)}${pa?privateAuctionStatus(x):""}<div class="actions"><button class="btn primary" onclick="completeBuyNow(${x.id})">Buy Now</button><button class="btn" onclick="offerModal(${x.id})">${mineOffer?'Replace offer':'Make offer'}</button>${pa?`<button class="btn" onclick="privateAuctionBuyerModal(${x.id})">Private auction</button>`:""}</div></div></div>`;
 }
+function interestModal(id){return offerModal(id)}
+function submitInterest(id){return submitOffer(id)}
 
-let auctionModalTimer=null;
-function stopAuctionModalTimer(){
-  if(auctionModalTimer){clearInterval(auctionModalTimer);auctionModalTimer=null;}
-}
-function bidModal(id){
-  let x=inv.find(z=>z.id===id);
-  if(!x||x.method!=="Auction"||!x.auction?.active){toast("This auction is not currently active.");return}
-  stopAuctionModalTimer();
-  let min=Number(x.auction.current||0)+1;
-  openModal(`<div class="sectionhead"><div><div class="eyebrow">${modeLabel(x)} · Live auction</div><h2>${x.name}</h2><div class="muted">${x.set} · ${x.grade}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div>
-  <div class="kpis">
-    <div class="kpi"><span>Current bid</span><b id="modalCurrentBid">${money(x.auction.current)}</b></div>
-    <div class="kpi"><span>Bids</span><b id="modalBidCount">${Number(x.auction.bidCount||0)}</b></div>
-    <div class="kpi"><span>Time</span><b id="modalAuctionTimer">${timeLeft(x)}</b></div>
-  </div>
-  <div class="field" style="margin-top:15px"><label>Your bid</label><input id="bidp" class="input" type="number" min="${min}" value="${min}"></div>
-  <div class="notice" style="margin-top:10px">${x.auctionMode==="Elastic"
-    ?"Elastic: bids received during the final 30 seconds extend the timer using the inverse fractional-second coefficient model."
-    :"Sudden Death: bids never extend the 3:00 timer. When it reaches zero, the auction ends."}</div>
-  <div class="actions"><button class="btn primary" onclick="placeBid(${id})">Place bid</button></div>`);
-
-  auctionModalTimer=setInterval(()=>{
-    const live=inv.find(z=>z.id===id);
-    const timer=document.getElementById("modalAuctionTimer");
-    const current=document.getElementById("modalCurrentBid");
-    const count=document.getElementById("modalBidCount");
-    if(!live||!timer){stopAuctionModalTimer();return}
-    finishExpired();
-    if(!live.auction?.active){stopAuctionModalTimer();return}
-    timer.textContent=timeLeft(live);
-    current.textContent=money(live.auction.current);
-    count.textContent=String(Number(live.auction.bidCount||0));
-    const input=document.getElementById("bidp");
-    if(input){
-      const newMin=Number(live.auction.current||0)+1;
-      input.min=newMin;
-      if(Number(input.value)<newMin)input.value=newMin;
-    }
-  },250);
-}
-
-function placeBid(id){
-  let x=inv.find(z=>z.id===id),p=Number(document.getElementById("bidp")?.value);
-  if(!x||!x.auction?.active){toast("This auction is no longer active.");return}
-  let min=Number(x.auction.current||0)+1;
-  if(!p||p<min){toast(`Bid must be at least ${money(min)}.`);return}
-
-  const beforeSeconds=Math.max(0,remaining(x)/1000);
-  x.auction.bidCount=Number(x.auction.bidCount||0)+1;
-  myBids[id]=Math.max(Number(myBids[id]||0),p);
-  x.auction.current=p;
-
-  if(x.auctionMode==="Elastic" && beforeSeconds<=ELASTIC_START && beforeSeconds>0){
-    x.auction.elastic=x.auction.elastic||{factor:ELASTIC_BASE,cycleFloor:5,lastThreshold:null};
-    const state=x.auction.elastic;
-
-    // If the countdown has fallen below the previous cycle's 5-second floor,
-    // restart the coefficient at .20.
-    if(beforeSeconds<state.cycleFloor){
-      state.factor=ELASTIC_BASE;
-      state.lastThreshold=null;
-    }
-
-    const extension=elasticExtensionSeconds(x,beforeSeconds);
-    if(extension>0){
-      x.auction.endsAt += extension*1000;
-      state.lastThreshold=Math.max(0,remaining(x)/1000);
-      state.factor=Math.max(0.0000001,(state.factor||ELASTIC_BASE)/2);
-    }
-  }
-
-  notifications.unshift({
-    id:Date.now(),unread:true,type:"Bid placed",
-    title:`${x.name} — ${money(p)}`,
-    body:"Your bid is now the current bid.",
-    time:"Just now",targetId:id
-  });
-  save();
-  stopAuctionModalTimer();
-  closeOverlay();
-  render();
-  toast("Bid placed.");
-}
-
-function interestModal(id){let x=inv.find(z=>z.id===id);openModal(`<div class="sectionhead"><div><div class="eyebrow">Buyer intent</div><h2>Express interest</h2><div class="muted">${x.name} · ${x.set}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="notice">Set the maximum price you would be willing to pay if this item enters auction. This is non-committal and creates no bid or purchase obligation.</div><div class="formgrid" style="margin-top:14px"><div class="field"><label>Maximum price</label><input id="ip" class="input" type="number" placeholder="e.g. 425"></div><div class="field"><label>Preferred method</label><select id="im" class="select"><option>Auction</option><option>Buy Now</option><option>Either</option></select></div></div><div class="actions"><button class="btn primary" onclick="submitInterest(${id})">Express interest</button></div>`)}
-function submitInterest(id){let x=inv.find(z=>z.id===id),p=Number(document.getElementById("ip").value),m=document.getElementById("im").value;if(!p){toast("Enter a maximum price.");return}let date="Today";x.interest.push([p,date]);interests.push({name:x.name,set:x.set,grade:x.grade,language:x.language,variant:x.variant,target:p,method:m,created:date});notifications.unshift({id:Date.now(),unread:true,type:"Interest recorded",title:`${x.name} — $${p}`,body:"Your expression has been added to the item's aggregated demand intelligence. No bid was placed.",time:"Just now"});save();closeOverlay();render();toast("Interest recorded. Demand intelligence updated.");}
-
-function concierge(){return `<section class="hero"><div class="eyebrow">Buyer hub · system-driven concierge</div><h1>Your interests become opportunities.</h1><p>The concierge monitors your criteria, inventory, method changes, and auctions. It informs and connects; it never dictates behavior or bids autonomously.</p></section><div class="kpis"><div class="kpi"><span>Active interests</span><b>${interests.length}</b></div><div class="kpi"><span>Notifications</span><b>${notifications.length}</b></div><div class="kpi"><span>Current matches</span><b>${matches().length}</b></div><div class="kpi"><span>Autonomous bids</span><b>0</b></div></div><div class="sectionhead"><h2>Won auctions</h2><span class="muted">${won.length} won</span></div><div class="grid2">${won.length?won.slice(0,12).map(w=>`<div class="panel"><div class="method">Won auction</div><h3>${w.name}</h3><div class="muted">${w.set} · ${w.grade}</div><div class="stat"><span>Winning bid</span><b>${money(w.price)}</b></div><div class="stat"><span>Won</span><span>${w.wonAt}</span></div><button class="btn primary small" onclick="toast('Order detail flow is represented in the prototype.')">View order</button></div>`).join(""):'<div class="notice">No won auctions yet. Place a bid and let the 3:00 timer expire.</div>'}</div><div class="sectionhead"><h2>Your interests</h2><button class="btn primary" onclick="newInterest()">Add interest</button></div><div class="grid2">${interests.map((i,k)=>`<div class="panel"><div class="method">${i.method} preferred</div><h3>${i.name}</h3><div class="muted">${i.set} · ${i.language} · ${i.grade}</div><div class="stat"><span>Maximum interest</span><b>$${i.target}</b></div><div class="stat"><span>Established</span><span>${i.created}</span></div><div class="actions"><button class="btn small" onclick="removeInterest(${k})">Remove</button><button class="btn primary small" onclick="interestMatches(${k})">Find opportunities</button></div></div>`).join("")}</div>`}
+function concierge(){return `<section class="hero"><div class="eyebrow">Buyer hub · system-driven concierge</div><h1>Your interests become opportunities.</h1><p>The concierge monitors your criteria, inventory, method changes, and auctions. It informs and connects; it never dictates behavior or bids autonomously.</p></section><div class="kpis"><div class="kpi"><span>Active interests</span><b>${interests.length}</b></div><div class="kpi"><span>Notifications</span><b>${notifications.length}</b></div><div class="kpi"><span>Current matches</span><b>${matches().length}</b></div><div class="kpi"><span>Autonomous bids</span><b>0</b></div></div><div class="sectionhead"><h2>Won auctions</h2><span class="muted">${won.length} won</span></div><div class="grid2">${won.length?won.slice(0,12).map(w=>`<div class="panel"><div class="method">Won auction</div><h3>${w.name}</h3><div class="muted">${w.set} · ${w.grade}</div><div class="stat"><span>Winning bid</span><b>${money(w.price)}</b></div><div class="stat"><span>Won</span><span>${w.wonAt}</span></div><button class="btn primary small" onclick="toast('Order detail flow is represented in the prototype.')">View order</button></div>`).join(""):'<div class="notice">No won auctions yet. Place a bid and let the 3:00 timer expire.</div>'}</div><div class="sectionhead"><h2>Your interests</h2><button class="btn primary" onclick="newInterest()">Add interest</button></div><div class="grid2">${interests.map((i,k)=>`<div class="panel"><div class="method">${i.method} preferred</div><h3>${i.name}</h3><div class="muted">${i.set} · ${i.language} · ${i.grade}</div><div class="stat"><span>Target price</span><b>$${i.target}</b></div><div class="stat"><span>Established</span><span>${i.created}</span></div><div class="actions"><button class="btn small" onclick="removeInterest(${k})">Remove</button><button class="btn primary small" onclick="interestMatches(${k})">Find opportunities</button></div></div>`).join("")}</div>`}
 function matches(){return inv.filter(x=>interests.some(i=>x.name.toLowerCase().includes(i.name.toLowerCase())&&i.target>=(x.method==="Buy Now"?x.price||0:x.auction?.current||0)))}
 function newInterest(){openModal(`<div class="sectionhead"><h2>New concierge interest</h2><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="formgrid"><div class="field"><label>Item / set</label><input id="nn" class="input" placeholder="Umbreon VMAX"></div><div class="field"><label>Language</label><select id="nl" class="select"><option>Any</option><option>English</option><option>Japanese</option></select></div><div class="field"><label>Variant</label><input id="nv" class="input" placeholder="Any / Alternate Art"></div><div class="field"><label>Grade range</label><input id="ng" class="input" placeholder="PSA 9–10"></div><div class="field"><label>Target price</label><input id="nt" class="input" type="number" placeholder="425"></div><div class="field"><label>Preferred method</label><select id="nm" class="select"><option>Either</option><option>Auction</option><option>Buy Now</option></select></div></div><div class="actions"><button class="btn primary" onclick="saveInterest()">Create interest</button></div>`)}
 function saveInterest(){let n=document.getElementById("nn").value,t=Number(document.getElementById("nt").value);if(!n||!t){toast("Item/set and target price are required.");return}interests.push({name:n,set:"Any",grade:document.getElementById("ng").value||"Any",language:document.getElementById("nl").value,variant:document.getElementById("nv").value||"Any",target:t,method:document.getElementById("nm").value,created:"Today"});save();closeOverlay();render();toast("Concierge interest created.")}
 function removeInterest(k){interests.splice(k,1);save();render();toast("Interest removed.")}
 function interestMatches(k){let i=interests[k],m=inv.filter(x=>x.name.toLowerCase().includes(i.name.toLowerCase())&&i.target>=(x.method==="Buy Now"?x.price||0:x.auction?.current||0));openModal(`<div class="sectionhead"><h2>${m.length} matching opportunities</h2><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="grid">${m.map(x=>`<div class="card"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set}</div><div class="price">${x.method==="Buy Now"?"$"+x.price:"$"+x.auction.current}</div><button class="btn primary small" onclick="closeOverlay();go('item',${x.id})">View</button></div>`).join("")||'<div class="notice">No current matches. The concierge continues monitoring.</div>'}</div>`)}
 
-function auctionQueueCard(x){return `<div class="queueitem" onclick="go('item',${x.id})"><b>${x.name}</b><small class="muted">${x.set} · ${x.grade}</small><div class="qprice">$1</div><small class="muted">${modeLabel(x)} · Queued · position ${(x.auction?.queuePosition||0)+1}</small></div>`}
-function auctions(){finishExpired();return `<section class="hero"><div class="eyebrow">Auction directory</div><h1>One active auction per channel.</h1><p>Each channel runs one item at a time. The queue remains visible and selectable; queued items display $1 until activation, when demonstrated pre-bid interest establishes the opening bid.</p></section><div class="grid">${channelDefs.map(ch=>{const xs=inv.filter(x=>x.method==="Auction"&&x.channel===ch.name).sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));const active=xs.find(x=>x.auction?.active);const queue=xs.filter(x=>!x.auction?.active);return `<div class="panel"><div class="eyebrow">${ch.category}</div><h2>${ch.name}</h2><p class="muted">${ch.description}</p>${active?`<div class="notice"><b>LIVE NOW</b> · ${active.name}<br><b>${money(active.auction.current)}</b> · ${timeLeft(active)} remaining</div><div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Open active auction</button></div>`:`<div class="notice">No auction currently active.</div>`}<div class="sectionhead"><h3>Queue</h3><span class="muted">Tap an item to inspect</span></div><div class="queuewindow">${queue.map(auctionQueueCard).join("")}</div><div class="actions"><button class="btn" onclick="channelName='${ch.name}';go('channel')">Open channel</button></div></div>`}).join("")}</div>`}
-function channel(){finishExpired();const ch=channelDefs.find(c=>c.name===channelName);const xs=inv.filter(x=>x.method==="Auction"&&x.channel===channelName).sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));const active=xs.find(x=>x.auction?.active);const queue=xs.filter(x=>!x.auction?.active);return `<section class="channelhero"><div class="channelnav">${channelDefs.map(c=>`<button class="btn small ${c.name===channelName?'primary':''}" onclick="channelName='${c.name}';render()">${c.name}</button>`).join("")}</div><div class="eyebrow" style="margin-top:25px">${ch?.category||"Auction channel"}</div><h1>${channelName}</h1><p class="muted">${ch?.description||""}</p></section><div class="panel">${active?`<div class="sectionhead"><div><div class="eyebrow">Active auction</div><h2>${active.name}</h2><div class="muted">${active.set} · ${active.grade}</div></div><span class="tag">${active.auctionMode||"Auction"}</span></div><div class="kpis"><div class="kpi"><span>Current bid</span><b>${money(active.auction.current)}</b></div><div class="kpi"><span>Time</span><b>${timeLeft(active)}</b></div><div class="kpi"><span>Next minimum</span><b>${money(minimumBid(active))}</b></div><div class="kpi"><span>Queue</span><b>${xs.length-1} waiting</b></div></div><div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Open auction</button><button class="btn" onclick="bidModal(${active.id})">Bid</button></div>`:''}<div class="sectionhead" style="margin-top:24px"><h2>Queue</h2><span class="muted">Tap any item to inspect</span></div><div class="queuewindow">${queue.map(auctionQueueCard).join("")}</div><div class="notice" style="margin-top:14px">Queued items remain at <b>$1</b> until activation. When an item becomes active, demonstrated pre-bid interest establishes the opening bid.</div></div>`}
-function buynow(){const xs=inv.filter(x=>x.method==="Buy Now");return `<section class="hero"><div class="eyebrow">Marketplace</div><h1>Buy Now.</h1><p>Immediate purchases from currently available inventory.</p></section><div class="grid">${xs.map(x=>`<article class="card"><div class="method">Buy Now</div><h3>${x.name}</h3><div class="muted">${x.set}</div><div class="meta">${x.grade} · ${x.language}</div><div class="price">${money(x.price)}</div><div class="actions"><button class="btn primary small" onclick="go('item',${x.id})">View item</button></div></article>`).join("")}</div>`}
+function auctionQueueCard(x){
+  const active=!!x.auction?.active;
+  return `<div class="queueitem ${active?'active':''}" onclick="closeQueueOverlay();go('item',${x.id})">
+    <div class="channeltype">${active?'LIVE NOW':`QUEUE · ${(x.auction?.queuePosition||0)+1}`}</div>
+    <b>${x.name}</b>
+    <small class="muted">${x.set} · ${x.grade} · ${x.language}</small>
+    <div class="qprice">${active?money(x.auction?.current||1):"$1"}</div>
+    <small class="muted">${active?`${modeLabel(x)} · ${timeLeft(x)} remaining`:"Starts at $1 when active"}</small>
+  </div>`
+}
+function channelInfo(name){
+  const ch=channelDefs.find(c=>c.name===name);
+  openModal(`<div class="sectionhead"><div><div class="eyebrow">${ch?.category||"Auction channel"}</div><h2>${name}</h2></div><button class="btn small" onclick="closeOverlay()">Close</button></div>
+  <div class="notice" style="margin-top:12px">
+    <b>Channel specification</b><br><br>
+    ${ch?.description||"Specialized perpetual auction channel."}<br><br>
+    <b>Auction type:</b> ${ch?.auctionType||"Perpetual channel"}<br>
+    <b>Format:</b> One item runs at a time.<br>
+    <b>Timer:</b> Every auction begins at 3:00.<br>
+    <b>Queue:</b> Items remain queued until the channel advances to them.
+  </div>`)
+}
+function closeQueueOverlay(){
+  const el=document.getElementById("queueOverlay");
+  if(el)el.remove();
+}
+function openQueue(channel){
+  const ch=channelDefs.find(c=>c.name===channel);
+  const xs=inv.filter(x=>x.method==="Auction"&&x.channel===channel)
+    .sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));
+  closeQueueOverlay();
+  const el=document.createElement("div");
+  el.id="queueOverlay";
+  el.className="queueoverlay";
+  el.innerHTML=`<div class="queuemodal">
+    <div class="queuemodalhead">
+      <div><div class="eyebrow">${ch?.category||"Auction channel"}</div><h2>${channel}</h2><div class="muted">${xs.length} items in queue</div></div>
+      <button class="btn small" onclick="closeQueueOverlay()">Close</button>
+    </div>
+    <div class="queuebody">${xs.map(auctionQueueCard).join("")}</div>
+  </div>`;
+  el.addEventListener("click",e=>{if(e.target===el)closeQueueOverlay()});
+  document.body.appendChild(el);
+}
+function auctions(){
+  finishExpired();
+  return `<section class="hero"><div class="eyebrow">Auction channels</div><h1>One auction. One channel. Always moving.</h1><p>Specialized perpetual channels keep auctions continuously active while the queue determines what runs next.</p></section>
+  <div class="grid">${channelDefs.map(ch=>{
+    const xs=inv.filter(x=>x.method==="Auction"&&x.channel===ch.name)
+      .sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));
+    const active=xs.find(x=>x.auction?.active);
+    return `<div class="panel">
+      <div class="channeltitle">
+        <div style="flex:1"><div class="eyebrow">${ch.category}</div><h2>${ch.name}</h2></div>
+        <button class="channelinfo" aria-label="Channel information" onclick="channelInfo('${ch.name.replace(/'/g,"\\'")}')">i</button>
+      </div>
+      <div class="channeltype">${ch.auctionType||"PERPETUAL AUCTION"}</div>
+      <p class="muted">${ch.description}</p>
+      ${active?`<div class="notice"><b>LIVE</b> · ${active.name}<br><b>${money(active.auction.current||1)}</b> · ${timeLeft(active)} remaining</div>
+      <div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Join auction</button><button class="btn" onclick="openQueue('${ch.name.replace(/'/g,"\\'")}')">Open queue</button></div>`
+      :`<div class="notice">No item is currently active.</div><div class="actions"><button class="btn" onclick="openQueue('${ch.name.replace(/'/g,"\\'")}')">Open queue</button></div>`}
+    </div>`
+  }).join("")}</div>`
+}
+function channel(){
+  finishExpired();
+  const ch=channelDefs.find(c=>c.name===channelName);
+  const xs=inv.filter(x=>x.method==="Auction"&&x.channel===channelName)
+    .sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));
+  const active=xs.find(x=>x.auction?.active);
+  return `<section class="channelhero"><div class="channelnav">${channelDefs.map(c=>`<button class="btn small ${c.name===channelName?'primary':''}" onclick="channelName='${c.name.replace(/'/g,"\\'")}';render()">${c.name}</button>`).join("")}</div>
+    <div class="eyebrow" style="margin-top:25px">${ch?.category||"Auction channel"}</div>
+    <div class="channeltitle"><h1>${channelName}</h1><button class="channelinfo" aria-label="Channel information" onclick="channelInfo('${channelName.replace(/'/g,"\\'")}')">i</button></div>
+    <div class="channeltype">${ch?.auctionType||"PERPETUAL AUCTION"}</div><p class="muted">${ch?.description||""}</p></section>
+  <div class="panel">${active?`<div class="sectionhead"><div><div class="eyebrow">Active auction</div><h2>${active.name}</h2><div class="muted">${active.set} · ${active.grade}</div></div><span class="tag">${modeLabel(active)}</span></div>
+    <div class="kpis"><div class="kpi"><span>Current bid</span><b>${money(active.auction.current||1)}</b></div><div class="kpi"><span>Bids</span><b>${Number(active.auction.bidCount||0)}</b></div><div class="kpi"><span>Time</span><b>${timeLeft(active)}</b></div></div>
+    <div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Join auction</button><button class="btn" onclick="openQueue('${channelName.replace(/'/g,"\\'")}')">Open queue</button></div>`
+    :`<div class="notice">No auction is currently active.</div><div class="actions"><button class="btn" onclick="openQueue('${channelName.replace(/'/g,"\\'")}')">Open queue</button></div>`}</div>`
+}
+function buynow(){const xs=inv.filter(x=>x.method==="Buy Now");return `<section class="hero"><div class="eyebrow">Marketplace</div><h1>Buy Now.</h1><p>Immediate purchases remain available while committed offers create actionable demand for sellers.</p></section><div class="grid">${xs.map(x=>`<article class="card"><div class="method">Buy Now</div><h3>${x.name}</h3><div class="muted">${x.set}</div><div class="meta">${x.grade} · ${x.language}</div><div class="price">${money(x.price)}</div>${buyNowOfferSummary(x.id)}<div class="actions"><button class="btn primary small" onclick="go('item',${x.id})">View item</button><button class="btn small" onclick="offerModal(${x.id})">Make offer</button></div></article>`).join("")}</div>`}
 function sell(){return `<section class="hero"><div class="eyebrow">Seller hub · consignment</div><h1>Standardize the item. Keep control of how it sells.</h1><p>Sellers proactively consign individual items with a manifest, establish presentation and an initial method, then reposition inventory as demonstrated demand develops.</p></section><div class="kpis"><div class="kpi"><span>Manifest items</span><b>${manifest.length}</b></div><div class="kpi"><span>Buy Now</span><b>${inv.filter(x=>x.method==="Buy Now").length}</b></div><div class="kpi"><span>Auction</span><b>${inv.filter(x=>x.method==="Auction").length}</b></div><div class="kpi"><span>Repositionable</span><b>All</b></div></div><div class="sectionhead"><h2>Consignment manifest</h2><button class="btn primary" onclick="addManifest()">Add individual item</button></div><div class="panel">${manifest.length?`<table class="table"><thead><tr><th>Item</th><th>Grade</th><th>Language</th><th>Initial method</th><th></th></tr></thead><tbody>${manifest.map((m,i)=>`<tr><td><b>${m.name}</b><br><span class="muted">${m.set}</span></td><td>${m.grade}</td><td>${m.language}</td><td>${m.method}</td><td><button class="btn small" onclick="manifest.splice(${i},1);save();render()">Remove</button></td></tr>`).join("")}</tbody></table>`:'<div class="notice">The seller creates the manifest proactively. Each individual item becomes a standardized unit of inventory and demand intelligence.</div>'}</div><div class="sectionhead"><h2>Inventory positioning</h2></div><div class="grid">${inv.map(sellerCard).join("")}</div>`}
-function sellerCard(x){return `<div class="panel"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set} · ${x.grade}</div><div class="stat"><span>Low / Avg / High</span><b>$${low(x.interest)} / $${avg(x.interest)} / $${high(x.interest)}</b></div><div class="stat"><span>Latest expression</span><span>$${x.interest.at(-1)[0]} · ${x.interest.at(-1)[1]}</span></div><div class="actions"><button class="btn small" onclick="demandModal(${x.id})">View demand</button><button class="btn primary small" onclick="methodModal(${x.id})">Position item</button></div></div>`}
+function sellerCard(x){const os=activeOffers(x.id),lo=os.length?Math.min(...os.map(o=>o.amount)):null,av=os.length?Math.round(os.reduce((s,o)=>s+o.amount,0)/os.length):null,hi=os.length?Math.max(...os.map(o=>o.amount)):null;return `<div class="panel"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set} · ${x.grade}</div><div class="stat"><span>Active offer range</span><b>${os.length?`${money(lo)} / ${money(av)} / ${money(hi)}`:"—"}</b></div><div class="stat"><span>Active offers</span><b>${os.length}</b></div><div class="stat"><span>Latest demand record</span><span>${os.length?money(os[0].amount):"—"}</span></div><div class="actions"><button class="btn small" onclick="sellerDemandActions(${x.id})">Offers</button><button class="btn small" onclick="demandModal(${x.id})">View demand</button><button class="btn primary small" onclick="methodModal(${x.id})">Position item</button></div></div>`}
+
 function addManifest(){openModal(`<div class="sectionhead"><h2>Add consigned item</h2><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="formgrid"><div class="field"><label>Item</label><input id="mn" class="input" placeholder="Umbreon VMAX"></div><div class="field"><label>Set / number</label><input id="ms" class="input" placeholder="Evolving Skies #215"></div><div class="field"><label>Grade</label><input id="mg" class="input" placeholder="PSA 10"></div><div class="field"><label>Language</label><select id="ml" class="select"><option>English</option><option>Japanese</option></select></div><div class="field"><label>Variant</label><input id="mv" class="input" placeholder="Alternate Art"></div><div class="field"><label>Initial method</label><select id="mm" class="select"><option>Buy Now</option><option>Auction</option></select></div></div><div class="actions"><button class="btn primary" onclick="saveManifest()">Add to manifest</button></div>`)}
 function saveManifest(){let n=document.getElementById("mn").value;if(!n){toast("Item name required.");return}manifest.push({name:n,set:document.getElementById("ms").value,grade:document.getElementById("mg").value,language:document.getElementById("ml").value,variant:document.getElementById("mv").value,method:document.getElementById("mm").value});save();closeOverlay();render();toast("Item added to manifest.")}
 
-function intelligence(){return `<section class="hero"><div class="eyebrow">Seller hub · intelligence</div><h1>See demand before choosing how to sell.</h1><p>Aggregated, non-identifying expressions show low, average, high, and dated willingness to pay for each individual item.</p></section><div class="kpis"><div class="kpi"><span>Tracked items</span><b>${inv.length}</b></div><div class="kpi"><span>Total expressions</span><b>${inv.reduce((s,x)=>s+x.interest.length,0)}</b></div><div class="kpi"><span>Buy Now positioned</span><b>${inv.filter(x=>x.method==="Buy Now").length}</b></div><div class="kpi"><span>Auction positioned</span><b>${inv.filter(x=>x.method==="Auction").length}</b></div></div><div class="sectionhead"><h2>Portfolio demand</h2></div><div class="grid">${inv.map(x=>`<div class="panel"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set} · ${x.grade}</div><div class="stat"><span>Low</span><b>$${low(x.interest)}</b></div><div class="stat"><span>Average</span><b>$${avg(x.interest)}</b></div><div class="stat"><span>High</span><b>$${high(x.interest)}</b></div><div class="stat"><span>Latest</span><span>$${x.interest.at(-1)[0]} · ${x.interest.at(-1)[1]}</span></div><div class="notice" style="margin-top:10px">${x.method==="Auction"&&x.interest.at(-1)[0]>=avg(x.interest)?"Buy Now may capture demonstrated demand.":"Current positioning remains reasonable."}</div><div class="actions"><button class="btn small" onclick="demandModal(${x.id})">Open analytics</button><button class="btn primary small" onclick="methodModal(${x.id})">Change method</button></div></div>`).join("")}</div>`}
+function intelligence(){return `<section class="hero"><div class="eyebrow">Seller hub · intelligence</div><h1>See demand before choosing how to sell.</h1><p>Aggregated, non-identifying active offers show current willingness to pay for each individual item. Every offer expires after 24 hours.</p></section><div class="kpis"><div class="kpi"><span>Tracked items</span><b>${inv.length}</b></div><div class="kpi"><span>Active offers</span><b>${inv.reduce((s,x)=>s+activeOffers(x.id).length,0)}</b></div><div class="kpi"><span>Buy Now positioned</span><b>${inv.filter(x=>x.method==="Buy Now").length}</b></div><div class="kpi"><span>Auction positioned</span><b>${inv.filter(x=>x.method==="Auction").length}</b></div></div><div class="sectionhead"><h2>Portfolio demand</h2></div><div class="grid">${inv.map(x=>{const os=activeOffers(x.id),lo=os.length?Math.min(...os.map(o=>o.amount)):null,av=os.length?Math.round(os.reduce((s,o)=>s+o.amount,0)/os.length):null,hi=os.length?Math.max(...os.map(o=>o.amount)):null;return `<div class="panel"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set} · ${x.grade}</div><div class="stat"><span>Low active offer</span><b>${lo!==null?money(lo):"—"}</b></div><div class="stat"><span>Average active offer</span><b>${av!==null?money(av):"—"}</b></div><div class="stat"><span>High active offer</span><b>${hi!==null?money(hi):"—"}</b></div><div class="stat"><span>Active offers</span><b>${os.length}</b></div><div class="notice" style="margin-top:10px">${x.method==="Auction"&&hi!==null&&hi>=av?"Buy Now may capture demonstrated demand.":x.method==="Buy Now"&&hi!==null&&hi>=x.price?"A committed offer is at or above the current Buy Now price.":"Current positioning remains available."}</div><div class="actions"><button class="btn small" onclick="sellerDemandActions(${x.id})">Manage offers</button><button class="btn small" onclick="demandModal(${x.id})">Open analytics</button><button class="btn primary small" onclick="methodModal(${x.id})">Change method</button></div></div>`}).join("")}</div>`}
 
-function demandModal(id){let x=inv.find(z=>z.id===id);openModal(`<div class="sectionhead"><div><div class="eyebrow">Demand intelligence</div><h2>${x.name}</h2><div class="muted">${x.set} · ${x.grade}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="kpis"><div class="kpi"><span>Low</span><b>$${low(x.interest)}</b></div><div class="kpi"><span>Average</span><b>$${avg(x.interest)}</b></div><div class="kpi"><span>High</span><b>$${high(x.interest)}</b></div><div class="kpi"><span>Expressions</span><b>${x.interest.length}</b></div></div><div class="grid2 section"><div class="panel"><div class="eyebrow">Interest history</div><h3>Dated expressions</h3><table class="table"><thead><tr><th>Expression</th><th>Date</th></tr></thead><tbody>${x.interest.slice().reverse().map(v=>`<tr><td><b>$${v[0]}</b></td><td>${v[1]}</td></tr>`).join("")}</tbody></table></div><div class="panel"><div class="eyebrow">Interpretation</div><h3>Demonstrated demand</h3><p class="muted">Expressions are aggregated and non-identifying. Dates help distinguish current demand from isolated or aging interest.</p><div class="stat"><span>Current method</span><b>${x.method}</b></div><div class="stat"><span>Latest expression</span><b>$${x.interest.at(-1)[0]}</b></div><button class="btn primary" onclick="closeOverlay();methodModal(${x.id})">Evaluate selling method</button></div></div>`)}
+function demandModal(id){let x=inv.find(z=>z.id===id),os=activeOffers(id),lo=os.length?Math.min(...os.map(o=>o.amount)):null,av=os.length?Math.round(os.reduce((s,o)=>s+o.amount,0)/os.length):null,hi=os.length?Math.max(...os.map(o=>o.amount)):null;openModal(`<div class="sectionhead"><div><div class="eyebrow">Demand intelligence</div><h2>${x.name}</h2><div class="muted">${x.set} · ${x.grade}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="kpis"><div class="kpi"><span>Low</span><b>${lo!==null?money(lo):"—"}</b></div><div class="kpi"><span>Average</span><b>${av!==null?money(av):"—"}</b></div><div class="kpi"><span>High</span><b>${hi!==null?money(hi):"—"}</b></div><div class="kpi"><span>Active offers</span><b>${os.length}</b></div></div><div class="grid2 section"><div class="panel"><div class="eyebrow">Offer activity</div><h3>Active offers</h3><table class="table"><thead><tr><th>Offer</th><th>Expires</th></tr></thead><tbody>${os.map(o=>`<tr><td><b>${money(o.amount)}</b></td><td>${offerExpiryText(o)}</td></tr>`).join("")||'<tr><td colspan="2">No active offers.</td></tr>'}</tbody></table></div><div class="panel"><div class="eyebrow">Interpretation</div><h3>Demonstrated demand</h3><p class="muted">Offers are aggregated and non-identifying. Their 24-hour expiry keeps seller intelligence current and actionable.</p><div class="stat"><span>Current method</span><b>${x.method}</b></div><div class="stat"><span>Highest active offer</span><b>${hi!==null?money(hi):"—"}</b></div><button class="btn primary" onclick="closeOverlay();methodModal(${x.id})">Evaluate selling method</button></div></div>`)}
 
-function methodModal(id){let x=inv.find(z=>z.id===id),a=avg(x.interest),h=high(x.interest),r=x.interest.at(-1);openModal(`<div class="sectionhead"><div><div class="eyebrow">Seller positioning</div><h2>${x.name}</h2><div class="muted">${x.set} · current: ${x.method}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="panel"><div class="eyebrow">Marketplace guidance</div><h3>${x.method==="Auction"&&r[0]>=a?"Buy Now may capture demonstrated demand":"Auction remains available for price discovery"}</h3><p class="muted">Guidance reflects demonstrated marketplace activity. The seller controls the method.</p><div class="stat"><span>Average interest</span><b>$${a}</b></div><div class="stat"><span>High interest</span><b>$${h}</b></div><div class="stat"><span>Most recent</span><b>$${r[0]} · ${r[1]}</b></div></div><div class="sectionhead"><h3>Choose selling method</h3></div><div class="grid2"><div class="panel"><div class="method">Buy Now</div><h3>Immediate liquidity</h3><p class="muted">Set an asking price supported by the demand you see.</p><button class="btn primary" onclick="changeMethod(${x.id},'Buy Now')">Move to Buy Now</button></div><div class="panel"><div class="method">Auction</div><h3>Price discovery</h3><p class="muted">Place the item into a perpetual auction channel.</p><button class="btn primary" onclick="changeMethod(${x.id},'Auction')">Move to Auction</button></div></div>`)}
-function changeMethod(id,m){let x=inv.find(z=>z.id===id);x.method=m;if(m==="Buy Now"){x.price=Math.round(avg(x.interest)*1.02);x.status="Recently converted";x.auction=null;x.channel=null}else{x.price=null;x.status="Auction queue";x.channel="Modern Pokemon";x.auction={current:Math.max(1,Math.round(avg(x.interest)*.9)),ends:"upcoming"}}notifications.unshift({id:Date.now(),unread:true,type:"Method change",title:`${x.name} moved to ${m}`,body:"Marketplace positioning has been updated.",time:"Just now"});save();closeOverlay();render();toast(x.name+" moved to "+m+".")}
+function methodModal(id){let x=inv.find(z=>z.id===id),os=activeOffers(id),a=os.length?Math.round(os.reduce((s,o)=>s+o.amount,0)/os.length):0,hi=os.length?Math.max(...os.map(o=>o.amount)):0;openModal(`<div class="sectionhead"><div><div class="eyebrow">Seller positioning</div><h2>${x.name}</h2><div class="muted">${x.set} · current: ${x.method}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="panel"><div class="eyebrow">Marketplace guidance</div><h3>${os.length&&hi>=a?"Buy Now may capture demonstrated demand":"Auction remains available for price discovery"}</h3><p class="muted">Guidance reflects active committed offers. The seller controls the method.</p><div class="stat"><span>Average active offer</span><b>${os.length?money(a):"—"}</b></div><div class="stat"><span>High active offer</span><b>${os.length?money(hi):"—"}</b></div></div><div class="sectionhead"><h3>Choose selling method</h3></div><div class="grid2"><div class="panel"><div class="method">Buy Now</div><h3>Immediate liquidity</h3><p class="muted">Set an asking price supported by demonstrated demand.</p><button class="btn primary" onclick="changeMethod(${x.id},'Buy Now')">Move to Buy Now</button></div><div class="panel"><div class="method">Auction</div><h3>Price discovery</h3><p class="muted">Place the item into a perpetual auction channel.</p><button class="btn primary" onclick="changeMethod(${x.id},'Auction')">Move to Auction</button></div></div>`)}
 
+function changeMethod(id,m){let x=inv.find(z=>z.id===id);x.method=m;if(m==="Buy Now"){x.price=Math.round(avg(x.interest)*1.02);x.status="Recently converted";x.auction=null;x.channel=null}else{x.price=null;x.status="Auction queue";x.channel="Modern Pokemon";x.auction={current:Math.max(1,highestPreBid(x)),ends:"upcoming",bidCount:0}}notifications.unshift({id:Date.now(),unread:true,type:"Method change",title:`${x.name} moved to ${m}`,body:"Marketplace positioning has been updated.",time:"Just now"});save();closeOverlay();render();toast(x.name+" moved to "+m+".")}
+
+function completeBuyNow(id){let x=inv.find(z=>z.id===id);if(!x||x.method!=="Buy Now"){toast("Item is no longer available for Buy Now.");return}offers.filter(o=>o.itemId===id&&o.status==="active").forEach(o=>o.status="closed");x.status="Sold via Buy Now";x.soldPrice=x.price;x.method="Sold";notifications.unshift({id:Date.now(),unread:true,type:"Purchase complete",title:`${x.name} — ${money(x.soldPrice)}`,body:"Buy Now purchase completed.",time:"Just now",targetId:id});save();render();toast("Buy Now purchase completed.")}
 function openNotifications(){let ns=notifications;openModal(`<div class="sectionhead"><div><div class="eyebrow">System-driven concierge</div><h2>Notifications</h2></div><button class="btn small" onclick="closeOverlay()">Close</button></div>${ns.map(n=>`<div class="notif ${n.unread?'unread':''}" onclick="readNotif(${n.id})"><div><span class="dot" style="${n.unread?'':'display:none'}"></span><b>${n.type}</b><span class="muted" style="float:right">${n.time}</span></div><h3>${n.title}</h3><div class="muted">${n.body}</div></div>`).join("")||'<div class="notice">No notifications.</div>'}<div class="actions"><button class="btn" onclick="markRead()">Mark all read</button><button class="btn" onclick="go('concierge')">Open Buyer Hub</button></div>`)}
 function readNotif(id){const n=notifications.find(x=>x.id===id);if(n)n.unread=false;save();updateBadge();if(n&&n.targetId){closeOverlay();go('item',n.targetId);return}closeOverlay();render()}
 
