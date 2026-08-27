@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marketplace Prototype</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f5f5f2;color:#171717}
+.wrap{max-width:1100px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #ddd;padding-bottom:14px}
+.logo{font-weight:800}.nav{display:flex;gap:6px;flex-wrap:wrap}.nav button,.ghost{border:1px solid #ccc;background:white;border-radius:9px;padding:9px 12px}.nav .active,.primary{background:#171717;color:white}.primary{border:0;border-radius:9px;padding:10px 13px}
+.hero{padding:30px 0 20px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:#666}.hero h1{font-size:clamp(36px,6vw,60px);line-height:1;max-width:760px;margin:9px 0}.hero p{max-width:680px;color:#5d5d59;font-size:17px;line-height:1.5}
+.search{display:flex;gap:8px;margin:12px 0 18px}.search input,.form input{flex:1;border:1px solid #ccc;border-radius:9px;padding:11px;background:white}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card,.panel{background:white;border:1px solid #ddd;border-radius:14px;padding:16px}.card{min-height:220px}.card h3,.panel h3{margin:8px 0 4px}.muted{color:#666}.method{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.price{font-size:23px;font-weight:800;margin-top:10px}.tag{display:inline-block;border:1px solid #ddd;border-radius:99px;padding:4px 8px;font-size:12px;margin-top:7px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.section-title{display:flex;justify-content:space-between;align-items:end;margin:20px 0 12px}.section-title h2{margin:0}.detail{display:grid;grid-template-columns:1fr 1.4fr;gap:18px}.visual{min-height:320px;border:1px solid #ddd;border-radius:12px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:900}.stat{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:10px 0}.notice{margin:14px 0;padding:12px;border-left:3px solid #171717;background:#f2f2ef}.form{display:grid;gap:9px}.timeline{border-left:2px solid #ddd;padding-left:14px}.timeline div{margin-bottom:13px}
+@media(max-width:760px){.grid,.detail{grid-template-columns:1fr}.hero h1{font-size:40px}}
+</style>
+</head>
+<body><div class="wrap">
+<header><div class="logo">MARKETPLACE <span class="muted">/ prototype</span></div>
+<nav class="nav"><button data-page="explore" class="active">Explore</button><button data-page="interests">My Interests</button><button data-page="seller">Sell</button></nav></header>
+<main id="app"></main></div>
+<script>
+const inv=[
+{id:1,n:"Umbreon VMAX",s:"Evolving Skies #215",g:"PSA 10",l:"English",v:"Alternate Art",m:"Auction",p:"Live auction",i:[[350,"Aug 18"],[407,"Aug 21"],[425,"Aug 25"]]},
+{id:2,n:"Charizard ex",s:"Obsidian Flames #223",g:"PSA 10",l:"English",v:"Special Illustration Rare",m:"Buy Now",p:"$129",i:[[115,"Aug 20"],[125,"Aug 23"]]},
+{id:3,n:"Gardevoir",s:"Secret Wonders #7",g:"Raw",l:"English",v:"Holo Rare",m:"Auction",p:"Live auction",i:[[42,"Aug 16"],[55,"Aug 24"]]},
+{id:4,n:"Mewtwo GX",s:"Shining Legends #39",g:"PSA 9",l:"English",v:"Full Art",m:"Buy Now",p:"$74",i:[[65,"Aug 19"],[70,"Aug 22"]]},
+{id:5,n:"Zekrom",s:"Celebrations #114",g:"Raw",l:"English",v:"Classic Collection",m:"Auction",p:"Live auction",i:[[18,"Aug 22"],[22,"Aug 25"]]},
+{id:6,n:"Reshiram & Charizard GX",s:"Sun & Moon Promo",g:"PSA 9",l:"English",v:"Tag Team",m:"Buy Now",p:"$89",i:[[75,"Aug 18"],[90,"Aug 25"]]}
+];
+let interests=[["Umbreon VMAX","Evolving Skies","PSA 9–10",425,"Auction"],["Charizard","Any","PSA 9–10",150,"Buy Now"]];
+let page="explore", itemId=1;
+const avg=x=>Math.round(x.reduce((a,b)=>a+b[0],0)/x.length);
+function nav(){document.querySelectorAll("[data-page]").forEach(b=>{b.onclick=()=>{page=b.dataset.page;render()}})}
+function render(){let a=document.getElementById("app");a.innerHTML=page==="explore"?explore():page==="interests"?buyer():page==="seller"?seller():item(itemId);nav()}
+function explore(){return `<section class="hero"><div class="eyebrow">Continuous collectibles marketplace</div><h1>Find what you want. Put inventory where it moves.</h1><p>Search standardized inventory, follow auction channels, buy immediately, or let the system-driven concierge surface opportunities.</p></section><div class="search"><input id="q" placeholder="Search card, set, variant, grade..."><button class="primary" onclick="filter()">Search</button></div><div id="cards" class="grid">${inv.map(card).join("")}</div>`}
+function card(x){return `<article class="card"><div class="method">${x.m}</div><h3>${x.n}</h3><div class="muted">${x.s}</div><div>${x.g} · ${x.l}</div><div class="tag">${x.v}</div><div class="price">${x.p}</div><div class="actions"><button class="primary" onclick="openItem(${x.id})">View item</button><button class="ghost" onclick="openItem(${x.id})">Express interest</button></div></article>`}
+function filter(){let q=document.getElementById("q").value.toLowerCase();document.getElementById("cards").innerHTML=inv.filter(x=>(x.n+x.s+x.g+x.v).toLowerCase().includes(q)).map(card).join("")}
+function openItem(id){itemId=id;page="item";render()}
+function item(id){let x=inv.find(z=>z.id===id);return `<div class="section-title"><div><div class="eyebrow">${x.m}</div><h2>${x.n}</h2><div class="muted">${x.s}</div></div><button class="ghost" onclick="page='explore';render()">Back</button></div><div class="detail"><div class="visual">${x.n.split(" ").map(w=>w[0]).join("").slice(0,3)}</div><div class="panel"><div class="stat"><b>Grade</b><span>${x.g}</span></div><div class="stat"><b>Language</b><span>${x.l}</span></div><div class="stat"><b>Variant</b><span>${x.v}</span></div><div class="stat"><b>Selling method</b><span>${x.m}</span></div><div class="notice">An expressed maximum is non-committal. It is not a bid or purchase obligation.</div><div class="form"><label>MAXIMUM I'D BE WILLING TO PAY</label><input id="max" type="number" placeholder="e.g. 125"><button class="primary" onclick="save()">Express interest</button></div></div></div>`}
+function save(){let v=+document.getElementById("max").value;if(v)alert("Interest recorded at $"+v+". No bid was placed.")}
+function buyer(){return `<section class="hero"><div class="eyebrow">System-driven concierge</div><h1>Your interests become opportunities.</h1><p>The concierge monitors inventory and selling-method changes without bidding or deciding for you.</p></section><div class="section-title"><h2>Active interests</h2><button class="primary" onclick="add()">Add interest</button></div><div class="grid">${interests.map(x=>`<div class="panel"><div class="method">${x[4]} preferred</div><h3>${x[0]}</h3><div class="muted">${x[1]} · ${x[2]}</div><div class="stat"><b>Target</b><span>$${x[3]}</span></div><button class="ghost" onclick="alert('Concierge found matching opportunities.')">Check matches</button></div>`).join("")}</div><div class="section-title"><h2>Recent concierge activity</h2></div><div class="panel"><div class="timeline"><div><b>New match</b><br><span class="muted">Umbreon VMAX PSA 10 — auction channel opened</span></div><div><b>Method changed</b><br><span class="muted">Charizard ex PSA 10 — Buy Now available at $129</span></div></div></div>`}
+function add(){let n=prompt("Item or set?");if(!n)return;let t=prompt("Target price?");if(!t)return;interests.push([n,"Any","Any",+t,"Either"]);render()}
+function seller(){return `<section class="hero"><div class="eyebrow">Seller intelligence</div><h1>See demand before choosing how to sell.</h1><p>Every expression of interest becomes non-identifying demand intelligence attached to the individual item.</p></section><div class="section-title"><h2>Consigned inventory</h2><button class="primary" onclick="alert('Manifest: add standardized individual items, presentation, and initial selling method.')">Create manifest</button></div><div class="grid">${inv.slice(0,4).map(x=>`<div class="panel"><div class="method">${x.m}</div><h3>${x.n}</h3><div class="muted">${x.s} · ${x.g}</div><div class="stat"><b>Low / Avg / High</b><span>$${Math.min(...x.i.map(a=>a[0]))} / $${avg(x.i)} / $${Math.max(...x.i.map(a=>a[0]))}</span></div><div class="stat"><b>Latest</b><span>${x.i.at(-1)[1]}</span></div><div class="actions"><button class="ghost" onclick="alert('${x.i.map(a=>"$"+a[0]+" — "+a[1]).join("\n")}')">View demand</button><button class="primary" onclick="toggle(${x.id})">Change method</button></div></div>`).join("")}</div>`}
+function toggle(id){let x=inv.find(z=>z.id===id);x.m=x.m==="Auction"?"Buy Now":"Auction";x.p=x.m==="Buy Now"?"$"+avg(x.i):"Live auction";render()}
+render();
+</script></body></html>
