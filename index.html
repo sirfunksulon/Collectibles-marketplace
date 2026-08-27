@@ -42,14 +42,14 @@ button,input,select{font:inherit}button{cursor:pointer}.top{position:sticky;top:
 <div id="overlay"></div><div id="toast" class="toast"></div>
 <script>
 const baseSeed=[
-{id:1,name:"Umbreon VMAX",set:"Evolving Skies #215",grade:"PSA 10",language:"English",variant:"Alternate Art",method:"Auction",price:null,status:"Live",channel:"Modern Chase Cards",interest:[[350,"Aug 18"],[382,"Aug 20"],[407,"Aug 21"],[395,"Aug 23"],[425,"Aug 25"]],auction:{current:382,endsAt:Date.now()+180000}},
+{id:1,name:"Umbreon VMAX",set:"Evolving Skies #215",grade:"PSA 10",language:"English",variant:"Alternate Art",method:"Auction",price:null,status:"Live",channel:"Modern Chase Cards",interest:[[350,"Aug 18"],[382,"Aug 20"],[407,"Aug 21"],[395,"Aug 23"],[425,"Aug 25"]],auctionMode:"Elastic",auction:{current:1,endsAt:0,bidCount:0,elastic:{factor:0.2,cycleFloor:5,lastThreshold:null}}},
 {id:2,name:"Charizard ex",set:"Obsidian Flames #223",grade:"PSA 10",language:"English",variant:"Special Illustration Rare",method:"Buy Now",price:129,status:"Available now",channel:null,interest:[[115,"Aug 20"],[125,"Aug 23"],[150,"Aug 25"]]},
-{id:3,name:"Gardevoir",set:"Secret Wonders #7",grade:"Raw",language:"English",variant:"Holo Rare",method:"Auction",price:null,status:"Live",channel:"Vintage Pokemon",interest:[[42,"Aug 16"],[48,"Aug 20"],[55,"Aug 24"]],auction:{current:51,endsAt:Date.now()+180000}},
+{id:3,name:"Gardevoir",set:"Secret Wonders #7",grade:"Raw",language:"English",variant:"Holo Rare",method:"Auction",price:null,status:"Live",channel:"Vintage Pokemon",interest:[[42,"Aug 16"],[48,"Aug 20"],[55,"Aug 24"]],auctionMode:"Sudden Death",auction:{current:1,endsAt:0,bidCount:0}},
 {id:4,name:"Mewtwo GX",set:"Shining Legends #39",grade:"PSA 9",language:"English",variant:"Full Art",method:"Buy Now",price:74,status:"Available now",channel:null,interest:[[65,"Aug 19"],[70,"Aug 22"],[72,"Aug 24"]]},
-{id:5,name:"Zekrom",set:"Celebrations #114",grade:"Raw",language:"English",variant:"Classic Collection",method:"Auction",price:null,status:"Live",channel:"Modern Pokemon",interest:[[18,"Aug 22"],[22,"Aug 25"]],auction:{current:18,endsAt:Date.now()+180000}},
+{id:5,name:"Zekrom",set:"Celebrations #114",grade:"Raw",language:"English",variant:"Classic Collection",method:"Auction",price:null,status:"Live",channel:"Modern Pokemon",interest:[[18,"Aug 22"],[22,"Aug 25"]],auctionMode:"Elastic",auction:{current:1,endsAt:0,bidCount:0,elastic:{factor:0.2,cycleFloor:5,lastThreshold:null}}},
 {id:6,name:"Reshiram & Charizard GX",set:"Sun & Moon Promo",grade:"PSA 9",language:"English",variant:"Tag Team",method:"Buy Now",price:89,status:"Available now",channel:null,interest:[[75,"Aug 18"],[82,"Aug 22"],[90,"Aug 25"]]},
 {id:7,name:"Jolteon VMAX",set:"Evolving Skies #051",grade:"PSA 10",language:"English",variant:"Alternate Art",method:"Buy Now",price:214,status:"Recently converted",channel:null,interest:[[175,"Aug 14"],[198,"Aug 19"],[205,"Aug 24"],[225,"Aug 26"]]},
-{id:8,name:"Alakazam V",set:"Scarlet & Violet 151 #188",grade:"PSA 10",language:"Japanese",variant:"Special Illustration Rare",method:"Auction",price:null,status:"Live",channel:"Japanese Pokemon",interest:[[82,"Aug 19"],[95,"Aug 23"],[110,"Aug 26"]],auction:{current:91,endsAt:Date.now()+180000}},
+{id:8,name:"Alakazam V",set:"Scarlet & Violet 151 #188",grade:"PSA 10",language:"Japanese",variant:"Special Illustration Rare",method:"Auction",price:null,status:"Live",channel:"Japanese Pokemon",interest:[[82,"Aug 19"],[95,"Aug 23"],[110,"Aug 26"]],auctionMode:"Sudden Death",auction:{current:1,endsAt:0,bidCount:0}},
 {id:9,name:"Blastoise",set:"Base Set #2",grade:"PSA 8",language:"English",variant:"Holo",method:"Buy Now",price:168,status:"Available now",channel:null,interest:[[140,"Aug 12"],[155,"Aug 17"],[160,"Aug 25"]]}
 ];
 
@@ -93,36 +93,140 @@ function buildAuctions(){
       out.push({
         id:id++,name:pair[0],set:pair[1]+" #"+String((i*7+11)%250+1),
         grade,language:def.name==="Japanese Pokemon"?"Japanese":"English",variant,
-        method:"Auction",price:null,status:"Live",channel:def.name,
+        method:"Auction",price:null,status:"Auction queue",channel:def.name,
         interest:[[Math.round(p*.78),"Aug 19"],[Math.round(p*.88),"Aug 23"],[p,"Aug 26"]],
-        auction:{current:Math.max(1,Math.round(p*.52)),endsAt:Date.now()+180000}
+        auctionMode:(i%2===0?"Elastic":"Sudden Death"),
+        auction:{current:1,endsAt:0,bidCount:0,elastic:{factor:0.2,cycleFloor:5,lastThreshold:null}}
       });
     }
   }
   return out;
 }
-let stored=JSON.parse(localStorage.getItem("cont_inv_v5")||"null");
+let stored=JSON.parse(localStorage.getItem("cont_inv_v6")||"null");
 let inv=stored||buildAuctions();
-let interests=JSON.parse(localStorage.getItem("cont_int_v5")||"null")||[
+let interests=JSON.parse(localStorage.getItem("cont_int_v6")||"null")||[
 {name:"Umbreon VMAX",set:"Evolving Skies",grade:"PSA 9–10",language:"English",variant:"Alternate Art",target:425,method:"Auction",created:"Aug 25"}
 ];
-let notifications=JSON.parse(localStorage.getItem("cont_notif_v5")||"null")||[
-{id:1,unread:true,type:"New opportunity",title:"Umbreon VMAX — PSA 10",body:"An auction opportunity matches your $425 maximum interest.",time:"Just now"}
+let notifications=JSON.parse(localStorage.getItem("cont_notif_v6")||"null")||[
+{id:1,unread:true,type:"New opportunity",title:"Umbreon VMAX — PSA 10",body:"An auction opportunity matches your $425 maximum interest.",time:"Just now",targetId:1}
 ];
-let won=JSON.parse(localStorage.getItem("cont_won_v5")||"null")||[];
-let myBids=JSON.parse(localStorage.getItem("cont_bids_v5")||"null")||{};
-let manifest=JSON.parse(localStorage.getItem("cont_manifest_v5")||"null")||[];
+let won=JSON.parse(localStorage.getItem("cont_won_v6")||"null")||[];
+let myBids=JSON.parse(localStorage.getItem("cont_bids_v6")||"null")||{};
+let manifest=JSON.parse(localStorage.getItem("cont_manifest_v6")||"null")||[];
 let page="explore",selected=1,searchTerm="",filters={method:"All",grade:"All",language:"All"},channelName="Modern Chase Cards",sortMode="Popular";
-function initializeAuctionQueues(){for(const ch of channelDefs){const xs=inv.filter(x=>x.method==="Auction"&&x.channel===ch.name).sort((a,b)=>(a.id||0)-(b.id||0));xs.forEach((x,i)=>{x.auction=x.auction||{};x.auction.queuePosition=i;x.auction.active=(i===0);x.auction.current=x.auction.current||1;if(i===0){x.auction.endsAt=Date.now()+180000;x.status="Live"}else{x.auction.endsAt=0;x.auction.current=1;x.status="Auction queue"}})}}
+function initializeAuctionQueues(){
+  for(const ch of channelDefs){
+    const xs=inv.filter(x=>x.method==="Auction"&&x.channel===ch.name)
+      .sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));
+    xs.forEach((x,i)=>{
+      x.auction=x.auction||{};
+      x.auction.queuePosition=i;
+      x.auction.active=(i===0);
+      x.auction.bidCount=Number(x.auction.bidCount||0);
+      if(x.auctionMode==="Elastic"){
+        x.auction.elastic=x.auction.elastic||{factor:0.2,cycleFloor:5,lastThreshold:null};
+      }
+      if(i===0){
+        x.auction.endsAt=Date.now()+180000;
+        x.auction.current=Math.max(1,highestPreBid(x));
+        x.auction.preBidApplied=highestPreBid(x)>0;
+        x.status="Live";
+      }else{
+        x.auction.endsAt=0;
+        x.auction.current=1;
+        x.auction.preBidApplied=false;
+        x.status="Auction queue";
+      }
+    });
+  }
+}
 initializeAuctionQueues();
-const save=()=>{localStorage.setItem("cont_inv_v5",JSON.stringify(inv));localStorage.setItem("cont_int_v5",JSON.stringify(interests));localStorage.setItem("cont_notif_v5",JSON.stringify(notifications));localStorage.setItem("cont_manifest_v5",JSON.stringify(manifest));localStorage.setItem("cont_won_v5",JSON.stringify(won));localStorage.setItem("cont_bids_v5",JSON.stringify(myBids))};
+const save=()=>{localStorage.setItem("cont_inv_v6",JSON.stringify(inv));localStorage.setItem("cont_int_v6",JSON.stringify(interests));localStorage.setItem("cont_notif_v6",JSON.stringify(notifications));localStorage.setItem("cont_manifest_v6",JSON.stringify(manifest));localStorage.setItem("cont_won_v6",JSON.stringify(won));localStorage.setItem("cont_bids_v6",JSON.stringify(myBids))};
 const money=n=>"$"+Number(n||0).toLocaleString();
 const remaining=x=>Math.max(0,(x.auction?.endsAt||0)-Date.now());
 const timeLeft=x=>{let s=Math.ceil(remaining(x)/1000); if(s<=0)return "00:00"; return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
-const activeAuctions=()=>inv.filter(x=>x.method==='Auction'&&x.auction?.active&&remaining(x)>0);
-function highestPreBid(x){return (x.interest||[]).map(r=>Number(r[0]||0)).filter(v=>v>0).reduce((a,b)=>Math.max(a,b),0)}
-function activateNextInChannel(channel){const xs=inv.filter(x=>x.method==="Auction"&&x.channel===channel).sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));if(!xs.length)return null;const ai=xs.findIndex(x=>x.auction?.active);const next=ai>=0?xs[(ai+1)%xs.length]:xs[0];xs.forEach(x=>{x.auction.active=false;x.auction.endsAt=0;x.auction.current=1;x.status="Auction queue"});next.auction.active=true;next.auction.endsAt=Date.now()+180000;next.auction.current=Math.max(1,highestPreBid(next));next.auction.preBidApplied=highestPreBid(next)>0;next.status="Live";notifications.unshift({id:Date.now()+next.id,unread:true,type:"Auction now live",title:`${next.name} — ${money(next.auction.current)}`,body:`${next.channel} is now active.`,time:"Just now",targetId:next.id});return next}
-function finishExpired(){const now=Date.now();const expired=inv.filter(x=>x.method==="Auction"&&x.auction?.active&&x.auction.endsAt<=now);for(const x of expired){const bid=myBids[x.id];if(bid&&bid>=x.auction.current){won.unshift({id:x.id,name:x.name,set:x.set,grade:x.grade,language:x.language,variant:x.variant,price:x.auction.current,wonAt:new Date().toLocaleString()});notifications.unshift({id:Date.now()+x.id,unread:true,type:"Auction won",title:`${x.name} — ${money(x.auction.current)}`,body:"You won this auction. It is now in your Buyer Hub.",time:"Just now",targetId:x.id})}activateNextInChannel(x.channel)}}
+const activeAuctions=()=>inv.filter(x=>x.method==="Auction"&&x.auction?.active&&remaining(x)>0);
+const ELASTIC_START=30;
+const ELASTIC_BASE=0.2;
+function highestPreBid(x){
+  return (x.interest||[]).map(r=>Number(r[0]||0)).filter(v=>v>0).reduce((a,b)=>Math.max(a,b),0);
+}
+function modeLabel(x){
+  return x.auctionMode==="Elastic"
+    ? "Elastic"
+    : "Sudden Death";
+}
+function elasticExtensionSeconds(x,beforeSeconds){
+  const state=x.auction.elastic||{factor:ELASTIC_BASE,cycleFloor:5,lastThreshold:null};
+  const r=Math.max(0,beforeSeconds);
+  if(r>ELASTIC_START||r<=0)return 0;
+
+  // Inverse position on the 0–31 scale.
+  const inverse=31-r;
+  return inverse*(state.factor||ELASTIC_BASE);
+}
+function resetElasticCycleIfNeeded(x,beforeSeconds){
+  const state=x.auction.elastic;
+  if(!state)return;
+  // Once the countdown drops below the 5-second floor without a re-up,
+  // the next re-up begins a fresh .20 cycle.
+  if(beforeSeconds<state.cycleFloor && !state.lastThreshold){
+    state.factor=ELASTIC_BASE;
+  }
+}
+function activateNextInChannel(channel){
+  const xs=inv.filter(x=>x.method==="Auction"&&x.channel===channel)
+    .sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));
+  if(!xs.length)return null;
+
+  const activeIndex=xs.findIndex(x=>x.auction?.active);
+  const next=activeIndex>=0?xs[(activeIndex+1)%xs.length]:xs[0];
+
+  xs.forEach(x=>{
+    x.auction.active=false;
+    x.auction.endsAt=0;
+    x.auction.current=1;
+    x.auction.bidCount=0;
+    x.auction.preBidApplied=false;
+    x.status="Auction queue";
+  });
+
+  next.auction.active=true;
+  next.auction.endsAt=Date.now()+180000;
+  next.auction.current=Math.max(1,highestPreBid(next));
+  next.auction.preBidApplied=highestPreBid(next)>0;
+  next.auction.bidCount=0;
+  next.status="Live";
+
+  notifications.unshift({
+    id:Date.now()+next.id,unread:true,type:"Auction now live",
+    title:`${next.name} — ${money(next.auction.current)}`,
+    body:`${next.channel} is now active.`,
+    time:"Just now",targetId:next.id
+  });
+  return next;
+}
+function finishExpired(){
+  const now=Date.now();
+  const expired=inv.filter(x=>x.method==="Auction"&&x.auction?.active&&x.auction.endsAt<=now);
+  for(const x of expired){
+    const bid=myBids[x.id];
+    if(bid&&bid>=x.auction.current){
+      won.unshift({
+        id:x.id,name:x.name,set:x.set,grade:x.grade,language:x.language,
+        variant:x.variant,price:x.auction.current,wonAt:new Date().toLocaleString()
+      });
+      notifications.unshift({
+        id:Date.now()+x.id,unread:true,type:"Auction won",
+        title:`${x.name} — ${money(x.auction.current)}`,
+        body:"You won this auction. It is now in your Buyer Hub.",
+        time:"Just now",targetId:x.id
+      });
+    }
+    const next=activateNextInChannel(x.channel);
+    if(page==="item"&&selected===x.id&&next) selected=next.id;
+  }
+}
 
 function tick(){finishExpired();render();}
 const low=a=>Math.min(...a.map(x=>x[0])), high=a=>Math.max(...a.map(x=>x[0])), avg=a=>Math.round(a.reduce((s,x)=>s+x[0],0)/a.length);
@@ -156,22 +260,119 @@ function explore(){
 function searchNow(){searchTerm=document.getElementById("search").value;render()}
 
 function item(id){
-  finishExpired(); let x=inv.find(z=>z.id===id), mine=myBids[x.id];
-  return `<section class="section"><button class="btn ghost small" onclick="go('explore')">← Marketplace</button></section><div class="detail"><div class="visual">${initials(x.name)}</div><div class="panel"><div class="eyebrow">${x.channel||x.method}</div><h1 style="font-size:40px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1><div class="muted">${x.set}</div><span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span>${x.method==="Auction"?`<div class="price">${money(x.auction.current)}</div><div class="notice"><b>LIVE · ${timeLeft(x)}</b> remaining · current bid</div><div class="actions"><button class="btn primary" onclick="bidModal(${x.id})">Place bid</button><button class="btn" onclick="interestModal(${x.id})">Express interest</button></div>${mine?`<div class="notice" style="margin-top:10px">Your current bid: <b>${money(mine)}</b>. There is no competing bidder in this prototype.</div>`:""}`:`<div class="price">${money(x.price)}</div><div class="notice">Available for immediate purchase.</div><div class="actions"><button class="btn primary" onclick="toast('Purchase flow is represented in the prototype.')">Buy Now</button><button class="btn" onclick="interestModal(${x.id})">Express interest</button></div>`}<div class="sectionhead"><h3>Demand intelligence</h3><button class="btn small" onclick="demandModal(${x.id})">View full demand</button></div><div class="stat"><span>Low expressed interest</span><b>${money(low(x.interest))}</b></div><div class="stat"><span>Average expressed interest</span><b>${money(avg(x.interest))}</b></div><div class="stat"><span>High expressed interest</span><b>${money(high(x.interest))}</b></div><div class="stat"><span>Expressions</span><b>${x.interest.length}</b></div></div></div>`;
+  finishExpired();
+  let x=inv.find(z=>z.id===id), mine=myBids[x.id];
+  if(!x)return "";
+  if(x.method==="Auction"){
+    return `<section class="section"><button class="btn ghost small" onclick="go('auctions')">← Auctions</button></section>
+    <div class="detail"><div class="visual">${initials(x.name)}</div>
+    <div class="panel">
+      <div class="eyebrow">${x.channel}</div>
+      <h1 style="font-size:40px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1>
+      <div class="muted">${x.set}</div>
+      <span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span>
+      <div class="sectionhead" style="margin-top:18px">
+        <div><div class="eyebrow">Auction format</div><h3>${modeLabel(x)}</h3></div>
+        <span class="tag">${x.auction?.active?"LIVE":"QUEUED"}</span>
+      </div>
+      ${x.auction?.active?`
+      <div class="kpis">
+        <div class="kpi"><span>Current bid</span><b>${money(x.auction.current)}</b></div>
+        <div class="kpi"><span>Bids</span><b>${Number(x.auction.bidCount||0)}</b></div>
+        <div class="kpi"><span>Time</span><b id="itemTimer">${timeLeft(x)}</b></div>
+      </div>
+      <div class="actions"><button class="btn primary" onclick="bidModal(${x.id})">Place bid</button></div>
+      ${mine?`<div class="notice">Your current bid: <b>${money(mine)}</b>.</div>`:""}
+      `:`<div class="notice">Queued at <b>$1</b>. This item becomes active when its channel reaches it.</div>`}
+    </div></div>`;
+  }
+  return `<section class="section"><button class="btn ghost small" onclick="go('buynow')">← Buy Now</button></section><div class="detail"><div class="visual">${initials(x.name)}</div><div class="panel"><div class="eyebrow">Buy Now</div><h1 style="font-size:40px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1><div class="muted">${x.set}</div><span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span><div class="price">${money(x.price)}</div><div class="notice">Available for immediate purchase.</div><div class="actions"><button class="btn primary" onclick="toast('Purchase flow is represented in the prototype.')">Buy Now</button></div></div></div>`;
+}
+
+let auctionModalTimer=null;
+function stopAuctionModalTimer(){
+  if(auctionModalTimer){clearInterval(auctionModalTimer);auctionModalTimer=null;}
 }
 function bidModal(id){
-  let x=inv.find(z=>z.id===id); if(!x||x.method!=="Auction"){toast("This item is not in auction.");return}
-  let min=Math.max(x.auction.current+1,Number(myBids[id]||0)+1);
-  openModal(`<div class="sectionhead"><div><div class="eyebrow">Live auction</div><h2>${x.name}</h2><div class="muted">${x.set} · ${x.grade}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="kpis"><div class="kpi"><span>Current bid</span><b>${money(x.auction.current)}</b></div><div class="kpi"><span>Time</span><b>${timeLeft(x)}</b></div><div class="kpi"><span>Your bid</span><b>${myBids[id]?money(myBids[id]):"—"}</b></div><div class="kpi"><span>Competition</span><b>None</b></div></div><div class="field" style="margin-top:15px"><label>Your bid</label><input id="bidp" class="input" type="number" min="${min}" value="${min}"></div><div class="notice" style="margin-top:10px">Prototype mode: bids are elastic only when they exceed the current bid. With no competing bidder, your bid becomes the current bid. When the 3:00 timer expires, the highest bid wins.</div><div class="actions"><button class="btn primary" onclick="placeBid(${id})">Place bid</button></div>`);
+  let x=inv.find(z=>z.id===id);
+  if(!x||x.method!=="Auction"||!x.auction?.active){toast("This auction is not currently active.");return}
+  stopAuctionModalTimer();
+  let min=Number(x.auction.current||0)+1;
+  openModal(`<div class="sectionhead"><div><div class="eyebrow">${modeLabel(x)} · Live auction</div><h2>${x.name}</h2><div class="muted">${x.set} · ${x.grade}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div>
+  <div class="kpis">
+    <div class="kpi"><span>Current bid</span><b id="modalCurrentBid">${money(x.auction.current)}</b></div>
+    <div class="kpi"><span>Bids</span><b id="modalBidCount">${Number(x.auction.bidCount||0)}</b></div>
+    <div class="kpi"><span>Time</span><b id="modalAuctionTimer">${timeLeft(x)}</b></div>
+  </div>
+  <div class="field" style="margin-top:15px"><label>Your bid</label><input id="bidp" class="input" type="number" min="${min}" value="${min}"></div>
+  <div class="notice" style="margin-top:10px">${x.auctionMode==="Elastic"
+    ?"Elastic: bids received during the final 30 seconds extend the timer using the inverse fractional-second coefficient model."
+    :"Sudden Death: bids never extend the 3:00 timer. When it reaches zero, the auction ends."}</div>
+  <div class="actions"><button class="btn primary" onclick="placeBid(${id})">Place bid</button></div>`);
+
+  auctionModalTimer=setInterval(()=>{
+    const live=inv.find(z=>z.id===id);
+    const timer=document.getElementById("modalAuctionTimer");
+    const current=document.getElementById("modalCurrentBid");
+    const count=document.getElementById("modalBidCount");
+    if(!live||!timer){stopAuctionModalTimer();return}
+    finishExpired();
+    if(!live.auction?.active){stopAuctionModalTimer();return}
+    timer.textContent=timeLeft(live);
+    current.textContent=money(live.auction.current);
+    count.textContent=String(Number(live.auction.bidCount||0));
+    const input=document.getElementById("bidp");
+    if(input){
+      const newMin=Number(live.auction.current||0)+1;
+      input.min=newMin;
+      if(Number(input.value)<newMin)input.value=newMin;
+    }
+  },250);
 }
+
 function placeBid(id){
-  let x=inv.find(z=>z.id===id),p=Number(document.getElementById("bidp").value);
-  let min=x.auction.current+1;
-  if(!p||p<min){toast("Bid must exceed the current bid.");return}
-  myBids[id]=p;x.auction.current=p;
-  notifications.unshift({id:Date.now(),unread:true,type:"Bid placed",title:`${x.name} — ${money(p)}`,body:"Your bid is now the current bid. The auction remains live until its timer expires.",time:"Just now"});
-  save();closeOverlay();render();toast("Bid placed.");
+  let x=inv.find(z=>z.id===id),p=Number(document.getElementById("bidp")?.value);
+  if(!x||!x.auction?.active){toast("This auction is no longer active.");return}
+  let min=Number(x.auction.current||0)+1;
+  if(!p||p<min){toast(`Bid must be at least ${money(min)}.`);return}
+
+  const beforeSeconds=Math.max(0,remaining(x)/1000);
+  x.auction.bidCount=Number(x.auction.bidCount||0)+1;
+  myBids[id]=Math.max(Number(myBids[id]||0),p);
+  x.auction.current=p;
+
+  if(x.auctionMode==="Elastic" && beforeSeconds<=ELASTIC_START && beforeSeconds>0){
+    x.auction.elastic=x.auction.elastic||{factor:ELASTIC_BASE,cycleFloor:5,lastThreshold:null};
+    const state=x.auction.elastic;
+
+    // If the countdown has fallen below the previous cycle's 5-second floor,
+    // restart the coefficient at .20.
+    if(beforeSeconds<state.cycleFloor){
+      state.factor=ELASTIC_BASE;
+      state.lastThreshold=null;
+    }
+
+    const extension=elasticExtensionSeconds(x,beforeSeconds);
+    if(extension>0){
+      x.auction.endsAt += extension*1000;
+      state.lastThreshold=Math.max(0,remaining(x)/1000);
+      state.factor=Math.max(0.0000001,(state.factor||ELASTIC_BASE)/2);
+    }
+  }
+
+  notifications.unshift({
+    id:Date.now(),unread:true,type:"Bid placed",
+    title:`${x.name} — ${money(p)}`,
+    body:"Your bid is now the current bid.",
+    time:"Just now",targetId:id
+  });
+  save();
+  stopAuctionModalTimer();
+  closeOverlay();
+  render();
+  toast("Bid placed.");
 }
+
 function interestModal(id){let x=inv.find(z=>z.id===id);openModal(`<div class="sectionhead"><div><div class="eyebrow">Buyer intent</div><h2>Express interest</h2><div class="muted">${x.name} · ${x.set}</div></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="notice">Set the maximum price you would be willing to pay if this item enters auction. This is non-committal and creates no bid or purchase obligation.</div><div class="formgrid" style="margin-top:14px"><div class="field"><label>Maximum price</label><input id="ip" class="input" type="number" placeholder="e.g. 425"></div><div class="field"><label>Preferred method</label><select id="im" class="select"><option>Auction</option><option>Buy Now</option><option>Either</option></select></div></div><div class="actions"><button class="btn primary" onclick="submitInterest(${id})">Express interest</button></div>`)}
 function submitInterest(id){let x=inv.find(z=>z.id===id),p=Number(document.getElementById("ip").value),m=document.getElementById("im").value;if(!p){toast("Enter a maximum price.");return}let date="Today";x.interest.push([p,date]);interests.push({name:x.name,set:x.set,grade:x.grade,language:x.language,variant:x.variant,target:p,method:m,created:date});notifications.unshift({id:Date.now(),unread:true,type:"Interest recorded",title:`${x.name} — $${p}`,body:"Your expression has been added to the item's aggregated demand intelligence. No bid was placed.",time:"Just now"});save();closeOverlay();render();toast("Interest recorded. Demand intelligence updated.");}
 
@@ -182,9 +383,9 @@ function saveInterest(){let n=document.getElementById("nn").value,t=Number(docum
 function removeInterest(k){interests.splice(k,1);save();render();toast("Interest removed.")}
 function interestMatches(k){let i=interests[k],m=inv.filter(x=>x.name.toLowerCase().includes(i.name.toLowerCase())&&i.target>=(x.method==="Buy Now"?x.price||0:x.auction?.current||0));openModal(`<div class="sectionhead"><h2>${m.length} matching opportunities</h2><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="grid">${m.map(x=>`<div class="card"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set}</div><div class="price">${x.method==="Buy Now"?"$"+x.price:"$"+x.auction.current}</div><button class="btn primary small" onclick="closeOverlay();go('item',${x.id})">View</button></div>`).join("")||'<div class="notice">No current matches. The concierge continues monitoring.</div>'}</div>`)}
 
-function auctionQueueCard(x){return `<div class="queueitem" onclick="go('item',${x.id})"><b>${x.name}</b><small class="muted">${x.set} · ${x.grade}</small><div class="qprice">$1</div><small class="muted">Queued · position ${(x.auction?.queuePosition||0)+1}</small></div>`}
-function auctions(){finishExpired();return `<section class="hero"><div class="eyebrow">Auction directory</div><h1>One active auction per channel.</h1><p>Each channel runs one item at a time. The queue remains visible and selectable; queued items display $1 until activation, when demonstrated pre-bid interest establishes the opening bid.</p></section><div class="grid">${channelDefs.map(ch=>{const xs=inv.filter(x=>x.method==="Auction"&&x.channel===ch.name).sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));const active=xs.find(x=>x.auction?.active);const queue=xs.filter(x=>!x.auction?.active).slice(0,5);return `<div class="panel"><div class="eyebrow">${ch.category}</div><h2>${ch.name}</h2><p class="muted">${ch.description}</p>${active?`<div class="notice"><b>LIVE NOW</b> · ${active.name}<br><b>${money(active.auction.current)}</b> · ${timeLeft(active)} remaining</div><div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Open active auction</button></div>`:`<div class="notice">No auction currently active.</div>`}<div class="sectionhead"><h3>Queue</h3><span class="muted">Tap an item to inspect</span></div><div class="queuewindow">${queue.map(auctionQueueCard).join("")}</div><div class="actions"><button class="btn" onclick="channelName='${ch.name}';go('channel')">Open channel</button></div></div>`}).join("")}</div>`}
-function channel(){finishExpired();const ch=channelDefs.find(c=>c.name===channelName);const xs=inv.filter(x=>x.method==="Auction"&&x.channel===channelName).sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));const active=xs.find(x=>x.auction?.active);const queue=xs.filter(x=>!x.auction?.active).slice(0,5);return `<section class="channelhero"><div class="channelnav">${channelDefs.map(c=>`<button class="btn small ${c.name===channelName?'primary':''}" onclick="channelName='${c.name}';render()">${c.name}</button>`).join("")}</div><div class="eyebrow" style="margin-top:25px">${ch?.category||"Auction channel"}</div><h1>${channelName}</h1><p class="muted">${ch?.description||""}</p></section><div class="panel">${active?`<div class="sectionhead"><div><div class="eyebrow">Active auction</div><h2>${active.name}</h2><div class="muted">${active.set} · ${active.grade}</div></div><span class="tag">${active.auctionMode||"Auction"}</span></div><div class="kpis"><div class="kpi"><span>Current bid</span><b>${money(active.auction.current)}</b></div><div class="kpi"><span>Time</span><b>${timeLeft(active)}</b></div><div class="kpi"><span>Next minimum</span><b>${money(minimumBid(active))}</b></div><div class="kpi"><span>Queue</span><b>${xs.length-1} waiting</b></div></div><div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Open auction</button><button class="btn" onclick="bidModal(${active.id})">Bid</button></div>`:''}<div class="sectionhead" style="margin-top:24px"><h2>Queue</h2><span class="muted">Tap any item to inspect</span></div><div class="queuewindow">${queue.map(auctionQueueCard).join("")}</div><div class="notice" style="margin-top:14px">Queued items remain at <b>$1</b> until activation. When an item becomes active, demonstrated pre-bid interest establishes the opening bid.</div></div>`}
+function auctionQueueCard(x){return `<div class="queueitem" onclick="go('item',${x.id})"><b>${x.name}</b><small class="muted">${x.set} · ${x.grade}</small><div class="qprice">$1</div><small class="muted">${modeLabel(x)} · Queued · position ${(x.auction?.queuePosition||0)+1}</small></div>`}
+function auctions(){finishExpired();return `<section class="hero"><div class="eyebrow">Auction directory</div><h1>One active auction per channel.</h1><p>Each channel runs one item at a time. The queue remains visible and selectable; queued items display $1 until activation, when demonstrated pre-bid interest establishes the opening bid.</p></section><div class="grid">${channelDefs.map(ch=>{const xs=inv.filter(x=>x.method==="Auction"&&x.channel===ch.name).sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));const active=xs.find(x=>x.auction?.active);const queue=xs.filter(x=>!x.auction?.active);return `<div class="panel"><div class="eyebrow">${ch.category}</div><h2>${ch.name}</h2><p class="muted">${ch.description}</p>${active?`<div class="notice"><b>LIVE NOW</b> · ${active.name}<br><b>${money(active.auction.current)}</b> · ${timeLeft(active)} remaining</div><div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Open active auction</button></div>`:`<div class="notice">No auction currently active.</div>`}<div class="sectionhead"><h3>Queue</h3><span class="muted">Tap an item to inspect</span></div><div class="queuewindow">${queue.map(auctionQueueCard).join("")}</div><div class="actions"><button class="btn" onclick="channelName='${ch.name}';go('channel')">Open channel</button></div></div>`}).join("")}</div>`}
+function channel(){finishExpired();const ch=channelDefs.find(c=>c.name===channelName);const xs=inv.filter(x=>x.method==="Auction"&&x.channel===channelName).sort((a,b)=>(a.auction?.queuePosition||0)-(b.auction?.queuePosition||0));const active=xs.find(x=>x.auction?.active);const queue=xs.filter(x=>!x.auction?.active);return `<section class="channelhero"><div class="channelnav">${channelDefs.map(c=>`<button class="btn small ${c.name===channelName?'primary':''}" onclick="channelName='${c.name}';render()">${c.name}</button>`).join("")}</div><div class="eyebrow" style="margin-top:25px">${ch?.category||"Auction channel"}</div><h1>${channelName}</h1><p class="muted">${ch?.description||""}</p></section><div class="panel">${active?`<div class="sectionhead"><div><div class="eyebrow">Active auction</div><h2>${active.name}</h2><div class="muted">${active.set} · ${active.grade}</div></div><span class="tag">${active.auctionMode||"Auction"}</span></div><div class="kpis"><div class="kpi"><span>Current bid</span><b>${money(active.auction.current)}</b></div><div class="kpi"><span>Time</span><b>${timeLeft(active)}</b></div><div class="kpi"><span>Next minimum</span><b>${money(minimumBid(active))}</b></div><div class="kpi"><span>Queue</span><b>${xs.length-1} waiting</b></div></div><div class="actions"><button class="btn primary" onclick="go('item',${active.id})">Open auction</button><button class="btn" onclick="bidModal(${active.id})">Bid</button></div>`:''}<div class="sectionhead" style="margin-top:24px"><h2>Queue</h2><span class="muted">Tap any item to inspect</span></div><div class="queuewindow">${queue.map(auctionQueueCard).join("")}</div><div class="notice" style="margin-top:14px">Queued items remain at <b>$1</b> until activation. When an item becomes active, demonstrated pre-bid interest establishes the opening bid.</div></div>`}
 function buynow(){const xs=inv.filter(x=>x.method==="Buy Now");return `<section class="hero"><div class="eyebrow">Marketplace</div><h1>Buy Now.</h1><p>Immediate purchases from currently available inventory.</p></section><div class="grid">${xs.map(x=>`<article class="card"><div class="method">Buy Now</div><h3>${x.name}</h3><div class="muted">${x.set}</div><div class="meta">${x.grade} · ${x.language}</div><div class="price">${money(x.price)}</div><div class="actions"><button class="btn primary small" onclick="go('item',${x.id})">View item</button></div></article>`).join("")}</div>`}
 function sell(){return `<section class="hero"><div class="eyebrow">Seller hub · consignment</div><h1>Standardize the item. Keep control of how it sells.</h1><p>Sellers proactively consign individual items with a manifest, establish presentation and an initial method, then reposition inventory as demonstrated demand develops.</p></section><div class="kpis"><div class="kpi"><span>Manifest items</span><b>${manifest.length}</b></div><div class="kpi"><span>Buy Now</span><b>${inv.filter(x=>x.method==="Buy Now").length}</b></div><div class="kpi"><span>Auction</span><b>${inv.filter(x=>x.method==="Auction").length}</b></div><div class="kpi"><span>Repositionable</span><b>All</b></div></div><div class="sectionhead"><h2>Consignment manifest</h2><button class="btn primary" onclick="addManifest()">Add individual item</button></div><div class="panel">${manifest.length?`<table class="table"><thead><tr><th>Item</th><th>Grade</th><th>Language</th><th>Initial method</th><th></th></tr></thead><tbody>${manifest.map((m,i)=>`<tr><td><b>${m.name}</b><br><span class="muted">${m.set}</span></td><td>${m.grade}</td><td>${m.language}</td><td>${m.method}</td><td><button class="btn small" onclick="manifest.splice(${i},1);save();render()">Remove</button></td></tr>`).join("")}</tbody></table>`:'<div class="notice">The seller creates the manifest proactively. Each individual item becomes a standardized unit of inventory and demand intelligence.</div>'}</div><div class="sectionhead"><h2>Inventory positioning</h2></div><div class="grid">${inv.map(sellerCard).join("")}</div>`}
 function sellerCard(x){return `<div class="panel"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set} · ${x.grade}</div><div class="stat"><span>Low / Avg / High</span><b>$${low(x.interest)} / $${avg(x.interest)} / $${high(x.interest)}</b></div><div class="stat"><span>Latest expression</span><span>$${x.interest.at(-1)[0]} · ${x.interest.at(-1)[1]}</span></div><div class="actions"><button class="btn small" onclick="demandModal(${x.id})">View demand</button><button class="btn primary small" onclick="methodModal(${x.id})">Position item</button></div></div>`}
@@ -206,7 +407,7 @@ function markRead(){notifications.forEach(n=>n.unread=false);save();updateBadge(
 function openProfile(){openDrawer(`<div class="sectionhead"><div><div class="eyebrow">Profile</div><h2>Scott</h2></div><button class="btn small" onclick="closeOverlay()">Close</button></div><div class="dir"><button onclick="go('concierge')">Buyer Hub<small>Interests · Concierge · opportunities · activity</small></button><button onclick="go('auctions')">Auction Channels<small>Browse and manually participate in perpetual channels</small></button><button onclick="go('sell')">Seller Hub<small>Consignment · inventory positioning · method control</small></button><button onclick="go('intelligence')">Seller Intelligence<small>Demand · expressions · positioning guidance</small></button></div><div class="notice">Buyer and seller experiences are separated into hubs, while the marketplace intelligence connects them underneath.</div>`)}
 function openDrawer(c){document.getElementById("overlay").innerHTML=`<div class="drawerback" onclick="if(event.target===this)closeOverlay()"><aside class="drawer">${c}</aside></div>`}
 function openModal(c){document.getElementById("overlay").innerHTML=`<div class="modalback" onclick="if(event.target===this)closeOverlay()"><div class="modal">${c}</div></div>`}
-function closeOverlay(){document.getElementById("overlay").innerHTML=""}
+function closeOverlay(){stopAuctionModalTimer();document.getElementById("overlay").innerHTML=""}
 window.addEventListener("keydown",e=>{if(e.key==="Escape")closeOverlay()});
 save();render();setInterval(tick,1000);
 </script>
