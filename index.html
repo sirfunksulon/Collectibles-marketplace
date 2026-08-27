@@ -3,43 +3,292 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Marketplace Prototype</title>
+<meta name="theme-color" content="#111111">
+<title>Continuum — Collectibles Marketplace Prototype</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f5f5f2;color:#171717}
-.wrap{max-width:1100px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #ddd;padding-bottom:14px}
-.logo{font-weight:800}.nav{display:flex;gap:6px;flex-wrap:wrap}.nav button,.ghost{border:1px solid #ccc;background:white;border-radius:9px;padding:9px 12px}.nav .active,.primary{background:#171717;color:white}.primary{border:0;border-radius:9px;padding:10px 13px}
-.hero{padding:30px 0 20px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:#666}.hero h1{font-size:clamp(36px,6vw,60px);line-height:1;max-width:760px;margin:9px 0}.hero p{max-width:680px;color:#5d5d59;font-size:17px;line-height:1.5}
-.search{display:flex;gap:8px;margin:12px 0 18px}.search input,.form input{flex:1;border:1px solid #ccc;border-radius:9px;padding:11px;background:white}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card,.panel{background:white;border:1px solid #ddd;border-radius:14px;padding:16px}.card{min-height:220px}.card h3,.panel h3{margin:8px 0 4px}.muted{color:#666}.method{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.price{font-size:23px;font-weight:800;margin-top:10px}.tag{display:inline-block;border:1px solid #ddd;border-radius:99px;padding:4px 8px;font-size:12px;margin-top:7px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.section-title{display:flex;justify-content:space-between;align-items:end;margin:20px 0 12px}.section-title h2{margin:0}.detail{display:grid;grid-template-columns:1fr 1.4fr;gap:18px}.visual{min-height:320px;border:1px solid #ddd;border-radius:12px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:900}.stat{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:10px 0}.notice{margin:14px 0;padding:12px;border-left:3px solid #171717;background:#f2f2ef}.form{display:grid;gap:9px}.timeline{border-left:2px solid #ddd;padding-left:14px}.timeline div{margin-bottom:13px}
-@media(max-width:760px){.grid,.detail{grid-template-columns:1fr}.hero h1{font-size:40px}}
+:root{
+  --bg:#f4f4f1;--surface:#fff;--surface2:#ededE9;--ink:#151515;--muted:#696963;
+  --line:#d8d8d2;--accent:#151515;--good:#23643b;--warn:#8a5b12;--danger:#8c3028;
+  --shadow:0 12px 35px rgba(0,0,0,.08);--radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(244,244,241,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1240px;margin:auto;padding:13px 18px;display:flex;align-items:center;gap:16px}
+.brand{font-weight:900;letter-spacing:-.04em;font-size:18px;white-space:nowrap}
+.brand small{font-weight:500;color:var(--muted);letter-spacing:0}
+.nav{display:flex;gap:5px;overflow:auto;margin-left:auto}
+.nav button{border:1px solid transparent;background:transparent;border-radius:10px;padding:9px 11px;color:#555;white-space:nowrap}
+.nav button.active{background:var(--ink);color:#fff}
+.profile{width:35px;height:35px;border-radius:50%;background:#ddd;display:grid;place-items:center;font-weight:800;flex:none}
+.main{max-width:1240px;margin:auto;padding:0 18px 70px}
+.hero{padding:48px 0 28px}
+.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.hero h1{font-size:clamp(38px,6vw,70px);line-height:.95;letter-spacing:-.055em;max-width:860px;margin:9px 0 15px}
+.hero p{font-size:18px;line-height:1.5;color:#5f5f59;max-width:760px;margin:0}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:8px 0 22px}
+.search{display:flex;gap:8px;flex:1;min-width:250px}
+.input,.select,.textarea{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;outline:none;width:100%}
+.input:focus,.select:focus,.textarea:focus{border-color:#888}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:10px 13px;font-weight:700}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.ghost{background:transparent}
+.btn.small{padding:7px 9px;font-size:13px}
+.btn.danger{color:var(--danger)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.card,.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:17px}
+.card{min-height:255px;display:flex;flex-direction:column}
+.card:hover{box-shadow:var(--shadow)}
+.card .push{margin-top:auto}
+.method{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:900;color:var(--muted)}
+.card h3{margin:8px 0 3px;font-size:19px;letter-spacing:-.02em}
+.muted{color:var(--muted)}
+.meta{font-size:13px;line-height:1.5}
+.tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:11px;margin:8px 5px 0 0}
+.price{font-size:25px;font-weight:900;letter-spacing:-.03em;margin:11px 0 2px}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.section{padding:18px 0}
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin:10px 0 12px}
+.section-head h2,.section-head h3{margin:0;letter-spacing:-.03em}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.kpi b{display:block;font-size:26px;letter-spacing:-.04em;margin-top:5px}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
+.notice{padding:12px 13px;border:1px solid var(--line);border-left:3px solid var(--ink);background:var(--surface2);border-radius:10px;line-height:1.45;font-size:13px}
+.good{color:var(--good)}.warn{color:var(--warn)}.danger{color:var(--danger)}
+.statline{display:flex;justify-content:space-between;gap:15px;padding:10px 0;border-bottom:1px solid #eee;font-size:14px}
+.statline:last-child{border-bottom:0}
+.progress{height:8px;border-radius:99px;background:#e4e4df;overflow:hidden;margin-top:8px}
+.progress i{display:block;height:100%;background:#151515;border-radius:99px}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{text-align:left;padding:11px 8px;border-bottom:1px solid #eee;vertical-align:top}
+.table th{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.timeline{border-left:2px solid #ddd;padding-left:16px}
+.timeline-item{margin:0 0 17px;position:relative}
+.timeline-item:before{content:"";position:absolute;left:-22px;top:4px;width:8px;height:8px;border-radius:50%;background:#151515}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
+.detail{display:grid;grid-template-columns:1fr 1.25fr;gap:16px}
+.visual{min-height:390px;background:#e8e8e3;border:1px solid var(--line);border-radius:16px;display:grid;place-items:center;font-size:68px;font-weight:900;letter-spacing:-.08em}
+.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.field{display:grid;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:900;color:var(--muted)}
+.modalback{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{width:min(820px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:19px;box-shadow:0 25px 80px rgba(0,0,0,.3)}
+.modal.wide{width:min(1050px,100%)}
+.toast{position:fixed;right:16px;bottom:16px;z-index:100;background:#151515;color:#fff;padding:12px 15px;border-radius:11px;box-shadow:var(--shadow);display:none}
+.toast.show{display:block}
+.pillrow{display:flex;gap:7px;flex-wrap:wrap}
+.filterbar{display:flex;gap:8px;flex-wrap:wrap}
+.filterbar .select{width:auto;min-width:145px}
+.itemlink{background:none;border:0;padding:0;text-align:left;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.mobilehide{}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.detail{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.topbar-inner{align-items:flex-start;flex-wrap:wrap}.nav{order:3;width:100%;margin-left:0}.grid,.grid2,.formgrid{grid-template-columns:1fr}.hero{padding-top:32px}.hero h1{font-size:42px}.kpis{grid-template-columns:repeat(2,1fr)}.mobilehide{display:none}}
 </style>
 </head>
-<body><div class="wrap">
-<header><div class="logo">MARKETPLACE <span class="muted">/ prototype</span></div>
-<nav class="nav"><button data-page="explore" class="active">Explore</button><button data-page="interests">My Interests</button><button data-page="seller">Sell</button></nav></header>
-<main id="app"></main></div>
+<body>
+<div class="app">
+<header class="topbar"><div class="topbar-inner">
+  <div class="brand">CONTINUUM <small>/ prototype</small></div>
+  <nav class="nav" id="nav">
+    <button data-page="explore">Explore</button>
+    <button data-page="concierge">Concierge</button>
+    <button data-page="auctions">Auctions</button>
+    <button data-page="sell">Sell</button>
+    <button data-page="intelligence">Seller Intelligence</button>
+  </nav>
+  <div class="profile">S</div>
+</div></header>
+<main class="main" id="app"></main>
+<div id="modal"></div><div id="toast" class="toast"></div>
+</div>
 <script>
-const inv=[
-{id:1,n:"Umbreon VMAX",s:"Evolving Skies #215",g:"PSA 10",l:"English",v:"Alternate Art",m:"Auction",p:"Live auction",i:[[350,"Aug 18"],[407,"Aug 21"],[425,"Aug 25"]]},
-{id:2,n:"Charizard ex",s:"Obsidian Flames #223",g:"PSA 10",l:"English",v:"Special Illustration Rare",m:"Buy Now",p:"$129",i:[[115,"Aug 20"],[125,"Aug 23"]]},
-{id:3,n:"Gardevoir",s:"Secret Wonders #7",g:"Raw",l:"English",v:"Holo Rare",m:"Auction",p:"Live auction",i:[[42,"Aug 16"],[55,"Aug 24"]]},
-{id:4,n:"Mewtwo GX",s:"Shining Legends #39",g:"PSA 9",l:"English",v:"Full Art",m:"Buy Now",p:"$74",i:[[65,"Aug 19"],[70,"Aug 22"]]},
-{id:5,n:"Zekrom",s:"Celebrations #114",g:"Raw",l:"English",v:"Classic Collection",m:"Auction",p:"Live auction",i:[[18,"Aug 22"],[22,"Aug 25"]]},
-{id:6,n:"Reshiram & Charizard GX",s:"Sun & Moon Promo",g:"PSA 9",l:"English",v:"Tag Team",m:"Buy Now",p:"$89",i:[[75,"Aug 18"],[90,"Aug 25"]]}
+const seedInventory=[
+{id:1,name:"Umbreon VMAX",set:"Evolving Skies #215",grade:"PSA 10",language:"English",variant:"Alternate Art",method:"Auction",price:null,status:"Auction begins tomorrow",interest:[[350,"Aug 18"],[382,"Aug 20"],[407,"Aug 21"],[395,"Aug 23"],[425,"Aug 25"]],auction:{current:382,ends:"18m",channel:"Modern Chase Cards"}},
+{id:2,name:"Charizard ex",set:"Obsidian Flames #223",grade:"PSA 10",language:"English",variant:"Special Illustration Rare",method:"Buy Now",price:129,status:"Available now",interest:[[115,"Aug 20"],[125,"Aug 23"],[150,"Aug 25"]],auction:null},
+{id:3,name:"Gardevoir",set:"Secret Wonders #7",grade:"Raw",language:"English",variant:"Holo Rare",method:"Auction",price:null,status:"Live auction",interest:[[42,"Aug 16"],[48,"Aug 20"],[55,"Aug 24"]],auction:{current:51,ends:"42m",channel:"Vintage Pokemon"}},
+{id:4,name:"Mewtwo GX",set:"Shining Legends #39",grade:"PSA 9",language:"English",variant:"Full Art",method:"Buy Now",price:74,status:"Available now",interest:[[65,"Aug 19"],[70,"Aug 22"],[72,"Aug 24"]],auction:null},
+{id:5,name:"Zekrom",set:"Celebrations #114",grade:"Raw",language:"English",variant:"Classic Collection",method:"Auction",price:null,status:"Auction queue",interest:[[18,"Aug 22"],[22,"Aug 25"]],auction:{current:18,ends:"1h 12m",channel:"Modern Pokemon"}},
+{id:6,name:"Reshiram & Charizard GX",set:"Sun & Moon Promo",grade:"PSA 9",language:"English",variant:"Tag Team",method:"Buy Now",price:89,status:"Available now",interest:[[75,"Aug 18"],[82,"Aug 22"],[90,"Aug 25"]],auction:null},
+{id:7,name:"Jolteon VMAX",set:"Evolving Skies #051",grade:"PSA 10",language:"English",variant:"Alternate Art",method:"Buy Now",price:214,status:"Recently converted",interest:[[175,"Aug 14"],[198,"Aug 19"],[205,"Aug 24"],[225,"Aug 26"]],auction:null},
+{id:8,name:"Alakazam V",set:"Scarlet & Violet 151 #188",grade:"PSA 10",language:"Japanese",variant:"Special Illustration Rare",method:"Auction",price:null,status:"Auction queue",interest:[[82,"Aug 19"],[95,"Aug 23"],[110,"Aug 26"]],auction:{current:91,ends:"2h",channel:"Japanese Pokemon"}},
+{id:9,name:"Blastoise",set:"Base Set #2",grade:"PSA 8",language:"English",variant:"Holo",method:"Buy Now",price:168,status:"Available now",interest:[[140,"Aug 12"],[155,"Aug 17"],[160,"Aug 25"]],auction:null}
 ];
-let interests=[["Umbreon VMAX","Evolving Skies","PSA 9–10",425,"Auction"],["Charizard","Any","PSA 9–10",150,"Buy Now"]];
-let page="explore", itemId=1;
-const avg=x=>Math.round(x.reduce((a,b)=>a+b[0],0)/x.length);
-function nav(){document.querySelectorAll("[data-page]").forEach(b=>{b.onclick=()=>{page=b.dataset.page;render()}})}
-function render(){let a=document.getElementById("app");a.innerHTML=page==="explore"?explore():page==="interests"?buyer():page==="seller"?seller():item(itemId);nav()}
-function explore(){return `<section class="hero"><div class="eyebrow">Continuous collectibles marketplace</div><h1>Find what you want. Put inventory where it moves.</h1><p>Search standardized inventory, follow auction channels, buy immediately, or let the system-driven concierge surface opportunities.</p></section><div class="search"><input id="q" placeholder="Search card, set, variant, grade..."><button class="primary" onclick="filter()">Search</button></div><div id="cards" class="grid">${inv.map(card).join("")}</div>`}
-function card(x){return `<article class="card"><div class="method">${x.m}</div><h3>${x.n}</h3><div class="muted">${x.s}</div><div>${x.g} · ${x.l}</div><div class="tag">${x.v}</div><div class="price">${x.p}</div><div class="actions"><button class="primary" onclick="openItem(${x.id})">View item</button><button class="ghost" onclick="openItem(${x.id})">Express interest</button></div></article>`}
-function filter(){let q=document.getElementById("q").value.toLowerCase();document.getElementById("cards").innerHTML=inv.filter(x=>(x.n+x.s+x.g+x.v).toLowerCase().includes(q)).map(card).join("")}
-function openItem(id){itemId=id;page="item";render()}
-function item(id){let x=inv.find(z=>z.id===id);return `<div class="section-title"><div><div class="eyebrow">${x.m}</div><h2>${x.n}</h2><div class="muted">${x.s}</div></div><button class="ghost" onclick="page='explore';render()">Back</button></div><div class="detail"><div class="visual">${x.n.split(" ").map(w=>w[0]).join("").slice(0,3)}</div><div class="panel"><div class="stat"><b>Grade</b><span>${x.g}</span></div><div class="stat"><b>Language</b><span>${x.l}</span></div><div class="stat"><b>Variant</b><span>${x.v}</span></div><div class="stat"><b>Selling method</b><span>${x.m}</span></div><div class="notice">An expressed maximum is non-committal. It is not a bid or purchase obligation.</div><div class="form"><label>MAXIMUM I'D BE WILLING TO PAY</label><input id="max" type="number" placeholder="e.g. 125"><button class="primary" onclick="save()">Express interest</button></div></div></div>`}
-function save(){let v=+document.getElementById("max").value;if(v)alert("Interest recorded at $"+v+". No bid was placed.")}
-function buyer(){return `<section class="hero"><div class="eyebrow">System-driven concierge</div><h1>Your interests become opportunities.</h1><p>The concierge monitors inventory and selling-method changes without bidding or deciding for you.</p></section><div class="section-title"><h2>Active interests</h2><button class="primary" onclick="add()">Add interest</button></div><div class="grid">${interests.map(x=>`<div class="panel"><div class="method">${x[4]} preferred</div><h3>${x[0]}</h3><div class="muted">${x[1]} · ${x[2]}</div><div class="stat"><b>Target</b><span>$${x[3]}</span></div><button class="ghost" onclick="alert('Concierge found matching opportunities.')">Check matches</button></div>`).join("")}</div><div class="section-title"><h2>Recent concierge activity</h2></div><div class="panel"><div class="timeline"><div><b>New match</b><br><span class="muted">Umbreon VMAX PSA 10 — auction channel opened</span></div><div><b>Method changed</b><br><span class="muted">Charizard ex PSA 10 — Buy Now available at $129</span></div></div></div>`}
-function add(){let n=prompt("Item or set?");if(!n)return;let t=prompt("Target price?");if(!t)return;interests.push([n,"Any","Any",+t,"Either"]);render()}
-function seller(){return `<section class="hero"><div class="eyebrow">Seller intelligence</div><h1>See demand before choosing how to sell.</h1><p>Every expression of interest becomes non-identifying demand intelligence attached to the individual item.</p></section><div class="section-title"><h2>Consigned inventory</h2><button class="primary" onclick="alert('Manifest: add standardized individual items, presentation, and initial selling method.')">Create manifest</button></div><div class="grid">${inv.slice(0,4).map(x=>`<div class="panel"><div class="method">${x.m}</div><h3>${x.n}</h3><div class="muted">${x.s} · ${x.g}</div><div class="stat"><b>Low / Avg / High</b><span>$${Math.min(...x.i.map(a=>a[0]))} / $${avg(x.i)} / $${Math.max(...x.i.map(a=>a[0]))}</span></div><div class="stat"><b>Latest</b><span>${x.i.at(-1)[1]}</span></div><div class="actions"><button class="ghost" onclick="alert('${x.i.map(a=>"$"+a[0]+" — "+a[1]).join("\n")}')">View demand</button><button class="primary" onclick="toggle(${x.id})">Change method</button></div></div>`).join("")}</div>`}
-function toggle(id){let x=inv.find(z=>z.id===id);x.m=x.m==="Auction"?"Buy Now":"Auction";x.p=x.m==="Buy Now"?"$"+avg(x.i):"Live auction";render()}
+let inv=JSON.parse(localStorage.getItem("continuum_inventory")||"null")||seedInventory;
+let interests=JSON.parse(localStorage.getItem("continuum_interests")||"null")||[
+{name:"Umbreon VMAX",set:"Evolving Skies",grade:"PSA 9–10",language:"English",variant:"Alternate Art",target:425,method:"Auction",created:"Aug 25"},
+{name:"Charizard",set:"Any",grade:"PSA 9–10",language:"English",variant:"Any",target:150,method:"Either",created:"Aug 23"}
+];
+let manifest=JSON.parse(localStorage.getItem("continuum_manifest")||"null")||[];
+let page="explore", selected=1, searchTerm="", filters={method:"All",grade:"All",language:"All"};
+
+function save(){localStorage.setItem("continuum_inventory",JSON.stringify(inv));localStorage.setItem("continuum_interests",JSON.stringify(interests));localStorage.setItem("continuum_manifest",JSON.stringify(manifest))}
+function avg(a){return Math.round(a.reduce((s,x)=>s+x[0],0)/a.length)}
+function low(a){return Math.min(...a.map(x=>x[0]))}
+function high(a){return Math.max(...a.map(x=>x[0]))}
+function initials(n){return n.split(/\s+/).map(w=>w[0]).join("").slice(0,3).toUpperCase()}
+function notify(msg){let t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
+function go(p,id=null){page=p;if(id)selected=id;render();window.scrollTo({top:0,behavior:"smooth"})}
+function bindNav(){document.querySelectorAll("#nav button").forEach(b=>{b.classList.toggle("active",b.dataset.page===page);b.onclick=()=>go(b.dataset.page)})}
+
+function render(){let app=document.getElementById("app");app.innerHTML=
+page==="explore"?explore():page==="concierge"?concierge():page==="auctions"?auctions():page==="sell"?sell():page==="intelligence"?intelligence():itemPage(selected);bindNav()}
+
+function explore(){
+let list=inv.filter(x=>{
+let q=(x.name+" "+x.set+" "+x.grade+" "+x.language+" "+x.variant).toLowerCase();
+return (!searchTerm||q.includes(searchTerm.toLowerCase())) &&
+(filters.method==="All"||x.method===filters.method)&&
+(filters.grade==="All"||x.grade.includes(filters.grade))&&
+(filters.language==="All"||x.language===filters.language)
+});
+return `<section class="hero"><div class="eyebrow">Continuous collectibles marketplace</div>
+<h1>Find what you want. Put inventory where it moves.</h1>
+<p>Standardized inventory, immediate purchases, perpetual auction channels, and a system-driven concierge operating inside one marketplace.</p></section>
+<div class="toolbar"><div class="search"><input class="input" id="search" value="${searchTerm}" placeholder="Search card, set, variant, grade..."><button class="btn primary" onclick="applySearch()">Search</button></div></div>
+<div class="filterbar">
+<select class="select" id="methodFilter" onchange="filters.method=this.value;render()"><option>All</option><option ${filters.method==="Buy Now"?"selected":""}>Buy Now</option><option ${filters.method==="Auction"?"selected":""}>Auction</option></select>
+<select class="select" onchange="filters.grade=this.value;render()"><option>All</option><option ${filters.grade==="PSA"?"selected":""}>PSA</option><option ${filters.grade==="CGC"?"selected":""}>CGC</option><option ${filters.grade==="Raw"?"selected":""}>Raw</option></select>
+<select class="select" onchange="filters.language=this.value;render()"><option>All</option><option ${filters.language==="English"?"selected":""}>English</option><option ${filters.language==="Japanese"?"selected":""}>Japanese</option></select>
+<button class="btn ghost" onclick="searchTerm='';filters={method:'All',grade:'All',language:'All'};render()">Clear filters</button>
+</div>
+<div class="section-head"><h2>${list.length} opportunities</h2><span class="muted">Inventory is individually standardized</span></div>
+<div class="grid">${list.map(card).join("")}</div>`
+}
+function applySearch(){searchTerm=document.getElementById("search").value;render()}
+function card(x){
+return `<article class="card"><div class="method">${x.method}${x.method==="Buy Now"?" · immediate":""}</div>
+<h3>${x.name}</h3><div class="muted">${x.set}</div><div class="meta">${x.grade} · ${x.language}</div><div>${x.variant?`<span class="tag">${x.variant}</span>`:""}</div>
+<div class="push"><div class="price">${x.method==="Buy Now"?"$"+x.price:x.auction?"$"+x.auction.current+" current":"Queued"}</div><div class="muted meta">${x.status}</div>
+<div class="actions"><button class="btn primary small" onclick="go('item',${x.id})">View item</button><button class="btn small" onclick="interestModal(${x.id})">Express interest</button></div></div></article>`
+}
+
+function itemPage(id){
+let x=inv.find(z=>z.id===id);if(!x)return explore();
+let recent=x.interest.slice().sort((a,b)=>new Date(b[1]+" 2026")-new Date(a[1]+" 2026")).slice(0,5);
+return `<section class="section"><button class="btn ghost small" onclick="go('explore')">← Back to marketplace</button></section>
+<div class="detail"><div class="visual">${initials(x.name)}</div>
+<div class="panel"><div class="eyebrow">${x.method}</div><h1 style="font-size:38px;letter-spacing:-.05em;margin:7px 0">${x.name}</h1><p class="muted">${x.set}</p>
+<div class="pillrow"><span class="tag">${x.grade}</span><span class="tag">${x.language}</span><span class="tag">${x.variant}</span></div>
+<div class="price">${x.method==="Buy Now"?"$"+x.price:x.auction?"$"+x.auction.current+" current":"Auction queue"}</div>
+<div class="notice">${x.method==="Auction"?"Auction channel: "+(x.auction?.channel||"Perpetual channel")+" · "+(x.auction?.ends||"upcoming"):"Available for immediate purchase."}</div>
+<div class="actions"><button class="btn primary" onclick="interestModal(${x.id})">Express interest</button>${x.method==="Buy Now"?`<button class="btn" onclick="notify('Purchase flow is represented in the prototype.')">Buy Now</button>`:`<button class="btn" onclick="go('auctions')">View auction channels</button>`}</div>
+<div class="section-head"><h3>Demand intelligence</h3><button class="btn small" onclick="demandModal(${x.id})">View full demand</button></div>
+<div class="statline"><span>Low expressed interest</span><b>$${low(x.interest)}</b></div>
+<div class="statline"><span>Average expressed interest</span><b>$${avg(x.interest)}</b></div>
+<div class="statline"><span>High expressed interest</span><b>$${high(x.interest)}</b></div>
+<div class="statline"><span>Expressions</span><b>${x.interest.length}</b></div>
+</div></div>
+<div class="grid2 section"><div class="panel"><div class="eyebrow">Recent expressions</div><h3>Non-identifying interest</h3>${recent.map(a=>`<div class="statline"><span>$${a[0]}</span><span class="muted">${a[1]}</span></div>`).join("")}</div>
+<div class="panel"><div class="eyebrow">Buyer independence</div><h3>Interest is not a bid</h3><p class="muted">A maximum expression tells the marketplace what opportunity would matter to a buyer. It creates no bid or purchase obligation and never bids autonomously.</p></div></div>`
+}
+
+function interestModal(id){
+let x=inv.find(z=>z.id===id);
+openModal(`<div class="section-head"><div><div class="eyebrow">Buyer concierge</div><h2>Express interest</h2><div class="muted">${x.name} · ${x.set}</div></div><button class="btn small" onclick="closeModal()">Close</button></div>
+<div class="notice">Set the maximum price you would be willing to pay if this item enters auction or becomes available within your criteria. This is non-committal.</div>
+<div class="formgrid" style="margin-top:14px"><div class="field"><label>Maximum price</label><input id="interestPrice" class="input" type="number" placeholder="e.g. 425"></div>
+<div class="field"><label>Preferred method</label><select id="interestMethod" class="select"><option>Auction</option><option>Buy Now</option><option>Either</option></select></div></div>
+<div class="actions"><button class="btn primary" onclick="submitInterest(${id})">Express interest</button></div>`)
+}
+function submitInterest(id){
+let x=inv.find(z=>z.id===id), p=Number(document.getElementById("interestPrice").value), m=document.getElementById("interestMethod").value;
+if(!p){notify("Enter a maximum price.");return}
+interests.push({name:x.name,set:x.set,grade:x.grade,language:x.language,variant:x.variant,target:p,method:m,created:"Today"});save();closeModal();notify("Interest recorded — no bid was placed.");render()
+}
+
+function concierge(){
+let matches=inv.filter(x=>interests.some(i=>(i.name==="Any"||x.name.toLowerCase().includes(i.name.toLowerCase()))&&(i.target>= (x.method==="Buy Now"?x.price||0:x.auction?.current||0))));
+return `<section class="hero"><div class="eyebrow">System-driven concierge</div><h1>Your interests become opportunities.</h1><p>The concierge monitors comprehensive interests, inventory, method changes, and auctions. It informs and connects; it never dictates behavior or bids autonomously.</p></section>
+<div class="kpis"><div class="kpi"><span>Active interests</span><b>${interests.length}</b></div><div class="kpi"><span>Current matches</span><b>${matches.length}</b></div><div class="kpi"><span>Methods monitored</span><b>3</b></div><div class="kpi"><span>Autonomous bids</span><b>0</b></div></div>
+<div class="section-head"><h2>Your interests</h2><button class="btn primary" onclick="newInterest()">Add interest</button></div>
+<div class="grid2">${interests.map((i,idx)=>`<div class="panel"><div class="method">${i.method} preferred</div><h3>${i.name}</h3><div class="muted">${i.set} · ${i.language} · ${i.grade}</div><div class="statline"><span>Target</span><b>$${i.target}</b></div><div class="statline"><span>Established</span><span>${i.created}</span></div><div class="actions"><button class="btn small" onclick="removeInterest(${idx})">Remove</button><button class="btn primary small" onclick="showInterestMatches(${idx})">Find opportunities</button></div></div>`).join("")}</div>
+<div class="section-head"><h2>Concierge activity</h2></div>
+<div class="panel"><div class="timeline">
+<div class="timeline-item"><b>New opportunity</b><div class="muted">Umbreon VMAX PSA 10 — auction begins tomorrow and remains below your $425 interest.</div></div>
+<div class="timeline-item"><b>Method change</b><div class="muted">Jolteon VMAX PSA 10 moved from auction positioning to Buy Now at $214.</div></div>
+<div class="timeline-item"><b>Auction update</b><div class="muted">Gardevoir Secret Wonders — current $51, below the relevant expressed interest range.</div></div>
+</div></div>`
+}
+function newInterest(){
+openModal(`<div class="section-head"><h2>New concierge interest</h2><button class="btn small" onclick="closeModal()">Close</button></div>
+<div class="formgrid"><div class="field"><label>Item / set</label><input id="niName" class="input" placeholder="Umbreon VMAX"></div><div class="field"><label>Language</label><select id="niLang" class="select"><option>Any</option><option>English</option><option>Japanese</option></select></div><div class="field"><label>Variant</label><input id="niVariant" class="input" placeholder="Any / Alternate Art / Holo"></div><div class="field"><label>Grading company / grade range</label><input id="niGrade" class="input" placeholder="PSA 9–10"></div><div class="field"><label>Target price</label><input id="niTarget" class="input" type="number" placeholder="425"></div><div class="field"><label>Preferred method</label><select id="niMethod" class="select"><option>Either</option><option>Auction</option><option>Buy Now</option></select></div></div>
+<div class="actions"><button class="btn primary" onclick="saveNewInterest()">Create interest</button></div>`)
+}
+function saveNewInterest(){
+let n=document.getElementById("niName").value,t=Number(document.getElementById("niTarget").value);if(!n||!t){notify("Item/set and target price are required.");return}
+interests.push({name:n,set:"Any",grade:document.getElementById("niGrade").value||"Any",language:document.getElementById("niLang").value,variant:document.getElementById("niVariant").value||"Any",target:t,method:document.getElementById("niMethod").value,created:"Today"});save();closeModal();render();notify("Concierge interest created.")
+}
+function removeInterest(i){interests.splice(i,1);save();render();notify("Interest removed.")}
+function showInterestMatches(idx){let i=interests[idx], m=inv.filter(x=>(i.name==="Any"||x.name.toLowerCase().includes(i.name.toLowerCase()))&&(i.target>=(x.method==="Buy Now"?x.price||0:x.auction?.current||0)));openModal(`<div class="section-head"><div><div class="eyebrow">Concierge results</div><h2>${m.length} matching opportunities</h2></div><button class="btn small" onclick="closeModal()">Close</button></div>${m.length?`<div class="grid">${m.map(x=>`<div class="card"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set}</div><div class="price">${x.method==="Buy Now"?"$"+x.price:"$"+x.auction.current}</div><button class="btn primary small" onclick="closeModal();go('item',${x.id})">View</button></div>`).join("")}</div>`:`<div class="empty">No current matches. The concierge continues monitoring.</div>`}`)
+}
+
+function auctions(){
+let channels=[...new Set(inv.filter(x=>x.method==="Auction").map(x=>x.auction?.channel||"Perpetual Auction"))];
+return `<section class="hero"><div class="eyebrow">Perpetual auction channels</div><h1>Participate manually—or let the concierge watch.</h1><p>Auction channels remain open to direct participation. Buyers decide when and whether to act.</p></section>
+<div class="grid">${channels.map(ch=>{let xs=inv.filter(x=>x.method==="Auction"&&(x.auction?.channel||"Perpetual Auction")===ch);return `<div class="panel"><div class="eyebrow">Auction channel</div><h3>${ch}</h3><p class="muted">${xs.length} active/upcoming items</p><div class="statline"><span>Lowest current</span><b>$${Math.min(...xs.map(x=>x.auction?.current||0))}</b></div><button class="btn primary small" onclick="filterChannel('${ch.replaceAll("'","")}')">View channel</button></div>`}).join("")}</div>
+<div class="section-head"><h2>Current auction opportunities</h2></div><div class="grid">${inv.filter(x=>x.method==="Auction").map(card).join("")}</div>`
+}
+function filterChannel(ch){page="explore";filters={method:"Auction",grade:"All",language:"All"};searchTerm=ch;render();notify("Showing auction opportunities for "+ch+".")}
+
+function sell(){
+return `<section class="hero"><div class="eyebrow">Consignment</div><h1>Standardize the item. Keep control of how it sells.</h1><p>Sellers proactively consign individual items with a manifest, establish presentation and an initial method, then reposition inventory as demonstrated demand develops.</p></section>
+<div class="kpis"><div class="kpi"><span>Manifest items</span><b>${manifest.length}</b></div><div class="kpi"><span>Buy Now</span><b>${inv.filter(x=>x.method==="Buy Now").length}</b></div><div class="kpi"><span>Auction</span><b>${inv.filter(x=>x.method==="Auction").length}</b></div><div class="kpi"><span>Method changes</span><b>3</b></div></div>
+<div class="section-head"><h2>Consignment manifest</h2><button class="btn primary" onclick="addManifestItem()">Add individual item</button></div>
+<div class="panel">${manifest.length?`<table class="table"><thead><tr><th>Item</th><th>Grade</th><th>Language</th><th>Initial method</th><th></th></tr></thead><tbody>${manifest.map((m,i)=>`<tr><td><b>${m.name}</b><br><span class="muted">${m.set}</span></td><td>${m.grade}</td><td>${m.language}</td><td>${m.method}</td><td><button class="btn small" onclick="manifest.splice(${i},1);save();render()">Remove</button></td></tr>`).join("")}</tbody></table>`:`<div class="empty">Your manifest is empty. Add individual standardized items to begin a consignment.</div>`}</div>
+<div class="section-head"><h2>Inventory positioning</h2></div><div class="grid">${inv.slice(0,6).map(sellerCard).join("")}</div>`
+}
+function sellerCard(x){return `<div class="panel"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set} · ${x.grade}</div><div class="statline"><span>Low / Avg / High</span><b>$${low(x.interest)} / $${avg(x.interest)} / $${high(x.interest)}</b></div><div class="statline"><span>Latest expression</span><span>$${x.interest.at(-1)[0]} · ${x.interest.at(-1)[1]}</span></div><div class="actions"><button class="btn small" onclick="demandModal(${x.id})">View demand</button><button class="btn primary small" onclick="methodModal(${x.id})">Position item</button></div></div>`}
+function addManifestItem(){
+openModal(`<div class="section-head"><h2>Add consigned item</h2><button class="btn small" onclick="closeModal()">Close</button></div>
+<div class="notice">The seller creates the manifest proactively. Each individual item becomes a standardized unit of inventory and demand intelligence.</div>
+<div class="formgrid" style="margin-top:14px"><div class="field"><label>Item</label><input id="mName" class="input" placeholder="Umbreon VMAX"></div><div class="field"><label>Set / number</label><input id="mSet" class="input" placeholder="Evolving Skies #215"></div><div class="field"><label>Grading company / grade</label><input id="mGrade" class="input" placeholder="PSA 10"></div><div class="field"><label>Language</label><select id="mLang" class="select"><option>English</option><option>Japanese</option></select></div><div class="field"><label>Variant</label><input id="mVariant" class="input" placeholder="Alternate Art"></div><div class="field"><label>Initial selling method</label><select id="mMethod" class="select"><option>Buy Now</option><option>Auction</option></select></div></div>
+<div class="actions"><button class="btn primary" onclick="saveManifest()">Add to manifest</button></div>`)
+}
+function saveManifest(){
+let n=document.getElementById("mName").value;if(!n){notify("Item name is required.");return}
+manifest.push({name:n,set:document.getElementById("mSet").value,grade:document.getElementById("mGrade").value,language:document.getElementById("mLang").value,variant:document.getElementById("mVariant").value,method:document.getElementById("mMethod").value});save();closeModal();render();notify("Item added to manifest.")
+}
+
+function intelligence(){
+return `<section class="hero"><div class="eyebrow">Seller intelligence</div><h1>See demand before choosing how to sell.</h1><p>Aggregated, non-identifying expressions show low, average, high, and dated willingness to pay for each individual item.</p></section>
+<div class="kpis"><div class="kpi"><span>Tracked items</span><b>${inv.length}</b></div><div class="kpi"><span>Total expressions</span><b>${inv.reduce((s,x)=>s+x.interest.length,0)}</b></div><div class="kpi"><span>Buy Now positioned</span><b>${inv.filter(x=>x.method==="Buy Now").length}</b></div><div class="kpi"><span>Auction positioned</span><b>${inv.filter(x=>x.method==="Auction").length}</b></div></div>
+<div class="section-head"><h2>Portfolio demand</h2><span class="muted">Aggregated and non-identifying</span></div>
+<div class="grid">${inv.map(x=>{let a=avg(x.interest),h=high(x.interest),l=low(x.interest);let recent=x.interest.at(-1);let recommendation=(x.method==="Auction"&&recent[0]>=a*1.05)?"Buy Now may capture demonstrated demand":(x.method==="Buy Now"&&x.interest.length<3)?"Auction may improve price discovery":"Current positioning remains reasonable";return `<div class="panel"><div class="method">${x.method}</div><h3>${x.name}</h3><div class="muted">${x.set} · ${x.grade}</div><div class="statline"><span>Low</span><b>$${l}</b></div><div class="statline"><span>Average</span><b>$${a}</b></div><div class="statline"><span>High</span><b>$${h}</b></div><div class="statline"><span>Latest</span><span>$${recent[0]} · ${recent[1]}</span></div><div class="section" style="padding-bottom:5px"><div class="eyebrow">Marketplace guidance</div><p style="margin:6px 0">${recommendation}</p></div><div class="actions"><button class="btn small" onclick="demandModal(${x.id})">Open analytics</button><button class="btn primary small" onclick="methodModal(${x.id})">Change method</button></div></div>`}).join("")}</div>`
+}
+
+function demandModal(id){
+let x=inv.find(z=>z.id===id), l=low(x.interest),a=avg(x.interest),h=high(x.interest),latest=x.interest.at(-1);
+let trend=x.interest.length>1&&latest[0]>=x.interest[0][0]?"Increasing":"Mixed";
+openModal(`<div class="section-head"><div><div class="eyebrow">Demand intelligence</div><h2>${x.name}</h2><div class="muted">${x.set} · ${x.grade} · ${x.variant}</div></div><button class="btn small" onclick="closeModal()">Close</button></div>
+<div class="kpis"><div class="kpi"><span>Low</span><b>$${l}</b></div><div class="kpi"><span>Average</span><b>$${a}</b></div><div class="kpi"><span>High</span><b>$${h}</b></div><div class="kpi"><span>Trend</span><b class="${trend==="Increasing"?"good":""}">${trend}</b></div></div>
+<div class="grid2 section"><div class="panel"><div class="eyebrow">Interest history</div><h3>Expressions over time</h3><table class="table"><thead><tr><th>Expression</th><th>Date</th></tr></thead><tbody>${x.interest.slice().reverse().map(v=>`<tr><td><b>$${v[0]}</b></td><td>${v[1]}</td></tr>`).join("")}</tbody></table></div>
+<div class="panel"><div class="eyebrow">Positioning</div><h3>${x.method==="Auction"?"Auction currently":"Buy Now currently"}</h3><p class="muted">Current marketplace method: <b>${x.method}</b>.</p><div class="statline"><span>Latest expression</span><b>$${latest[0]}</b></div><div class="statline"><span>Average</span><b>$${a}</b></div><div class="statline"><span>Expressions</span><b>${x.interest.length}</b></div><div class="notice">Dates help distinguish current demand from isolated or aging interest. Buyer identities are not disclosed.</div><div class="actions"><button class="btn primary" onclick="closeModal();methodModal(${x.id})">Evaluate selling method</button></div></div></div>`)
+}
+
+function methodModal(id){
+let x=inv.find(z=>z.id===id),a=avg(x.interest),h=high(x.interest),recent=x.interest.at(-1);
+let guidance=x.method==="Auction"?(recent[0]>=a?"Buy Now may capture demonstrated demand":"Auction remains positioned for price discovery"):(x.interest.length>=3?"Auction may improve price discovery":"Buy Now remains a straightforward liquidity path");
+openModal(`<div class="section-head"><div><div class="eyebrow">Seller positioning</div><h2>${x.name}</h2><div class="muted">${x.set} · current method: ${x.method}</div></div><button class="btn small" onclick="closeModal()">Close</button></div>
+<div class="panel"><div class="eyebrow">Marketplace guidance</div><h3>${guidance}</h3><p class="muted">This is guidance derived from demonstrated marketplace activity. The seller controls the method.</p><div class="statline"><span>Average expressed interest</span><b>$${a}</b></div><div class="statline"><span>High expressed interest</span><b>$${h}</b></div><div class="statline"><span>Most recent</span><b>$${recent[0]} · ${recent[1]}</b></div></div>
+<div class="section-head"><h3>Choose selling method</h3></div>
+<div class="grid2"><div class="panel"><div class="method">Buy Now</div><h3>Immediate liquidity</h3><p class="muted">Set an asking price supported by the demand you see.</p><button class="btn primary" onclick="changeMethod(${x.id},'Buy Now')">Move to Buy Now</button></div>
+<div class="panel"><div class="method">Auction</div><h3>Price discovery</h3><p class="muted">Place the item into a perpetual auction channel.</p><button class="btn primary" onclick="changeMethod(${x.id},'Auction')">Move to Auction</button></div></div>`)
+}
+function changeMethod(id,m){
+let x=inv.find(z=>z.id===id);x.method=m;if(m==="Buy Now"){x.price=Math.round(avg(x.interest)*1.02);x.status="Recently converted";x.auction=null}else{x.price=null;x.status="Auction queue";x.auction={current:Math.max(1,Math.round(avg(x.interest)*.9)),ends:"upcoming",channel:"Modern Pokemon"}}
+save();closeModal();render();notify(x.name+" moved to "+m+".")
+}
+
+function openModal(content){document.getElementById("modal").innerHTML=`<div class="modalback" onclick="backdrop(event)"><div class="modal">${content}</div></div>`}
+function backdrop(e){if(e.target===e.currentTarget)closeModal()}
+function closeModal(){document.getElementById("modal").innerHTML=""}
+
+window.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()})
 render();
-</script></body></html>
+</script>
+</body>
+</html>
