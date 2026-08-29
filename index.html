@@ -188,7 +188,7 @@ button{transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
 </style>
 <script>
 /* RapidUp refinement build: this script extends the existing prototype into a stateful product simulation. */
-const STORAGE_KEY='continuum_refinement_v11';
+const STORAGE_KEY='rapidup_refinement_v23';
 const IMG={
   lugia:'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?auto=format&fit=crop&w=1200&q=86',
   cards:'https://images.unsplash.com/photo-1601645191163-3fc0d5d64e35?auto=format&fit=crop&w=1200&q=86',
@@ -277,11 +277,11 @@ function queueMatches(x,c){
   const year=Number(d.year??inferYear(x));
   if(q.yearMin!=null && year<Number(q.yearMin)) return false;
   if(q.yearMax!=null && year>Number(q.yearMax)) return false;
-  if(q.eras?.length && !q.eras.includes(d.era)) return false;
-  if(q.conditions?.length && !q.conditions.includes(d.condition)) return false;
-  if(q.languages?.length && !q.languages.includes(d.language||x.lang)) return false;
-  if(q.variants?.length && !q.variants.includes(d.variant||x.variant)) return false;
-  if(q.presentations?.length && !q.presentations.includes(d.presentation)) return false;
+  if(q.eras?.length && d.era && !q.eras.includes(d.era)) return false;
+  if(q.conditions?.length && d.condition && !q.conditions.includes(d.condition)) return false;
+  if(q.languages?.length && (d.language||x.lang) && !q.languages.includes(d.language||x.lang)) return false;
+  if(q.variants?.length && (d.variant||x.variant) && !q.variants.includes(d.variant||x.variant)) return false;
+  if(q.presentations?.length && d.presentation && !q.presentations.includes(d.presentation)) return false;
   return true;
 }
 function queuePool(cid){
@@ -642,5 +642,20 @@ function tick(){
  save();
 }
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
-state.exploreFilters=state.exploreFilters||{};normalizeAuctions();save();render();tick();setInterval(tick,1000);setInterval(updatePreciseTimerDisplays,50);
+try{
+ state.exploreFilters=state.exploreFilters||{};
+ normalizeAuctions();
+ save();
+ render();
+ tick();
+}catch(e){
+ console.error('RapidUp initialization recovered:',e);
+ localStorage.removeItem(STORAGE_KEY);
+ state=initialState();
+ try{normalizeAuctions();}catch(_){}
+ try{save();}catch(_){}
+ try{render();}catch(err){console.error('RapidUp render failure:',err);}
+}
+setInterval(tick,1000);
+setInterval(updatePreciseTimerDisplays,50);
 </script></body></html>
