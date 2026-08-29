@@ -251,6 +251,44 @@ function loadState(){
  try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const s=JSON.parse(raw);if(s&&s.channelPos&&Array.isArray(s.offers)){const base=initialState();const merged={...base,...s};items.forEach(x=>{const saved=(s.itemState||{})[x.id];if(saved){Object.assign(x,saved);if(saved.internal)x.internal=saved.internal}});normalizeAuctions(merged);merged.proxyBids=merged.proxyBids||{};return merged;}}}catch(e){console.warn('RapidUp state reset',e)}
  const s=initialState();normalizeAuctions(s);return s;
 }
+function queueCriteria(c){
+  return c?.criteria||{};
+}
+function criteriaText(c){
+  const q=queueCriteria(c);
+  const parts=[];
+  if(q.auctionType) parts.push(q.auctionType);
+  if(q.startingMin!=null||q.startingMax!=null) parts.push(`Start ${money(q.startingMin??0)}–${money(q.startingMax??q.startingMin??0)}`);
+  if(q.yearMin!=null||q.yearMax!=null) parts.push(`Years ${q.yearMin??'Any'}–${q.yearMax??'Any'}`);
+  if(q.eras?.length) parts.push(q.eras.join('/'));
+  if(q.conditions?.length) parts.push(q.conditions.join('/'));
+  if(q.languages?.length) parts.push(q.languages.join('/'));
+  if(q.variants?.length) parts.push(q.variants.join('/'));
+  if(q.presentations?.length) parts.push(q.presentations.join('/'));
+  return parts.join(' · ');
+}
+function queueMatches(x,c){
+  if(!x||x.sold||x.method!=='auction') return false;
+  const q=queueCriteria(c), d=x.internal||{};
+  if(q.auctionType && String(d.auctionType||x.auctionType).toUpperCase()!==String(q.auctionType).toUpperCase()) return false;
+  const sp=Number(d.startingPrice??x.startingPrice??x.current??0);
+  if(q.startingMin!=null && sp<Number(q.startingMin)) return false;
+  if(q.startingMax!=null && sp>Number(q.startingMax)) return false;
+  const year=Number(d.year??inferYear(x));
+  if(q.yearMin!=null && year<Number(q.yearMin)) return false;
+  if(q.yearMax!=null && year>Number(q.yearMax)) return false;
+  if(q.eras?.length && !q.eras.includes(d.era)) return false;
+  if(q.conditions?.length && !q.conditions.includes(d.condition)) return false;
+  if(q.languages?.length && !q.languages.includes(d.language||x.lang)) return false;
+  if(q.variants?.length && !q.variants.includes(d.variant||x.variant)) return false;
+  if(q.presentations?.length && !q.presentations.includes(d.presentation)) return false;
+  return true;
+}
+function queuePool(cid){
+  const c=channel(cid);
+  if(!c) return [];
+  return items.filter(x=>queueMatches(x,c));
+}
 function normalizeAuctions(s=state){const now=Date.now();channels.forEach(c=>{
  const pool=queuePool(c.id);
  if(!pool.length){s.channelPos[c.id]=0;return;}
