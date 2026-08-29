@@ -68,6 +68,39 @@ html,body{font-family:var(--font-display)!important}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.brandWord{font-size:22px}.itemimg{height:225px}}
 @media(max-width:620px){.nav{gap:10px}.brandLogo{width:37px;height:37px}.brandWord{font-size:19px}.brandWord small{font-size:7px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.itemimg{height:180px}.itembody{padding:12px}.itembody h3{font-size:17px!important}.itemcard .price{font-size:23px;margin:9px 0}.itembody .tag{font-size:8px;padding:4px 6px}.itembody .primary,.itembody .secondary{padding:9px 8px;font-size:11px}.hero{padding:28px 0 20px}.hero h1{font-size:45px}}
 </style>
+
+<style>
+/* RU-SURGICAL auction immersion pass */
+html,body{background:#fff}
+body.auction-mode{overflow:hidden!important;height:100dvh;width:100vw}
+body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
+.auctionScreen{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;padding:0!important;margin:0!important;overflow:hidden!important;background:#111;z-index:50}
+.auctionScreen .auctionStage,.auctionScreen .auctionImage{width:100%;height:100%;min-height:0!important}
+.auctionScreen .auctionImage{border-radius:0!important;box-shadow:none!important;background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.auctionScreen .auctionImage>img{width:100%;height:100%;object-fit:contain;background:#111}
+.auctionScreen .auctionOverlayShade{position:absolute;inset:0;z-index:1;background:linear-gradient(to bottom,rgba(0,0,0,.18),rgba(0,0,0,0) 28%,rgba(0,0,0,.08) 62%,rgba(0,0,0,.72) 100%)}
+.ruReturn,.ruExtend,.ruAuctionControls,.ruChannelInfo{position:absolute;z-index:5;color:#fff}
+.ruReturn{top:14px;left:16px;border:0;background:rgba(0,0,0,.42);backdrop-filter:blur(8px);border-radius:10px;padding:7px 10px;font-size:11px;font-weight:700}
+.ruExtend{top:14px;right:16px;display:flex;align-items:baseline;gap:6px;background:rgba(0,0,0,.42);backdrop-filter:blur(8px);border-radius:10px;padding:7px 10px;font-size:10px}
+.ruExtend b{font-size:15px;font-variant-numeric:tabular-nums}
+.ruAuctionControls{left:16px;right:16px;bottom:54px}
+.ruProductName{font-size:12px;line-height:1.15;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 7px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.ruBidRow{display:flex;align-items:flex-start;gap:10px}
+.ruBidActions{width:min(330px,44vw);display:flex;flex-direction:column;gap:6px}
+.ruBidActions .swipeBid,.ruBidActions .overlayCustom{width:100%;min-height:38px;height:38px;font-size:11px;border-radius:10px}
+.ruBidActions .swipeHint{font-size:8px}
+.ruLive{display:flex;flex-direction:column;justify-content:flex-start;gap:1px;min-width:110px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.ruLive span{display:block;font-size:8px;font-weight:700;letter-spacing:.08em}
+.ruLive #auctionCurrent{display:block;font-size:24px;line-height:1;font-weight:850;font-variant-numeric:tabular-nums}
+.ruLive #auctionTimer{display:block;font-size:13px;line-height:1.1;font-weight:750;font-variant-numeric:tabular-nums}
+.ruChannelInfo{left:16px;bottom:14px;display:flex;align-items:center;gap:7px;background:transparent;border:0;padding:0;color:#fff;font-size:9px;text-align:left;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.ruChannelInfo .ruAuctionInfoIcon{position:static;width:18px;height:18px;flex:none;font-size:9px;border-color:rgba(255,255,255,.8)}
+.auctionScreen .modal{z-index:120}
+@media(max-width:620px){
+ .ruReturn,.ruExtend{top:9px;font-size:9px;padding:6px 8px}.ruReturn{left:9px}.ruExtend{right:9px}
+ .ruAuctionControls{left:9px;right:9px;bottom:48px}.ruProductName{font-size:9px;margin-bottom:5px}.ruBidRow{gap:6px}.ruBidActions{width:58vw;gap:4px}.ruBidActions .swipeBid,.ruBidActions .overlayCustom{height:32px;min-height:32px;font-size:9px;border-radius:8px}.ruLive{min-width:70px}.ruLive #auctionCurrent{font-size:18px}.ruLive #auctionTimer{font-size:10px}.ruChannelInfo{left:9px;bottom:9px;font-size:8px;max-width:75%}
+}
+</style>
 </head>
 <body><div id="app"></div>
 
@@ -257,7 +290,26 @@ function elasticPreview(x){
   const extension=effectiveUsed?0:mirrored*effectiveCoef;
   return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart:startsNewCycle?whole:cycleStart,newCycle:startsNewCycle};
 }
-function auctionPage(){const x=item(state.activeItem);if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;const mine=myBid(x.id),nextBid=minBid(x),ep=elasticPreview(x);const showElastic=x.auctionType==='ELASTIC'&&secondsLeft(x)<=30;const elasticInfo=showElastic?`<div class="elasticTransparency"><div class="elasticReadout"><b id="elasticNextExtension">${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b><span class="sub">next extension</span></div></div>`:'';return `<main class="auctionScreen"><section class="section auctionBack"><button class="ghost" onclick="route('auctions')">← Dashboard</button></section><div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div>${elasticInfo}<div class="auctionBottomOverlay"><div class="auctionIdentity"><h1>${esc(fullItemTitle(x))}</h1></div><div class="auctionLiveStats"><div><span class="overlayLabel">CURRENT BID</span><b id="auctionCurrent" class="overlayBid">${money(x.current)}</b><span id="auctionBids" class="overlayMeta">${x.bidCount||0} bids</span></div><div><b id="auctionTimer" class="timer ${x.auctionType==='ELASTIC'?'elastic':'sudden'}">${fmt(secondsLeft(x))}</b></div></div><div class="bidModes overlayBidModes"><div id="swipeBidControl" class="swipeBid" data-bid-id="${x.id}" onpointerdown="startSwipe(event,'${x.id}')" onpointermove="moveSwipe(event)" onpointerup="endSwipe(event,'${x.id}')" onpointercancel="cancelSwipe(event)"><div class="swipeProgress" id="swipeProgress"></div><div class="swipeTrack">SWIPE TO BID ${money(nextBid)} →</div><div class="swipeThumb" id="swipeThumb">→</div><span class="swipeHint">SLIDE</span></div><button class="overlayCustom" onclick="openModal('customBid','${x.id}')">CUSTOM BID</button></div></div><div class="ruAuctionInfo"><span class="ruAuctionInfoIcon">i</span>${esc(x.auctionType==='ELASTIC'?'Elastic auction · final 30-second zone uses the inverse mirrored-number model.':'Sudden Death auction · bids do not extend the timer.')}</div></div></div></main>`}
+function auctionPage(){
+  const x=item(state.activeItem);
+  if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;
+  const c=channel(x.channelId),nextBid=minBid(x),ep=elasticPreview(x),showElastic=x.auctionType==='ELASTIC'&&secondsLeft(x)<=30;
+  const elasticInfo=showElastic?`<div class="ruExtend"><span>EXTEND</span><b id="elasticNextExtension">${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b></div>`:'';
+  const criteria=[c?.category,c?.auctionType,x.method==='auction'?'Auction':'Buy Now'].filter(Boolean).join(' · ');
+  return `<main class="auctionScreen">
+    <div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div>
+      <button class="ruReturn" onclick="route('auctions')">← Return</button>${elasticInfo}
+      <div class="ruAuctionControls">
+        <div class="ruProductName">${esc(fullItemTitle(x))}</div>
+        <div class="ruBidRow">
+          <div class="ruBidActions"><div id="swipeBidControl" class="swipeBid" data-bid-id="${x.id}" onpointerdown="startSwipe(event,'${x.id}')" onpointermove="moveSwipe(event)" onpointerup="endSwipe(event,'${x.id}')" onpointercancel="cancelSwipe(event)"><div class="swipeProgress" id="swipeProgress"></div><div class="swipeTrack">SWIPE TO BID ${money(nextBid)} →</div><div class="swipeThumb" id="swipeThumb">→</div><span class="swipeHint">SLIDE</span></div><button class="overlayCustom" onclick="openModal('customBid','${x.id}')">CUSTOM BID</button></div>
+          <div class="ruLive"><div><span>CURRENT BID</span><b id="auctionCurrent">${money(x.current)}</b></div><div><b id="auctionTimer">${fmt(secondsLeft(x))}</b></div></div>
+        </div>
+      </div>
+      <button class="ruChannelInfo" onclick="openModal('channelInfo','${x.channelId}')"><span class="ruAuctionInfoIcon">i</span><span>${esc(criteria)}</span></button>
+    </div></div>
+  </main>`;
+}
 function quickBid(id){
   const x=item(id);if(!x||x.sold||x.status!=='Live')return false;
   return submitBid(id,minBid(x),{buyer:'You'});
@@ -457,7 +509,7 @@ function consignModal(){return `<div class="modal"><div class="modalHead"><div><
 function settingsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Account & Settings</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="list"><div class="listrow"><span>Operating mode</span><b>${state.userMode.toUpperCase()}</b></div><div class="listrow"><span>Concierge notifications</span><b>On</b></div><div class="listrow"><span>Offer expiration</span><b>24 hours</b></div><div class="listrow"><span>Public auction start</span><b>3:00</b></div><div class="listrow"><span>Buyer demand privacy</span><b>Protected</b></div></div></div>`}
 function orderModal(index){const w=state.won[index];if(!w)return `<div class="modal"><div class="modalHead"><h2>Order</h2><button class="close" onclick="closeModal()">×</button></div><div class="empty">Transaction not found.</div></div>`;const x=item(w.item);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">WON ITEM</div><h2>Order</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="success"><b>Transaction secured.</b><br>${esc(x.name)} · ${money(w.price)}</div><div class="step"><b>Next</b>Confirm shipping and payment details in the eventual production checkout.</div><button class="primary" onclick="closeModal();activity('Order flow acknowledged for '+x.name+'.')">Continue</button></div>`}
 function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
-function render(){let body;if(state.page==='explore')body=explore();else if(state.page==='auctions')body=auctions();else if(state.page==='buy')body=buy();else if(state.page==='auction')body=auctionPage();else if(state.page==='item')body=itemPage();else if(state.page==='buyer')body=buyerHub();else if(state.page==='seller')body=sellerHub();else body=explore();document.getElementById('app').innerHTML=header()+body+modals()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');}
+function render(){let body;if(state.page==='explore')body=explore();else if(state.page==='auctions')body=auctions();else if(state.page==='buy')body=buy();else if(state.page==='auction')body=auctionPage();else if(state.page==='item')body=itemPage();else if(state.page==='buyer')body=buyerHub();else if(state.page==='seller')body=sellerHub();else body=explore();document.body.classList.toggle('auction-mode',state.page==='auction');document.getElementById('app').innerHTML=(state.page==='auction'?'':header())+body+modals()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');}
 function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.status==='active'&&o.expires<=now){o.status='expired';changed=true;}});return changed}
 function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId),pool=items.filter(i=>i.channelId===c.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+180000;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
 function tick(){
