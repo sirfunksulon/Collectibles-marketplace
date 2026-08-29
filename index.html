@@ -31,6 +31,29 @@ main{max-width:1280px;margin:auto;padding:30px 22px 90px}.hero{padding:34px 0 28
 .ruFilterModal .modal{max-width:760px}.ruFilterGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ruFilterField label{display:block;font-size:11px;font-weight:850;margin-bottom:5px;color:var(--muted)}.ruFilterField.full{grid-column:1/-1}.ruFilterChoices{display:flex;flex-wrap:wrap;gap:7px}.ruFilterChoices label{border:1px solid var(--line);padding:8px 10px;border-radius:11px;background:#fff;cursor:pointer;color:var(--ink)}.ruFilterChoices input{margin-right:5px}.ruResultCount{font-weight:900}.ruAuctionType{display:none}.queueShell .queueItem{cursor:default}.queueShell .queueItem .ruQueueOffer{display:inline-flex;margin-top:6px}
 @media(max-width:900px){.ruChannelGrid{grid-template-columns:1fr}.auctionScreen .auctionBottomOverlay{grid-template-columns:1fr 220px 260px}.auctionScreen .ruAuctionInfo{max-width:55%}}
 @media(max-width:620px){.ruFilterGrid{grid-template-columns:1fr}.ruFilterField.full{grid-column:auto}.auctionScreen{height:calc(100vh - 70px)}.auctionScreen .auctionBottomOverlay{left:12px;right:12px;bottom:10px;grid-template-columns:1fr 120px;gap:8px}.auctionScreen .overlayBidModes{grid-column:1/-1;grid-row:2}.auctionScreen .auctionIdentity{grid-column:1/-1}.auctionScreen .auctionLiveStats{grid-column:2;grid-row:1}.auctionScreen .ruAuctionInfo{left:12px;bottom:10px;max-width:55%;font-size:10px}.auctionScreen .elasticTransparency{right:12px;top:58px}.auctionScreen .auctionBack{top:8px;left:8px}}
+
+/* RU-SURGICAL: stabilize dynamic timer geometry */
+[data-item-timer], [data-channel-timer] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 5.8ch;
+  width: 5.8ch;
+  white-space: nowrap;
+  flex: 0 0 5.8ch;
+}
+[data-item-timer] {
+  min-width: 5.8ch;
+  width: 5.8ch;
+}
+[data-channel-timer] {
+  min-width: 6.2ch;
+  width: 6.2ch;
+}
 </style>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
