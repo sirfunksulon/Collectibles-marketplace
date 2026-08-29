@@ -101,6 +101,39 @@ body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
  .ruAuctionControls{left:9px;right:9px;bottom:48px}.ruProductName{font-size:9px;margin-bottom:5px}.ruBidRow{gap:6px}.ruBidActions{width:58vw;gap:4px}.ruBidActions .swipeBid,.ruBidActions .overlayCustom{height:32px;min-height:32px;font-size:9px;border-radius:8px}.ruLive{min-width:70px}.ruLive #auctionCurrent{font-size:18px}.ruLive #auctionTimer{font-size:10px}.ruChannelInfo{left:9px;bottom:9px;font-size:8px;max-width:75%}
 }
 </style>
+
+<style>
+/* RU-SURGICAL auction visual refinement v19 */
+.auctionScreen .auctionImage>img{width:min(72vw,560px)!important;height:min(72vh,760px)!important;max-width:78vw!important;max-height:72vh!important;object-fit:contain!important;background:transparent!important;z-index:0;filter:drop-shadow(0 20px 34px rgba(0,0,0,.28));}
+.auctionScreen .auctionOverlayShade{background:linear-gradient(to bottom,rgba(0,0,0,.08) 0%,rgba(0,0,0,0) 34%,rgba(0,0,0,.10) 65%,rgba(0,0,0,.78) 100%)!important}
+.auctionScreen .ruChannelName{position:absolute;top:15px;left:50%;transform:translateX(-50%);z-index:6;color:#fff;font-size:13px;font-weight:800;letter-spacing:.04em;text-shadow:0 1px 5px rgba(0,0,0,.85);white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.auctionScreen .ruReturn{font-size:11px!important;padding:8px 11px!important}
+.auctionScreen .ruAuctionControls{left:2.2vw;right:2.2vw;bottom:72px!important}
+.auctionScreen .ruProductName{font-size:14px!important;line-height:1.15!important;font-weight:750!important;margin-bottom:9px!important;max-width:96vw}
+.auctionScreen .ruBidRow{gap:14px!important;align-items:flex-start!important}
+.auctionScreen .ruBidActions{width:min(400px,56vw)!important;gap:8px!important}
+.auctionScreen .ruBidActions .swipeBid,.auctionScreen .ruBidActions .overlayCustom{min-height:48px!important;height:48px!important;font-size:12px!important;border-radius:12px!important}
+.auctionScreen .ruBidActions .swipeHint{font-size:9px!important}
+.auctionScreen .ruLive{min-width:130px!important}
+.auctionScreen .ruLive span{font-size:9px!important}
+.auctionScreen .ruLive #auctionCurrent{font-size:31px!important}
+.auctionScreen .ruLive #auctionTimer{font-size:16px!important}
+.auctionScreen .ruChannelInfo{left:2.2vw!important;bottom:20px!important;font-size:11px!important}
+.auctionScreen .ruChannelInfo .ruAuctionInfoIcon{width:21px!important;height:21px!important;font-size:10px!important}
+@media(max-width:620px){
+ .auctionScreen .auctionImage>img{width:min(76vw,430px)!important;height:min(65vh,650px)!important;max-width:82vw!important;max-height:65vh!important}
+ .auctionScreen .ruChannelName{top:11px;font-size:12px;max-width:48vw}
+ .auctionScreen .ruAuctionControls{left:14px;right:14px;bottom:78px!important}
+ .auctionScreen .ruProductName{font-size:13px!important;margin-bottom:8px!important}
+ .auctionScreen .ruBidRow{gap:9px!important}
+ .auctionScreen .ruBidActions{width:min(58vw,360px)!important;gap:7px!important}
+ .auctionScreen .ruBidActions .swipeBid,.auctionScreen .ruBidActions .overlayCustom{min-height:46px!important;height:46px!important;font-size:11px!important}
+ .auctionScreen .ruLive{min-width:92px!important}
+ .auctionScreen .ruLive #auctionCurrent{font-size:27px!important}
+ .auctionScreen .ruLive #auctionTimer{font-size:15px!important}
+ .auctionScreen .ruChannelInfo{left:14px!important;bottom:22px!important;font-size:10px!important}
+}
+</style>
 </head>
 <body><div id="app"></div>
 
@@ -201,7 +234,14 @@ function money(n){return '$'+Number(n||0).toLocaleString(undefined,{maximumFract
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function item(id){return items.find(x=>x.id===id)} function channel(id){return channels.find(x=>x.id===id)}
 function tags(x){return `<span class="tag">${esc(x.grade)}</span><span class="tag">${esc(x.lang)}</span><span class="tag">${esc(x.variant)}</span>`}
-function img(x){return `<img src="${x.img}" alt="${esc(x.name)} collectible" loading="lazy">`}
+function fallbackImage(id){
+  const x=item(id)||{};
+  const title=String(x.name||'Collectible').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,28);
+  const set=String(x.set||'COLLECTIBLE').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,24);
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1000" viewBox="0 0 720 1000"><rect width="720" height="1000" rx="48" fill="#f3f3ee"/><rect x="34" y="34" width="652" height="932" rx="34" fill="#171816"/><rect x="58" y="58" width="604" height="884" rx="26" fill="#e8e9e2"/><circle cx="360" cy="455" r="175" fill="#fff" stroke="#111" stroke-width="8"/><path d="M205 500 Q360 290 515 500 Q360 635 205 500Z" fill="#d5d7d0" stroke="#111" stroke-width="8"/><text x="360" y="125" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" font-weight="800" fill="#111">RAPIDUP COLLECTIBLE</text><text x="360" y="865" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="800" fill="#111">${title}</text><text x="360" y="905" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" fill="#555">${set}</text></svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+}
+function img(x){return `<img src="${x.img||fallbackImage(x.id)}" onerror="this.onerror=null;this.src=fallbackImage('${x.id}')" alt="${esc(x.name)} collectible" loading="lazy">`}
 function remainingMs(x){return Math.max(0,(x.endsAt||0)-Date.now())}
 function secondsLeft(x){return remainingMs(x)/1000}
 function fmt(sec){
@@ -298,7 +338,8 @@ function auctionPage(){
   const criteria=[c?.category,c?.auctionType,x.method==='auction'?'Auction':'Buy Now'].filter(Boolean).join(' · ');
   return `<main class="auctionScreen">
     <div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div>
-      <button class="ruReturn" onclick="route('auctions')">← Return</button>${elasticInfo}
+      <div class="ruChannelName">${esc(c?.name||'Auction')}</div>
+      <button class="ruReturn" onclick="route('auctions')">← Return to Dashboard</button>${elasticInfo}
       <div class="ruAuctionControls">
         <div class="ruProductName">${esc(fullItemTitle(x))}</div>
         <div class="ruBidRow">
