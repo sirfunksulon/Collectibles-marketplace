@@ -134,39 +134,6 @@ body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
  .auctionScreen .ruChannelInfo{left:14px!important;bottom:22px!important;font-size:10px!important}
 }
 </style>
-
-<style>
-/* RU-SURGICAL v20 — auction spatial refinement */
-.auctionScreen .auctionStage{display:flex;align-items:center;justify-content:center}
-.auctionScreen .auctionImage>img{position:relative;top:-2.5vh;width:min(76vw,620px)!important;height:min(76vh,800px)!important;max-width:82vw!important;max-height:76vh!important;object-fit:contain!important}
-.auctionScreen .ruBidRow{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(180px,300px)!important;grid-template-rows:minmax(58px,auto) minmax(58px,auto)!important;gap:10px 18px!important;align-items:stretch!important}
-.auctionScreen .ruBidActions{grid-column:1;grid-row:1 / span 2;width:min(440px,100%)!important;gap:10px!important;align-self:stretch!important}
-.auctionScreen .ruBidActions .swipeBid,.auctionScreen .ruBidActions .overlayCustom{min-height:60px!important;height:60px!important;font-size:14px!important;border-radius:14px!important}
-.auctionScreen .ruBidActions .swipeHint{font-size:10px!important}
-.auctionScreen .ruLive{display:contents!important;min-width:0!important;text-shadow:0 1px 4px rgba(0,0,0,.8)}
-.auctionScreen .ruLive>div:first-child{grid-column:2;grid-row:1;display:flex;flex-direction:column;justify-content:center;min-width:0}
-.auctionScreen .ruLive>div:last-child{grid-column:2;grid-row:2;display:flex;flex-direction:column;justify-content:center;min-width:0}
-.auctionScreen .ruLive span{font-size:10px!important;letter-spacing:.1em!important}
-.auctionScreen .ruLive #auctionCurrent{font-size:38px!important;line-height:1!important}
-.auctionScreen .ruLive #auctionTimer{font-size:27px!important;line-height:1!important}
-.auctionScreen .ruProductName{font-size:16px!important;line-height:1.15!important;margin-bottom:10px!important}
-@media(max-width:900px){
- .auctionScreen .ruBidRow{grid-template-columns:minmax(0,1fr) minmax(145px,220px)!important;gap:8px 12px!important}
- .auctionScreen .ruBidActions .swipeBid,.auctionScreen .ruBidActions .overlayCustom{min-height:56px!important;height:56px!important}
- .auctionScreen .ruLive #auctionCurrent{font-size:31px!important}.auctionScreen .ruLive #auctionTimer{font-size:22px!important}
-}
-@media(max-width:620px){
- .auctionScreen .auctionImage>img{top:-2vh;width:min(82vw,440px)!important;height:min(66vh,650px)!important;max-width:88vw!important;max-height:66vh!important}
- .auctionScreen .ruAuctionControls{left:12px!important;right:12px!important;bottom:62px!important}
- .auctionScreen .ruProductName{font-size:14px!important;margin-bottom:8px!important}
- .auctionScreen .ruBidRow{grid-template-columns:minmax(0,1fr) minmax(105px,34vw)!important;gap:7px!important}
- .auctionScreen .ruBidActions{width:100%!important;gap:7px!important}
- .auctionScreen .ruBidActions .swipeBid,.auctionScreen .ruBidActions .overlayCustom{min-height:54px!important;height:54px!important;font-size:11px!important}
- .auctionScreen .ruLive span{font-size:8px!important}
- .auctionScreen .ruLive #auctionCurrent{font-size:25px!important}
- .auctionScreen .ruLive #auctionTimer{font-size:18px!important}
-}
-</style>
 </head>
 <body><div id="app"></div>
 
