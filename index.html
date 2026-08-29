@@ -96,9 +96,9 @@ const IMG={
   vintage:'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?auto=format&fit=crop&w=1200&q=86'
 };
 const channels=[
- {id:'c1',name:'Modern Chase',category:'Modern Pokémon',auctionType:'ELASTIC',description:'High-demand modern chase cards, alternate arts and premium modern singles.',info:'Three-minute perpetual public auctions. Elastic bidding can extend the clock during the final 30-second zone using RapidUp’s inverse mirrored-number model. Each qualifying re-up halves the coefficient; consumed integers remain consumed for the life of the auction.',color:'elastic'},
+ {id:'c1',name:'Modern Chase',category:'Modern Pokémon',auctionType:'ELASTIC',description:'High-demand modern chase cards, alternate arts and premium modern singles.',info:'Three-minute perpetual public auctions. Elastic bidding can extend the clock during the final 30-second zone using RapidUp’s inverse mirrored-number model. Each qualifying re-up halves the coefficient; consumed integers remain consumed within the active decay cycle; each subsequent lower integer begins a new cycle.',color:'elastic'},
  {id:'c2',name:'Vintage English',category:'Vintage Pokémon',auctionType:'SUDDEN DEATH',description:'Vintage English cards, WOTC-era pieces and established collector favorites.',info:'Three-minute perpetual public auctions. Bidding is completely independent of the timer. At 0:00 the current high bid wins and the next queue position becomes active.',color:'sudden'},
- {id:'c3',name:'Japanese & Regional',category:'Japanese / Regional',auctionType:'ELASTIC',description:'Japanese-language cards, regional releases and language-specific variants.',info:'Three-minute perpetual public auctions using the inverse elastic model. Qualifying bids in the 1–30 second zone can add decimal time; coefficient decay and one-use integer states prevent runaway extension.',color:'elastic'},
+ {id:'c3',name:'Japanese & Regional',category:'Japanese / Regional',auctionType:'ELASTIC',description:'Japanese-language cards, regional releases and language-specific variants.',info:'Three-minute perpetual public auctions using the inverse elastic model. Qualifying bids in the 1–30 second zone can add decimal time; coefficient decay and cycle-local one-use integer states prevent runaway extension.',color:'elastic'},
  {id:'c4',name:'Graded Chase',category:'Graded Collectibles',auctionType:'SUDDEN DEATH',description:'Graded chase cards and premium slabs across eras and sets.',info:'Three-minute perpetual sudden-death auctions. The clock never responds to bids. The next slab enters at 3:00 as soon as the current one closes.',color:'sudden'}
 ];
 const seedNames=['Umbreon VMAX','Rayquaza VMAX','Espeon VMAX','Pikachu VMAX','Mew ex','Tyranitar V','Gengar VMAX','Mewtwo VSTAR','Blastoise','Charizard ex','Gardevoir','Lugia V','Entei','Alakazam V','Zekrom','Reshiram & Charizard GX','Sylveon VMAX','Magikarp Wailord GX','Giratina V','Dragonite V','Mewtwo GX','Jolteon VMAX','Aerodactyl V','Machamp V','Darkrai VSTAR','Arceus VSTAR','Celebi VMAX','Rayquaza V','Pikachu ex','Charizard VMAX'];
@@ -109,7 +109,7 @@ let items=[];
 function makeAuctionItem(id,k,c){
  const nm=seedNames[(c*17+k)%seedNames.length];
  const base=35+((c*50+k)*7)%430;
- return {id,name:k<seedNames.length?nm:`${nm} · ${k+1}`,set:`${sets[(c*3+k)%sets.length]} #${20+(k*7)%190}`,method:'auction',type:'Auction',channel:c.name,channelId:c.id,auctionType:c.auctionType,market:base+35,grade:grades[(k+c)%grades.length],lang:(k+c)%4===0?'Japanese':'English',variant:variants[(k+c)%variants.length],img:[IMG.lugia,IMG.cards,IMG.vintage][(k+c)%3],sold:false,current:1,bidCount:(k+c)%4,seconds:0,endsAt:0,auction:{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0}};
+ return {id,name:k<seedNames.length?nm:`${nm} · ${k+1}`,set:`${sets[(c*3+k)%sets.length]} #${20+(k*7)%190}`,method:'auction',type:'Auction',channel:c.name,channelId:c.id,auctionType:c.auctionType,market:base+35,grade:grades[(k+c)%grades.length],lang:(k+c)%4===0?'Japanese':'English',variant:variants[(k+c)%variants.length],img:[IMG.lugia,IMG.cards,IMG.vintage][(k+c)%3],sold:false,current:1,bidCount:(k+c)%4,seconds:0,endsAt:0,auction:{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2}};
 }
 channels.forEach((c,ci)=>{for(let k=0;k<50;k++)items.push(makeAuctionItem('a'+(ci*50+k+1),k,c));});
 items.push(
@@ -219,14 +219,17 @@ function elasticPreview(x){
   const a=x.auction||{};
   const coef=Number(a.coef??.2);
   const usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
-  // Elastic operates on the finite 30 → 0 sequence. Zero is terminal; it is
-  // not a 31st state. For integer N, the mirrored value is 30 − N.
-  if(whole<1||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole)};
-  const subsequent=Math.max(0,whole-1);
+  const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+  // Each decay cycle is local to the lower integer at which it began.
+  // When the countdown passes below that starting integer, the next integer
+  // begins a fresh cycle with a fresh coefficient and fresh consumed set.
+  if(whole<1||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
+  const startsNewCycle=cycleStart==null||whole<cycleStart;
+  const effectiveCoef=startsNewCycle?.2:coef;
+  const effectiveUsed=startsNewCycle?false:usedIntegers.includes(whole);
   const mirrored=30-whole;
-  const used=usedIntegers.includes(whole);
-  const extension=used?0:mirrored*coef;
-  return {active:true,remaining,whole,subsequent,mirrored,coef,nextCoef:used?coef:coef/2,extension,used};
+  const extension=effectiveUsed?0:mirrored*effectiveCoef;
+  return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart:startsNewCycle?whole:cycleStart,newCycle:startsNewCycle};
 }
 function auctionPage(){
   const x=item(state.activeItem);
@@ -235,7 +238,7 @@ function auctionPage(){
   const elasticInfo=x.auctionType==='ELASTIC'?`<div class="elasticTransparency">
     <div class="elasticReadout"><span class="overlayLabel">LAST EXTENSION</span><b>${last==null?'—':'+'+Number(last).toFixed(2)+'s'}</b><span class="sub">actual time added</span></div>
     <div class="elasticReadout"><span class="overlayLabel">NEXT EXTENSION</span><b>${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b><span class="sub">${ep.active?(ep.used?'integer already used':'predicted if qualifying'):'outside extension zone'}</span></div>
-    <div class="elasticReadout"><span class="overlayLabel">ELASTIC STATE</span><b>${ep.active?`${ep.whole}s → ${ep.subsequent}s`:'inactive'} · ${ep.active?ep.coef.toFixed(2):'—'}</b><span class="sub">${ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer'}</span></div>
+    <div class="elasticReadout"><span class="overlayLabel">ELASTIC STATE</span><b>${ep.active?`${ep.whole}s → ${ep.subsequent}s`:'inactive'} · ${ep.active?ep.coef.toFixed(2):'—'}</b><span class="sub">${ep.active?(ep.newCycle?`new decay cycle at ${ep.whole}s · base coefficient ${ep.coef.toFixed(2)}`:(ep.used?`integer consumed in cycle from ${ep.cycleStart}s · coefficient remains ${ep.coef.toFixed(2)}`:`cycle from ${ep.cycleStart}s · mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`)):'public timer'}</span></div>
   </div>`:'';
   return `<main class="auctionScreen">
     <section class="section auctionBack"><button class="ghost" onclick="route('auctions')">← Auction directory</button></section>
@@ -348,58 +351,62 @@ function resolveProxyForIncomingBid(x){
 }
 
 function applyElasticReup(x,before){
-  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[]};
+  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};
   a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
-  const whole=Math.max(1,Math.min(30,Math.floor(before)));
-  const subsequent=Math.max(0,whole-1);
 
-  // Every integer is a finite opportunity for this auction. Once an integer
-  // has produced its applicable extension, revisiting that integer later in
-  // the same auction does not make it fresh again. This is the key guard
-  // against perpetual renewal during rapid bidding.
+  const whole=Math.max(1,Math.min(30,Math.floor(before)));
+
+  // A decay cycle belongs to the lower integer at which it was started.
+  // The cycle's consumed-integer set is local: a later cycle does not inherit
+  // integers consumed by an earlier cycle. When the countdown passes below
+  // the prior cycle's starting integer, that subsequent integer starts fresh
+  // at the base coefficient.
+  const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+  if(cycleStart==null||whole<cycleStart){
+    a.cycleStartInteger=whole;
+    a.usedIntegers=[];
+    a.coef=.2;
+    a.nextCoefficient=.2;
+    a.decayActive=false;
+  }
+
+  const coef=Number(a.coef??.2);
+
+  // Only one bid at each integer qualifies within the active decay cycle.
+  // Re-visiting a consumed integer has no extension and does not cause another
+  // coefficient decay.
   if(a.usedIntegers.includes(whole)){
-    // A consumed integer is completely inert on revisit. It cannot add time,
-    // and it cannot advance coefficient decay. Only the first qualifying bid
-    // that consumes a fresh integer may trigger a reset/extension.
-    const coef=Number(a.coef??.2);
     a.lastTrigger=before;
     a.lastInteger=whole;
+    a.reups=(a.reups||0)+1;
+    a.decayActive=true;
     a.lastExtension=0;
     a.lastExtensionAt=Date.now();
     a.lastMirrored=30-whole;
     a.lastAppliedCoefficient=coef;
+    a.nextCoefficient=coef;
     x.auction=a;
-    state.activity=`Elastic bid at ${whole}s: integer already consumed · +0.00s · coefficient remains ${coef.toFixed(4)}`;
+    state.activity=`Elastic re-up at ${whole}s: integer already consumed in this decay cycle · +0.00s · coefficient remains ${coef.toFixed(4)}`;
     return 0;
   }
 
-  // The mirrored value is defined against the 30-second range, not a
-  // hypothetical 31-second state: N → (30 − N). Thus 5 → 25 and, at the
-  // initial 0.20 coefficient, 5 seconds produces a 5.00 second extension.
   const mirrored=30-whole;
-  const coef=Number(a.coef??.2);
   const extension=mirrored*coef;
-
   x.endsAt+=extension*1000;
   a.lastReupAt=Date.now();
   a.lastTrigger=before;
   a.lastInteger=whole;
   a.reups=(a.reups||0)+1;
   a.decayActive=true;
-  a.cycleStartInteger=whole;
   a.usedIntegers.push(whole);
   a.lastExtension=extension;
   a.lastExtensionAt=Date.now();
   a.lastMirrored=mirrored;
   a.lastAppliedCoefficient=coef;
-  // The fresh integer is now consumed. Its extension creates new integer
-  // opportunities above it, but those opportunities use the decayed
-  // coefficient on their own first qualifying bids. Re-visiting a consumed
-  // integer never decays again.
   a.coef=coef/2;
   a.nextCoefficient=a.coef;
   x.auction=a;
-  state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next integer ${subsequent}s`;
+  state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
   return extension;
 }
 
