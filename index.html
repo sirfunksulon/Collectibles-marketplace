@@ -168,6 +168,10 @@ function fmt(sec){
 }
 function fmtPrecise(sec){return `${Math.max(0,Number(sec)||0).toFixed(2)}s`}
 function updatePreciseTimerDisplays(){
+  // All public countdown surfaces share the same authoritative endsAt timestamp
+  // and refresh at sub-second cadence. The auction page is not special here.
+  document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x)el.textContent=fmt(secondsLeft(x));});
+  document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x)el.textContent=fmt(secondsLeft(x));});
   const x=state.page==='auction'?item(state.activeItem):null;
   if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));}
 }
@@ -223,7 +227,7 @@ function elasticPreview(x){
   // Each decay cycle is local to the lower integer at which it began.
   // When the countdown passes below that starting integer, the next integer
   // begins a fresh cycle with a fresh coefficient and fresh consumed set.
-  if(whole<1||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
+  if(whole<0||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
   const startsNewCycle=cycleStart==null||whole<cycleStart;
   const effectiveCoef=startsNewCycle?.2:coef;
   const effectiveUsed=startsNewCycle?false:usedIntegers.includes(whole);
@@ -354,7 +358,7 @@ function applyElasticReup(x,before){
   const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};
   a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
 
-  const whole=Math.max(1,Math.min(30,Math.floor(before)));
+  const whole=Math.max(0,Math.min(30,Math.floor(before)));
 
   // A decay cycle belongs to the lower integer at which it was started.
   // The cycle's consumed-integer set is local: a later cycle does not inherit
@@ -476,10 +480,8 @@ function tick(){
  }
  if(changed){save();render();return;}
  // All visible countdowns derive from the same authoritative endsAt value.
- document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x)el.textContent=fmt(secondsLeft(x));});
- document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x)el.textContent=fmt(secondsLeft(x));});
  const x=state.page==='auction'?item(state.activeItem):null;
- if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const cur=document.getElementById('auctionCurrent');if(cur)cur.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const fb=document.getElementById('fastBidButton');if(fb)fb.textContent=`BID ${money(minBid(x))}`;
+ if(x){const cur=document.getElementById('auctionCurrent');if(cur)cur.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const fb=document.getElementById('fastBidButton');if(fb)fb.textContent=`BID ${money(minBid(x))}`;
   if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.used?'integer already consumed':'predicted from current integer'):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
  save();
 }
