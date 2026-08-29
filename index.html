@@ -282,7 +282,7 @@ function itemCard(x){
   if(auction&&x.status!=='Live')return '';
   const title=fullItemTitle(x);
   const method=auction?'AUCTION':'BUY NOW';
-  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?fmt(secondsLeft(x))+' remaining':'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="buyNow('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
+  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?`<span data-item-timer="${x.id}">${fmt(secondsLeft(x))}</span> remaining`:'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="buyNow('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
 }
 function fullItemTitle(x){return x.fullName||`${x.year||inferYear(x)} Pokemon ${x.set||''} ${x.variant||''} ${x.name||''}${isGraded(x)?` ${x.grader||graderFromGrade(x.grade)||''} ${x.grade||''}`:''}`.replace(/\s+/g,' ').trim();}
 function inferYear(x){const m=String(x.name||'').match(/\b(19|20)\d{2}\b/);return m?m[0]:'2025';}
@@ -292,7 +292,8 @@ function exploreFilterModal(){const f=state.exploreFilters||{};const cats=[...ne
 function applyExploreFilters(){state.exploreFilters={text:document.getElementById('rfText')?.value.trim()||'',category:document.getElementById('rfCategory')?.value||'',year:document.getElementById('rfYear')?.value||'',condition:document.getElementById('rfCondition')?.value||'',grader:document.getElementById('rfGrader')?.value.trim()||'',gradeMin:document.getElementById('rfMin')?.value||'',gradeMax:document.getElementById('rfMax')?.value||'',presentation:document.getElementById('rfPresentation')?.value||'',language:document.getElementById('rfLanguage')?.value||'',variant:document.getElementById('rfVariant')?.value||'',method:document.getElementById('rfMethod')?.value||'',auctionType:document.getElementById('rfAuctionType')?.value||''};closeModal();}
 function explore(){
   const f=state.exploreFilters||{};
-  let list=items.filter(x=>!x.sold && (x.method==='buy' || (x.method==='auction' && x.status==='Live')));
+  const activeAuctionIds=new Set(channels.map(c=>activeForChannel(c.id)).filter(Boolean).map(x=>x.id));
+  let list=items.filter(x=>!x.sold && (x.method==='buy' || (x.method==='auction' && x.status==='Live' && activeAuctionIds.has(x.id))));
   if(f.text)list=list.filter(x=>fullItemTitle(x).toLowerCase().includes(f.text.toLowerCase()));
   if(f.category)list=list.filter(x=>x.category===f.category||x.channel===f.category||x.channelId===f.category);
   if(f.year)list=list.filter(x=>String(x.year||inferYear(x))===String(f.year));
@@ -611,5 +612,6 @@ document.addEventListener('click',function(e){
  if(actionEl){e.preventDefault();const a=actionEl.getAttribute('data-ru-action');if(a==='notifications')openModal('notifications');else if(a==='profile')openProfile();}
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
-state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
+function preciseTimerLoop(){updatePreciseTimerDisplays();requestAnimationFrame(preciseTimerLoop)}
+state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();preciseTimerLoop();setInterval(tick,250);
 </script></body></html>
