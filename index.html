@@ -358,21 +358,18 @@ function applyElasticReup(x,before){
   // the same auction does not make it fresh again. This is the key guard
   // against perpetual renewal during rapid bidding.
   if(a.usedIntegers.includes(whole)){
-    // A consumed integer cannot produce another extension on revisit, but a
-    // qualifying re-up still advances the authoritative coefficient decay.
+    // A consumed integer is completely inert on revisit. It cannot add time,
+    // and it cannot advance coefficient decay. Only the first qualifying bid
+    // that consumes a fresh integer may trigger a reset/extension.
     const coef=Number(a.coef??.2);
     a.lastTrigger=before;
     a.lastInteger=whole;
-    a.reups=(a.reups||0)+1;
-    a.decayActive=true;
     a.lastExtension=0;
     a.lastExtensionAt=Date.now();
     a.lastMirrored=30-whole;
     a.lastAppliedCoefficient=coef;
-    a.coef=coef/2;
-    a.nextCoefficient=a.coef;
     x.auction=a;
-    state.activity=`Elastic re-up at ${whole}s: integer already consumed · +0.00s · coefficient ${coef.toFixed(4)} → ${a.coef.toFixed(4)}`;
+    state.activity=`Elastic bid at ${whole}s: integer already consumed · +0.00s · coefficient remains ${coef.toFixed(4)}`;
     return 0;
   }
 
@@ -395,8 +392,10 @@ function applyElasticReup(x,before){
   a.lastExtensionAt=Date.now();
   a.lastMirrored=mirrored;
   a.lastAppliedCoefficient=coef;
-  // Decay persists across integer transitions and revisits. It is never
-  // restored simply because the clock crosses or returns to an integer.
+  // The fresh integer is now consumed. Its extension creates new integer
+  // opportunities above it, but those opportunities use the decayed
+  // coefficient on their own first qualifying bids. Re-visiting a consumed
+  // integer never decays again.
   a.coef=coef/2;
   a.nextCoefficient=a.coef;
   x.auction=a;
