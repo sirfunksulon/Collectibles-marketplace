@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Card Consignment Intake</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    select, button { width: 100%; padding: 10px; margin-top: 5px; }
+    button { background: #22c55e; color: white; border: none; font-size: 16px; margin-top: 20px; cursor: pointer; }
+    #result { margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; display: none; }
+  </style>
+</head>
+<body>
+
+  <h2>Consignment Inventory Generator</h2>
+
+  <label for="setSelect">1. Select Card Set:</label>
+  <select id="setSelect">
+    <option value="">-- Loading Sets... --</option>
+  </select>
+
+  <label for="cardSelect">2. Select Card:</label>
+  <select id="cardSelect" disabled>
+    <option value="">-- Choose Set First --</option>
+  </select>
+
+  <label for="variantSelect">3. Select Variant:</label>
+  <select id="variantSelect" disabled>
+    <option value="">-- Choose Card First --</option>
+  </select>
+
+  <label for="conditionSelect">4. Condition:</label>
+  <select id="conditionSelect">
+    <option value="Near Mint">Near Mint</option>
+    <option value="Lightly Played">Lightly Played</option>
+    <option value="Graded Slab">Graded Slab</option>
+  </select>
+
+  <button id="submitBtn">Generate Consignment Item</button>
+
+  <div id="result"></div>
+
+  <script>
+    let currentCards = [];
+
+    // Load set options on page load
+    async function init() {
+      const res = await fetch('/api/consignment?action=getSets');
+      const sets = await res.json();
+      
+      const setSelect = document.getElementById('setSelect');
+      setSelect.innerHTML = '<option value="">-- Select Set --</option>';
+      sets.forEach(s => {
+        setSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+      });
+    }
+
+    // Filter cards when a set is selected
+    document.getElementById('setSelect').addEventListener('change', async (e) => {
+      const setId = e.target.value;
+      if (!setId) return;
+
+      const res = await fetch(`/api/consignment?action=getCardsBySet&setId=${setId}`);
+      currentCards = await res.json();
+
+      const cardSelect = document.getElementById('cardSelect');
+      cardSelect.innerHTML = '<option value="">-- Select Card --</option>';
+      currentCards.forEach((c, index) => {
+        cardSelect.innerHTML += `<option value="${index}">${c.name} (${c.number})</option>`;
+      });
+      cardSelect.disabled = false;
+    });
+
+    // Populate variants when a card is selected
+    document.getElementById('cardSelect').addEventListener('change', (e) => {
+      const card = currentCards[e.target.value];
+      if (!card) return;
+
+      const variantSelect = document.getElementById('variantSelect');
+      variantSelect.innerHTML = '<option value="">-- Select Variant --</option>';
+      card.variants.forEach(v => {
+        variantSelect.innerHTML += `<option value="${v}">${v}</option>`;
+      });
+      variantSelect.disabled = false;
+    });
+
+    // Submit consignment order
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const setSelect = document.getElementById('setSelect');
+      const cardSelect = document.getElementById('cardSelect');
+      const variantSelect = document.getElementById('variantSelect');
+      
+      const selectedCard = currentCards[cardSelect.value];
+      const selectedSetName = setSelect.options[setSelect.selectedIndex].text;
+
+      const payload = {
+        cardName: selectedCard.name,
+        cardNumber: selectedCard.number,
+        setName: selectedSetName,
+        variant: variantSelect.value,
+        condition: document.getElementById('conditionSelect').value,
+        era: 'Classic'
+      };
+
+      const res = await fetch('/api/consignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      
+      const resultDiv = document.getElementById('result');
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = `<strong>Item Staged!</strong><br>
+        Title: ${data.title}<br>
+        Routing Queue: <code>${data.routingKey}</code>`;
+    });
+
+    init();
+  </script>
+</body>
+</html>
