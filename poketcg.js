@@ -1,9 +1,21 @@
 // poketcg.js
 
-const POKEMON_API_URL = 'https://api.pokemontcg.io/v2/cards';
+const POKEMON_API_URL =
+  'https://api.pokemontcg.io/v2/cards';
 
-const pokemonCardSearchCache = new Map();
-const pokemonCardMemory = new Map();
+const pokemonCardSearchCache =
+  new Map();
+
+const pokemonCardMemory =
+  new Map();
+
+/*
+ * Prevent multiple simultaneous broad-index downloads.
+ */
+let pokemonCardIndexPromise = null;
+
+let pokemonCardIndexLoaded = false;
+
 
 /*
  * ------------------------------------------------------------
@@ -24,16 +36,21 @@ function uniqueCards(cards) {
     ...new Map(
       (cards || [])
         .filter(Boolean)
-        .map(card => [card.id, card])
+        .map(card => [
+          card.id,
+          card
+        ])
     ).values()
   ];
 }
 
 
 function cardMatchesText(card, value) {
-  const q = String(value || '')
-    .trim()
-    .toLowerCase();
+
+  const q =
+    String(value || '')
+      .trim()
+      .toLowerCase();
 
   if (!q) {
     return true;
@@ -60,14 +77,26 @@ function cardMatchesText(card, value) {
  * API REQUEST
  * ------------------------------------------------------------
  *
- * Supports normal single-page requests.
+ * IMPORTANT:
  *
- * pageSize is capped at 250 by the Pokémon TCG API.
+ * We only send valid Pokémon TCG API queries here.
+ *
+ * Do NOT use:
+ *
+ * name:*p*
+ *
+ * because the API does not reliably support a leading
+ * wildcard.
  * ------------------------------------------------------------
  */
 
-async function pokemonTcgRequest(query, page = 1) {
-  const normalizedQuery = String(query || '').trim();
+async function pokemonTcgRequest(
+  query,
+  page = 1
+) {
+
+  const normalizedQuery =
+    String(query || '').trim();
 
   if (!normalizedQuery) {
     return [];
@@ -76,7 +105,9 @@ async function pokemonTcgRequest(query, page = 1) {
   const key =
     `${normalizedQuery.toLowerCase()}|page:${page}`;
 
-  if (pokemonCardSearchCache.has(key)) {
+  if (
+    pokemonCardSearchCache.has(key)
+  ) {
     return pokemonCardSearchCache.get(key);
   }
 
@@ -86,28 +117,41 @@ async function pokemonTcgRequest(query, page = 1) {
     `&page=${page}` +
     `&pageSize=250`;
 
-  const response = await fetch(url);
+  const response =
+    await fetch(url);
 
   if (!response.ok) {
+
     throw new Error(
       `Pokémon TCG API returned ${response.status}`
     );
   }
 
-  const result = await response.json();
+  const result =
+    await response.json();
 
-  const cards = Array.isArray(result.data)
-    ? result.data
-    : [];
+  const cards =
+    Array.isArray(result.data)
+      ? result.data
+      : [];
 
-  pokemonCardSearchCache.set(key, cards);
+  pokemonCardSearchCache.set(
+    key,
+    cards
+  );
 
   /*
-   * Keep every successfully retrieved card in local memory.
+   * Keep every successfully retrieved card
+   * in local memory.
    */
   cards.forEach(card => {
+
     if (card?.id) {
-      pokemonCardMemory.set(card.id, card);
+
+      pokemonCardMemory.set(
+        card.id,
+        card
+      );
     }
   });
 
@@ -119,23 +163,15 @@ async function pokemonTcgRequest(query, page = 1) {
  * ------------------------------------------------------------
  * PAGINATED API REQUEST
  * ------------------------------------------------------------
- *
- * Used for broad searches such as:
- *
- * P
- * PI
- * E
- * A
- *
- * A single API request only returns a maximum of 250 cards.
- *
- * This continues requesting pages until there are no more
- * matching cards.
- * ------------------------------------------------------------
  */
 
-async function pokemonTcgRequestAll(query, maxPages = 20) {
-  const normalizedQuery = String(query || '').trim();
+async function pokemonTcgRequestAll(
+  query,
+  maxPages = 100
+) {
+
+  const normalizedQuery =
+    String(query || '').trim();
 
   if (!normalizedQuery) {
     return [];
@@ -143,28 +179,129 @@ async function pokemonTcgRequestAll(query, maxPages = 20) {
 
   const allCards = [];
 
-  for (let page = 1; page <= maxPages; page++) {
+  for (
+    let page = 1;
+    page <= maxPages;
+    page++
+  ) {
 
-    const cards = await pokemonTcgRequest(
-      normalizedQuery,
-      page
-    );
+    const cards =
+      await pokemonTcgRequest(
+        normalizedQuery,
+        page
+      );
 
     if (!cards.length) {
       break;
     }
 
-    allCards.push(...cards);
+    allCards.push(
+      ...cards
+    );
 
     /*
-     * If fewer than 250 were returned, this was the final page.
+     * A short page means there are
+     * no more results.
      */
     if (cards.length < 250) {
       break;
     }
   }
 
-  return uniqueCards(allCards);
+  return uniqueCards(
+    allCards
+  );
+}
+
+
+/*
+ * ------------------------------------------------------------
+ * LOAD POKÉMON INDEX
+ * ------------------------------------------------------------
+ *
+ * This is the key change.
+ *
+ * We cannot reliably ask the API:
+ *
+ *     name:*p*
+ *
+ * Instead we obtain the Pokémon card records through
+ * a valid broad query and perform substring matching
+ * locally.
+ *
+ * Once loaded, subsequent searches are instant.
+ * ------------------------------------------------------------
+ */
+
+async function ensurePokemonCardIndex() {
+
+  /*
+   * Already loaded.
+   */
+  if (pokemonCardIndexLoaded) {
+
+    return [
+      ...pokemonCardMemory.values()
+    ];
+  }
+
+
+  /*
+   * Another request is already loading it.
+   *
+   * Reuse that request rather than starting another
+   * complete database download when the user types
+   * quickly.
+   */
+  if (pokemonCardIndexPromise) {
+
+    return pokemonCardIndexPromise;
+  }
+
+
+  pokemonCardIndexPromise =
+    (async () => {
+
+      /*
+       * Broad but VALID API query.
+       *
+       * Pokémon TCG API accepts supertype queries.
+       */
+      const cards =
+        await pokemonTcgRequestAll(
+          'supertype:Pokémon',
+          100
+        );
+
+      cards.forEach(card => {
+
+        if (card?.id) {
+
+          pokemonCardMemory.set(
+            card.id,
+            card
+          );
+        }
+      });
+
+      pokemonCardIndexLoaded =
+        true;
+
+      return [
+        ...pokemonCardMemory.values()
+      ];
+
+    })();
+
+  try {
+
+    return await pokemonCardIndexPromise;
+
+  } finally {
+
+    pokemonCardIndexPromise =
+      null;
+  }
 }
 
 
@@ -177,42 +314,77 @@ async function pokemonTcgRequestAll(query, maxPages = 20) {
  */
 
 function getPokemonCardVariants(card) {
-  const variants = new Set();
+
+  const variants =
+    new Set();
 
   const prices =
     card?.tcgplayer?.prices || {};
 
-  Object.keys(prices).forEach(key => {
+  Object.keys(prices)
+    .forEach(key => {
 
-    const k =
-      key.toLowerCase();
+      const k =
+        key.toLowerCase();
 
-    if (k.includes('reverseholo')) {
-      variants.add('Reverse Holo');
-    }
+      if (
+        k.includes(
+          'reverseholo'
+        )
+      ) {
 
-    if (k.includes('holofoil')) {
-      variants.add('Holo');
-    }
+        variants.add(
+          'Reverse Holo'
+        );
+      }
 
-    if (k.includes('1stedition')) {
-      variants.add('1st Edition');
-    }
+      if (
+        k.includes(
+          'holofoil'
+        )
+      ) {
 
-    if (k === 'normal') {
-      variants.add('Normal');
-    }
-  });
+        variants.add(
+          'Holo'
+        );
+      }
+
+      if (
+        k.includes(
+          '1stedition'
+        )
+      ) {
+
+        variants.add(
+          '1st Edition'
+        );
+      }
+
+      if (
+        k === 'normal'
+      ) {
+
+        variants.add(
+          'Normal'
+        );
+      }
+    });
 
 
   /*
-   * Do not invent rarity information.
+   * If pricing data is unavailable,
+   * use Normal as the presentation fallback.
    */
   if (!variants.size) {
-    variants.add('Normal');
+
+    variants.add(
+      'Normal'
+    );
   }
 
-  return [...variants];
+  return [
+    ...variants
+  ];
 }
 
 
@@ -222,7 +394,10 @@ function getPokemonCardVariants(card) {
  * ------------------------------------------------------------
  */
 
-function cardHasVariant(card, variant) {
+function cardHasVariant(
+  card,
+  variant
+) {
 
   if (!variant) {
     return true;
@@ -233,10 +408,11 @@ function cardHasVariant(card, variant) {
       .trim()
       .toLowerCase();
 
-  return getPokemonCardVariants(card)
-    .some(v =>
-      v.toLowerCase() === wanted
-    );
+  return getPokemonCardVariants(
+    card
+  ).some(v =>
+    v.toLowerCase() === wanted
+  );
 }
 
 
@@ -245,19 +421,17 @@ function cardHasVariant(card, variant) {
  * POKÉMON / CHARACTER SEARCH
  * ------------------------------------------------------------
  *
- * THIS IS THE IMPORTANT CHANGE.
- *
- * The Pokémon field is a SUBSTRING search.
+ * TRUE SUBSTRING SEARCH.
  *
  * Examples:
  *
  * P
  *   Pikachu
  *   Pidgey
- *   Popplio
  *   Piplup
- *   Unown [P]
+ *   Popplio
  *   Espurr
+ *   Unown [P]
  *   etc.
  *
  * PI
@@ -266,8 +440,8 @@ function cardHasVariant(card, variant) {
  *   Pidgey
  *   Piloswine
  *   Piplup
- *   Unown [P] does NOT match because "pi" isn't
- *   contained in "unown [p]"
+ *   Rapidash
+ *   etc.
  *
  * UNOWN
  *   Unown [A]
@@ -275,12 +449,16 @@ function cardHasVariant(card, variant) {
  *   Unown [P]
  *   etc.
  *
- * The API is used only to obtain candidates.
- * JavaScript performs the FINAL contains() check.
+ * The API is NOT asked to perform the substring search.
+ *
+ * JavaScript performs the actual search against the
+ * locally cached Pokémon index.
  * ------------------------------------------------------------
  */
 
-async function searchByPokemon(value) {
+async function searchByPokemon(
+  value
+) {
 
   const searchValue =
     String(value || '')
@@ -294,94 +472,74 @@ async function searchByPokemon(value) {
 
   /*
    * ----------------------------------------------------------
-   * LOCAL MEMORY FIRST
+   * LOCAL MEMORY
+   * ----------------------------------------------------------
+   *
+   * If the index is already loaded, this is instantaneous.
    * ----------------------------------------------------------
    */
 
-  const localResults =
-    [...pokemonCardMemory.values()]
-      .filter(card =>
-        String(card?.name || '')
-          .toLowerCase()
-          .includes(searchValue)
-      );
+  let cards = [
+    ...pokemonCardMemory.values()
+  ];
 
 
   /*
    * ----------------------------------------------------------
-   * API SEARCH
-   * ----------------------------------------------------------
-   *
-   * We deliberately search for the text anywhere in the name.
-   *
-   * Example:
-   *
-   * P
-   * -> name:*p*
-   *
-   * PI
-   * -> name:*pi*
-   *
-   * UNOWN
-   * -> name:*unown*
-   *
-   * The JavaScript filter below remains the authority.
+   * LOAD INDEX IF NECESSARY
    * ----------------------------------------------------------
    */
 
-  const escaped =
-    escapePokemonQuery(value);
+  if (!pokemonCardIndexLoaded) {
 
-  let apiResults = [];
+    try {
 
-  try {
+      cards =
+        await ensurePokemonCardIndex();
 
-    apiResults =
-      await pokemonTcgRequestAll(
-        `name:*${escaped}*`
+    } catch (error) {
+
+      console.error(
+        'Pokémon card index lookup failed:',
+        error
       );
 
-  } catch (error) {
+      /*
+       * Fall back to whatever may already be
+       * in local memory.
+       */
+      cards = [
+        ...pokemonCardMemory.values()
+      ];
 
-    console.error(
-      'Pokémon name lookup failed:',
-      error
-    );
-
-    /*
-     * If API access fails but we have already retrieved
-     * matching cards, continue using local memory.
-     */
+      /*
+       * If absolutely nothing is available,
+       * allow the existing RapidUp error handling
+       * to report the failure.
+       */
+      if (!cards.length) {
+        throw error;
+      }
+    }
   }
 
 
   /*
    * ----------------------------------------------------------
-   * MERGE API + LOCAL RESULTS
+   * TRUE CONTAINS MATCH
    * ----------------------------------------------------------
    */
 
-  const combined =
-    uniqueCards([
-      ...apiResults,
-      ...localResults
-    ]);
-
-
-  /*
-   * ----------------------------------------------------------
-   * FINAL SUBSTRING FILTER
-   * ----------------------------------------------------------
-   *
-   * This guarantees that the API's interpretation of the
-   * wildcard cannot change the behavior we want.
-   * ----------------------------------------------------------
-   */
-
-  return combined.filter(card =>
-    String(card?.name || '')
-      .toLowerCase()
-      .includes(searchValue)
+  return uniqueCards(
+    cards.filter(card =>
+      String(
+        card?.name || ''
+      )
+        .toLowerCase()
+        .includes(
+          searchValue
+        )
+    )
   );
 }
 
@@ -390,9 +548,15 @@ async function searchByPokemon(value) {
  * ------------------------------------------------------------
  * SET SEARCH
  * ------------------------------------------------------------
+ *
+ * Sets are also handled with local substring matching once
+ * the index has been loaded.
+ * ------------------------------------------------------------
  */
 
-async function searchBySet(value) {
+async function searchBySet(
+  value
+) {
 
   const searchValue =
     String(value || '')
@@ -404,51 +568,49 @@ async function searchBySet(value) {
   }
 
 
-  /*
-   * Local memory.
-   */
-
-  const localResults =
-    [...pokemonCardMemory.values()]
-      .filter(card =>
-        String(card?.set?.name || '')
-          .toLowerCase()
-          .includes(searchValue)
-      );
+  let cards = [
+    ...pokemonCardMemory.values()
+  ];
 
 
   /*
-   * API search.
+   * Load the index if necessary.
    */
+  if (!pokemonCardIndexLoaded) {
 
-  const escaped =
-    escapePokemonQuery(value);
+    try {
 
-  let apiResults = [];
+      cards =
+        await ensurePokemonCardIndex();
 
-  try {
+    } catch (error) {
 
-    apiResults =
-      await pokemonTcgRequestAll(
-        `set.name:*${escaped}*`
+      console.error(
+        'Set lookup failed:',
+        error
       );
 
-  } catch (error) {
+      cards = [
+        ...pokemonCardMemory.values()
+      ];
 
-    console.error(
-      'Set lookup failed:',
-      error
-    );
+      if (!cards.length) {
+        throw error;
+      }
+    }
   }
 
 
-  return uniqueCards([
-    ...apiResults,
-    ...localResults
-  ]).filter(card =>
-    String(card?.set?.name || '')
-      .toLowerCase()
-      .includes(searchValue)
+  return uniqueCards(
+    cards.filter(card =>
+      String(
+        card?.set?.name || ''
+      )
+        .toLowerCase()
+        .includes(
+          searchValue
+        )
+    )
   );
 }
 
@@ -459,10 +621,13 @@ async function searchBySet(value) {
  * ------------------------------------------------------------
  */
 
-async function searchByCard(value) {
+async function searchByCard(
+  value
+) {
 
   const q =
-    String(value || '').trim();
+    String(value || '')
+      .trim();
 
   if (!q) {
     return [];
@@ -474,17 +639,15 @@ async function searchByCard(value) {
    */
 
   const clean =
-    q.replace(/^#/, '');
+    q.replace(
+      /^#/,
+      ''
+    );
 
 
   /*
    * ----------------------------------------------------------
    * EXACT COLLECTOR NUMBER
-   *
-   * 16
-   * 16/165
-   * #16
-   * #16/165
    * ----------------------------------------------------------
    */
 
@@ -500,42 +663,64 @@ async function searchByCard(value) {
       numberMatch[1];
 
 
-    const localResults =
-      [...pokemonCardMemory.values()]
-        .filter(card =>
-          String(card?.number || '')
-            .split('/')[0] === number
-        );
+    /*
+     * Local memory first.
+     */
 
-
-    let apiResults = [];
-
-    try {
-
-      apiResults =
-        await pokemonTcgRequestAll(
-          `number:${number}`
-        );
-
-    } catch (error) {
-
-      console.error(
-        'Card number lookup failed:',
-        error
+    let localResults =
+      [
+        ...pokemonCardMemory.values()
+      ].filter(card =>
+        String(
+          card?.number || ''
+        )
+          .split('/')[0] ===
+        number
       );
+
+
+    /*
+     * If the index isn't loaded, retrieve the
+     * exact number from the API.
+     */
+    if (!pokemonCardIndexLoaded) {
+
+      try {
+
+        const apiResults =
+          await pokemonTcgRequestAll(
+            `number:${number}`,
+            100
+          );
+
+        localResults =
+          uniqueCards([
+            ...apiResults,
+            ...localResults
+          ]);
+
+      } catch (error) {
+
+        console.error(
+          'Card number lookup failed:',
+          error
+        );
+      }
     }
 
 
-    return uniqueCards([
-      ...apiResults,
-      ...localResults
-    ]);
+    return uniqueCards(
+      localResults
+    );
   }
 
 
   /*
    * ----------------------------------------------------------
-   * CARD NAME / EMBEDDED NUMBER
+   * NAME / EMBEDDED NUMBER
+   * ----------------------------------------------------------
+   *
+   * Examples:
    *
    * Breloom
    * Breloom #16
@@ -549,7 +734,9 @@ async function searchByCard(value) {
     );
 
 
-  let namePart = clean;
+  let namePart =
+    clean;
+
 
   if (embeddedNumber) {
 
@@ -563,74 +750,79 @@ async function searchByCard(value) {
   }
 
 
-  const searches = [];
+  let cards = [
+    ...pokemonCardMemory.values()
+  ];
 
 
   /*
-   * Card name.
+   * Load the index if necessary.
    */
+  if (!pokemonCardIndexLoaded) {
 
-  if (namePart) {
+    try {
 
-    searches.push(
-      pokemonTcgRequestAll(
-        `name:*${escapePokemonQuery(namePart)}*`
-      )
-    );
+      cards =
+        await ensurePokemonCardIndex();
+
+    } catch (error) {
+
+      console.error(
+        'Card lookup failed:',
+        error
+      );
+    }
   }
 
 
   /*
-   * Embedded collector number.
+   * ----------------------------------------------------------
+   * NAME FILTER
+   * ----------------------------------------------------------
+   */
+
+  let results =
+    cards.filter(card => {
+
+      if (!namePart) {
+        return true;
+      }
+
+      return String(
+        card?.name || ''
+      )
+        .toLowerCase()
+        .includes(
+          namePart.toLowerCase()
+        );
+    });
+
+
+  /*
+   * ----------------------------------------------------------
+   * NUMBER FILTER
+   * ----------------------------------------------------------
    */
 
   if (embeddedNumber) {
 
-    searches.push(
-      pokemonTcgRequestAll(
-        `number:${embeddedNumber[1]}`
-      )
-    );
-  }
-
-
-  let results = [];
-
-  try {
-
-    const searchResults =
-      await Promise.all(searches);
+    const number =
+      embeddedNumber[1];
 
     results =
-      searchResults.flat();
-
-  } catch (error) {
-
-    console.error(
-      'Card lookup failed:',
-      error
-    );
+      results.filter(card =>
+        String(
+          card?.number || ''
+        )
+          .split('/')[0] ===
+        number
+      );
   }
 
 
-  /*
-   * Local memory.
-   */
-
-  const localResults =
-    [...pokemonCardMemory.values()]
-      .filter(card =>
-        cardMatchesText(
-          card,
-          namePart || clean
-        )
-      );
-
-
-  return uniqueCards([
-    ...results,
-    ...localResults
-  ]);
+  return uniqueCards(
+    results
+  );
 }
 
 
@@ -640,7 +832,9 @@ async function searchByCard(value) {
  * ------------------------------------------------------------
  */
 
-async function searchByVariant(value) {
+async function searchByVariant(
+  value
+) {
 
   const q =
     String(value || '')
@@ -657,54 +851,43 @@ async function searchByVariant(value) {
 
 
   /*
-   * Search local memory first.
+   * Make sure we have the card index.
    */
 
-  const cached =
-    [...pokemonCardMemory.values()]
-      .filter(card =>
-        getPokemonCardVariants(card)
-          .some(v =>
-            v.toLowerCase().includes(q)
-          )
+  let cards = [
+    ...pokemonCardMemory.values()
+  ];
+
+
+  if (!pokemonCardIndexLoaded) {
+
+    try {
+
+      cards =
+        await ensurePokemonCardIndex();
+
+    } catch (error) {
+
+      console.error(
+        'Variant lookup failed:',
+        error
       );
 
-
-  if (cached.length) {
-    return cached;
+      return [];
+    }
   }
 
 
-  /*
-   * Broad fallback.
-   */
-
-  try {
-
-    const results =
-      await pokemonTcgRequestAll(
-        'supertype:Pokémon'
-      );
-
-
-    return uniqueCards(
-      results.filter(card =>
-        getPokemonCardVariants(card)
-          .some(v =>
-            v.toLowerCase().includes(q)
-          )
+  return uniqueCards(
+    cards.filter(card =>
+      getPokemonCardVariants(
+        card
+      ).some(v =>
+        v.toLowerCase()
+          .includes(q)
       )
-    );
-
-  } catch (error) {
-
-    console.error(
-      'Variant lookup failed:',
-      error
-    );
-
-    return [];
-  }
+    )
+  );
 }
 
 
@@ -746,15 +929,24 @@ async function searchByVariant(value) {
  * ------------------------------------------------------------
  */
 
-async function searchPokemonCards(search) {
+async function searchPokemonCards(
+  search
+) {
+
 
   /*
    * ----------------------------------------------------------
    * PLAIN TEXT SEARCH
    * ----------------------------------------------------------
+   *
+   * Plain text is treated as a Pokémon / character search.
+   * ----------------------------------------------------------
    */
 
-  if (typeof search === 'string') {
+  if (
+    typeof search ===
+    'string'
+  ) {
 
     const value =
       search.trim();
@@ -763,16 +955,9 @@ async function searchPokemonCards(search) {
       return [];
     }
 
-
-    /*
-     * A plain text search is treated primarily as a Pokémon
-     * / character search.
-     *
-     * This prevents the Pokémon field from accidentally
-     * becoming a weird combination of set + card searches.
-     */
-
-    return searchByPokemon(value);
+    return searchByPokemon(
+      value
+    );
   }
 
 
@@ -810,7 +995,8 @@ async function searchPokemonCards(search) {
     ).trim();
 
 
-  let results = null;
+  let results =
+    null;
 
 
   /*
@@ -837,17 +1023,21 @@ async function searchPokemonCards(search) {
   if (set) {
 
     const setResults =
-      await searchBySet(set);
+      await searchBySet(
+        set
+      );
 
 
     results =
       results === null
         ? setResults
-        : results.filter(cardRecord =>
-            setResults.some(
-              other =>
-                other.id === cardRecord.id
-            )
+        : results.filter(
+            cardRecord =>
+              setResults.some(
+                other =>
+                  other.id ===
+                  cardRecord.id
+              )
           );
   }
 
@@ -861,17 +1051,21 @@ async function searchPokemonCards(search) {
   if (card) {
 
     const cardResults =
-      await searchByCard(card);
+      await searchByCard(
+        card
+      );
 
 
     results =
       results === null
         ? cardResults
-        : results.filter(cardRecord =>
-            cardResults.some(
-              other =>
-                other.id === cardRecord.id
-            )
+        : results.filter(
+            cardRecord =>
+              cardResults.some(
+                other =>
+                  other.id ===
+                  cardRecord.id
+              )
           );
   }
 
@@ -899,16 +1093,19 @@ async function searchPokemonCards(search) {
   if (variant) {
 
     results =
-      results.filter(cardRecord =>
-        cardHasVariant(
-          cardRecord,
-          variant
-        )
+      results.filter(
+        cardRecord =>
+          cardHasVariant(
+            cardRecord,
+            variant
+          )
       );
   }
 
 
-  return uniqueCards(results);
+  return uniqueCards(
+    results
+  );
 }
 
 
@@ -918,11 +1115,14 @@ async function searchPokemonCards(search) {
  * ------------------------------------------------------------
  */
 
-async function fetchPokemonCard(cardName) {
+async function fetchPokemonCard(
+  cardName
+) {
 
   const query =
-    String(cardName || '').trim();
-
+    String(
+      cardName || ''
+    ).trim();
 
   if (!query) {
     return [];
@@ -953,12 +1153,17 @@ async function fetchPokemonCard(cardName) {
  * ------------------------------------------------------------
  */
 
-function getPokemonNames(cards) {
+function getPokemonNames(
+  cards
+) {
 
   return [
     ...new Set(
       (cards || [])
-        .map(card => card?.name)
+        .map(
+          card =>
+            card?.name
+        )
         .filter(Boolean)
     )
   ].sort(
@@ -968,7 +1173,9 @@ function getPokemonNames(cards) {
 }
 
 
-function getPokemonSets(cards) {
+function getPokemonSets(
+  cards
+) {
 
   return [
     ...new Map(
@@ -989,59 +1196,75 @@ function getPokemonSets(cards) {
 }
 
 
-function getPokemonCardOptions(cards) {
+function getPokemonCardOptions(
+  cards
+) {
 
   return uniqueCards(
     cards || []
-  ).sort((a, b) => {
+  ).sort(
+    (a, b) => {
 
-    const setA =
-      a?.set?.name || '';
+      const setA =
+        a?.set?.name || '';
 
-    const setB =
-      b?.set?.name || '';
-
-
-    const setCompare =
-      setA.localeCompare(setB);
+      const setB =
+        b?.set?.name || '';
 
 
-    if (setCompare !== 0) {
-      return setCompare;
-    }
+      const setCompare =
+        setA.localeCompare(
+          setB
+        );
 
 
-    const numberA =
-      a?.number || '';
+      if (
+        setCompare !== 0
+      ) {
 
-    const numberB =
-      b?.number || '';
-
-
-    return numberA.localeCompare(
-      numberB,
-      undefined,
-      {
-        numeric: true
+        return setCompare;
       }
-    );
-  });
+
+
+      const numberA =
+        a?.number || '';
+
+      const numberB =
+        b?.number || '';
+
+
+      return numberA.localeCompare(
+        numberB,
+        undefined,
+        {
+          numeric: true
+        }
+      );
+    }
+  );
 }
 
 
-function getPokemonVariants(cards) {
+function getPokemonVariants(
+  cards
+) {
 
   const variants =
     new Set();
 
 
-  (cards || []).forEach(card => {
+  (cards || [])
+    .forEach(card => {
 
-    getPokemonCardVariants(card)
-      .forEach(variant =>
-        variants.add(variant)
+      getPokemonCardVariants(
+        card
+      ).forEach(
+        variant =>
+          variants.add(
+            variant
+          )
       );
-  });
+    });
 
 
   return [
@@ -1056,6 +1279,11 @@ function getPokemonVariants(cards) {
 /*
  * ------------------------------------------------------------
  * LOCAL FILTER
+ * ------------------------------------------------------------
+ *
+ * This remains a pure local filter.
+ *
+ * Pokémon / character matching is substring based.
  * ------------------------------------------------------------
  */
 
@@ -1094,94 +1322,109 @@ function filterPokemonCards(
     ).trim();
 
 
-  return source.filter(record => {
-
-    /*
-     * Pokémon / character:
-     *
-     * TRUE SUBSTRING MATCH.
-     */
-
-    if (
-      pokemon &&
-      !String(
-        record?.name || ''
-      )
-        .toLowerCase()
-        .includes(
-          pokemon.toLowerCase()
-        )
-    ) {
-
-      return false;
-    }
+  return source.filter(
+    record => {
 
 
-    /*
-     * Set:
-     *
-     * TRUE SUBSTRING MATCH.
-     */
-
-    if (
-      set &&
-      !String(
-        record?.set?.name || ''
-      )
-        .toLowerCase()
-        .includes(
-          set.toLowerCase()
-        )
-    ) {
-
-      return false;
-    }
-
-
-    /*
-     * Card name / number.
-     */
-
-    if (card) {
-
-      const cardText = [
-        record?.name,
-        record?.number
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
+      /*
+       * Pokémon / character:
+       *
+       * TRUE SUBSTRING MATCH.
+       *
+       * P:
+       *   Pikachu
+       *   Pidgey
+       *   Unown [P]
+       *
+       * PI:
+       *   Pikachu
+       *   Pichu
+       *   Pidgey
+       *   Piplup
+       *   etc.
+       */
 
       if (
-        !cardText.includes(
-          card.toLowerCase()
+        pokemon &&
+        !String(
+          record?.name || ''
+        )
+          .toLowerCase()
+          .includes(
+            pokemon.toLowerCase()
+          )
+      ) {
+
+        return false;
+      }
+
+
+      /*
+       * Set:
+       *
+       * TRUE SUBSTRING MATCH.
+       */
+
+      if (
+        set &&
+        !String(
+          record?.set?.name || ''
+        )
+          .toLowerCase()
+          .includes(
+            set.toLowerCase()
+          )
+      ) {
+
+        return false;
+      }
+
+
+      /*
+       * Card name / number.
+       */
+
+      if (card) {
+
+        const cardText = [
+          record?.name,
+          record?.number
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+
+        if (
+          !cardText.includes(
+            card.toLowerCase()
+          )
+        ) {
+
+          return false;
+        }
+      }
+
+
+      /*
+       * Variant.
+       */
+
+      if (
+        variant &&
+        !cardHasVariant(
+          record,
+          variant
         )
       ) {
 
         return false;
       }
+
+
+      return true;
     }
-
-
-    /*
-     * Variant.
-     */
-
-    if (
-      variant &&
-      !cardHasVariant(
-        record,
-        variant
-      )
-    ) {
-
-      return false;
-    }
-
-
-    return true;
-  });
+  );
 }
 
 
@@ -1196,6 +1439,12 @@ function clearPokemonTcgCache() {
   pokemonCardSearchCache.clear();
 
   pokemonCardMemory.clear();
+
+  pokemonCardIndexLoaded =
+    false;
+
+  pokemonCardIndexPromise =
+    null;
 }
 
 
