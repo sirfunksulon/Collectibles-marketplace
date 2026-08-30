@@ -31,29 +31,6 @@ main{max-width:1280px;margin:auto;padding:30px 22px 90px}.hero{padding:34px 0 28
 .ruFilterModal .modal{max-width:760px}.ruFilterGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ruFilterField label{display:block;font-size:11px;font-weight:850;margin-bottom:5px;color:var(--muted)}.ruFilterField.full{grid-column:1/-1}.ruFilterChoices{display:flex;flex-wrap:wrap;gap:7px}.ruFilterChoices label{border:1px solid var(--line);padding:8px 10px;border-radius:11px;background:#fff;cursor:pointer;color:var(--ink)}.ruFilterChoices input{margin-right:5px}.ruResultCount{font-weight:900}.ruAuctionType{display:none}.queueShell .queueItem{cursor:default}.queueShell .queueItem .ruQueueOffer{display:inline-flex;margin-top:6px}
 @media(max-width:900px){.ruChannelGrid{grid-template-columns:1fr}.auctionScreen .auctionBottomOverlay{grid-template-columns:1fr 220px 260px}.auctionScreen .ruAuctionInfo{max-width:55%}}
 @media(max-width:620px){.ruFilterGrid{grid-template-columns:1fr}.ruFilterField.full{grid-column:auto}.auctionScreen{height:calc(100vh - 70px)}.auctionScreen .auctionBottomOverlay{left:12px;right:12px;bottom:10px;grid-template-columns:1fr 120px;gap:8px}.auctionScreen .overlayBidModes{grid-column:1/-1;grid-row:2}.auctionScreen .auctionIdentity{grid-column:1/-1}.auctionScreen .auctionLiveStats{grid-column:2;grid-row:1}.auctionScreen .ruAuctionInfo{left:12px;bottom:10px;max-width:55%;font-size:10px}.auctionScreen .elasticTransparency{right:12px;top:58px}.auctionScreen .auctionBack{top:8px;left:8px}}
-
-/* RU-SURGICAL: stabilize dynamic timer geometry */
-[data-item-timer], [data-channel-timer] {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-width: 5.8ch;
-  width: 5.8ch;
-  white-space: nowrap;
-  flex: 0 0 5.8ch;
-}
-[data-item-timer] {
-  min-width: 5.8ch;
-  width: 5.8ch;
-}
-[data-channel-timer] {
-  min-width: 6.2ch;
-  width: 6.2ch;
-}
 </style>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -208,21 +185,21 @@ const sets=['Evolving Skies','Silver Tempest','Secret Wonders','Shining Legends'
 const variants=['Alternate Art','Holo','Special Illustration Rare','Illustration Rare','Secret Rare','Classic Collection','Promo','Reverse Holo'];
 const grades=['Raw','PSA 10','PSA 9','CGC 9.5','BGS 9.5'];
 let items=[];
-function makeAuctionItem(id,k,c,ci){
- const nm=seedNames[(ci*17+k)%seedNames.length];
- const base=35+((ci*50+k)*7)%430;
- const year=ci===0?2020+(k%7):ci===1?1999+(k%5):ci===2?2004+(k%16):1999+(k%28);
+function makeAuctionItem(id,k,seedGroup){
+ const nm=seedNames[(seedGroup*17+k)%seedNames.length];
+ const base=35+((seedGroup*50+k)*7)%430;
+ const year=seedGroup===0?2020+(k%7):seedGroup===1?1999+(k%5):seedGroup===2?2004+(k%16):1999+(k%28);
  const era=year<=2003?'Vintage':year<=2019?'Mid Era':'Modern';
- const lang=ci===2?'Japanese':'English';
- const condition=(ci===3||k%3!==0)?'Graded':'Raw';
- const grade=condition==='Graded'?grades[(k+ci)%grades.length]:'Raw';
+ const lang=seedGroup===2?'Japanese':'English';
+ const condition=(seedGroup===3||k%3!==0)?'Graded':'Raw';
+ const grade=condition==='Graded'?grades[(k+seedGroup)%grades.length]:'Raw';
  const presentation=k%2===0?'Premium':'Standard';
- const variant=variants[(k+ci)%variants.length];
- const startingPrice=1+((k+ci)%6)*5;
- const fullName=`${year} Pokemon ${sets[(ci*3+k)%sets.length]} ${variant} ${nm} #${20+(k*7)%190}${condition==='Graded'?` ${grade}`:''}`;
- return {id,name:nm,set:`${sets[(ci*3+k)%sets.length]} #${20+(k*7)%190}`,fullName,year,era,category:'Pokemon',method:'auction',type:'Auction',channel:c.name,channelId:c.id,auctionType:c.auctionType,market:base+35,grade,lang,variant,img:[IMG.lugia,IMG.cards,IMG.vintage][(k+ci)%3],sold:false,current:startingPrice,bidCount:(k+ci)%4,seconds:0,endsAt:0,startingPrice,internal:{category:'Pokemon',year,era,condition,language:lang,variant,presentation,auctionType:c.auctionType,startingPrice},auction:{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2}};
+ const variant=variants[(k+seedGroup)%variants.length];
+ const startingPrice=1+((k+seedGroup)%6)*5;
+ const fullName=`${year} Pokemon ${sets[(seedGroup*3+k)%sets.length]} ${variant} ${nm} #${20+(k*7)%190}${condition==='Graded'?` ${grade}`:''}`;
+ return {id,name:nm,set:`${sets[(seedGroup*3+k)%sets.length]} #${20+(k*7)%190}`,fullName,year,era,category:'Pokemon',method:'auction',type:'Auction',channel:null,channelId:null,auctionType:seedGroup%2===0?'ELASTIC':'SUDDEN DEATH',market:base+35,grade,lang,variant,img:[IMG.lugia,IMG.cards,IMG.vintage][(k+seedGroup)%3],sold:false,current:startingPrice,bidCount:(k+seedGroup)%4,seconds:0,endsAt:0,startingPrice,internal:{category:'Pokemon',year,era,condition,language:lang,variant,presentation,auctionType:seedGroup%2===0?'ELASTIC':'SUDDEN DEATH',startingPrice},auction:{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2}};
 }
-channels.forEach((c,ci)=>{for(let k=0;k<50;k++)items.push(makeAuctionItem('a'+(ci*50+k+1),k,c,ci));});
+for(let seedGroup=0;seedGroup<channels.length;seedGroup++){for(let k=0;k<50;k++)items.push(makeAuctionItem('a'+(seedGroup*50+k+1),k,seedGroup));}
 items.push(
  {id:'b1',name:'Lugia V',set:'Silver Tempest #186',method:'buy',type:'Buy Now',price:129,market:154,grade:'PSA 10',lang:'English',variant:'Alternate Art',img:IMG.lugia,sold:false},
  {id:'b2',name:'Charizard ex',set:'Obsidian Flames #223',method:'buy',type:'Buy Now',price:129,market:145,grade:'PSA 10',lang:'English',variant:'Special Illustration Rare',img:IMG.cards,sold:false},
@@ -233,7 +210,7 @@ items.push(
 );
 function initialState(){
  const now=Date.now();
- const s={page:'explore',activeItem:'a1',queueChannel:null,modal:null,profile:false,userMode:'buyer',search:'',sort:'activity',buyerTab:'overview',sellerTab:'overview',activity:'',toast:'',channelPos:{c1:0,c2:0,c3:0,c4:0},lastTick:now,offers:[],bids:[],won:[],purchases:[],notifications:[],interests:['Umbreon VMAX','Lugia V','Japanese','PSA 10'],privateAuctions:{},proxyBids:{},readNotifications:[],seeded:true};
+ const s={page:'explore',activeItem:'a1',queueChannel:null,modal:null,profile:false,userMode:'buyer',search:'',sort:'activity',buyerTab:'overview',sellerTab:'overview',activity:'',toast:'',channelPos:{c1:0,c2:0,c3:0,c4:0},channelQueues:null,lastTick:now,offers:[],bids:[],won:[],purchases:[],notifications:[],interests:['Umbreon VMAX','Lugia V','Japanese','PSA 10'],privateAuctions:{},proxyBids:{},readNotifications:[],seeded:true};
  s.offers=[
   {id:'o-seed-1',item:'b1',buyer:'You',amount:150,status:'active',created:now-2*3600000,expires:now+22*3600000,wave:0},
   {id:'o-seed-2',item:'b1',buyer:'Buyer B',amount:121,status:'active',created:now-1*3600000,expires:now+23*3600000,wave:0},
@@ -257,9 +234,63 @@ function loadState(){
 }
 function queueCriteria(c){return c?.criteria||{}}
 function criteriaText(c){const q=queueCriteria(c),p=[];if(q.auctionType)p.push(q.auctionType);if(q.startingMin!=null||q.startingMax!=null)p.push(`Start ${money(q.startingMin??0)}–${money(q.startingMax??q.startingMin??0)}`);if(q.yearMin!=null||q.yearMax!=null)p.push(`Years ${q.yearMin??'Any'}–${q.yearMax??'Any'}`);if(q.eras?.length)p.push(q.eras.join('/'));if(q.conditions?.length)p.push(q.conditions.join('/'));if(q.languages?.length)p.push(q.languages.join('/'));if(q.variants?.length)p.push(q.variants.join('/'));if(q.presentations?.length)p.push(q.presentations.join('/'));return p.join(' · ')}
-function queueMatches(x,c){if(!x||x.sold||x.method!=='auction')return false;const q=queueCriteria(c),d=x.internal||{};if(q.auctionType&&String(d.auctionType||x.auctionType).toUpperCase()!==String(q.auctionType).toUpperCase())return false;const sp=Number(d.startingPrice??x.startingPrice??x.current??0);if(q.startingMin!=null&&sp<Number(q.startingMin))return false;if(q.startingMax!=null&&sp>Number(q.startingMax))return false;const year=Number(d.year??inferYear(x));if(q.yearMin!=null&&year<Number(q.yearMin))return false;if(q.yearMax!=null&&year>Number(q.yearMax))return false;if(q.eras?.length&&d.era&&!q.eras.includes(d.era))return false;if(q.conditions?.length&&d.condition&&!q.conditions.includes(d.condition))return false;if(q.languages?.length&&(d.language||x.lang)&&!q.languages.includes(d.language||x.lang))return false;if(q.variants?.length&&(d.variant||x.variant)&&!q.variants.includes(d.variant||x.variant))return false;if(q.presentations?.length&&d.presentation&&!q.presentations.includes(d.presentation))return false;return true}
-function queuePool(cid){const c=channel(cid);return c?items.filter(x=>queueMatches(x,c)):[]}
-function normalizeAuctions(s=state){const now=Date.now();channels.forEach(c=>{const pool=queuePool(c.id);if(!pool.length){s.channelPos[c.id]=0;return;}let pos=Math.min(Number(s.channelPos[c.id]||0),pool.length-1);s.channelPos[c.id]=pos;pool.forEach((x,i)=>{x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};if(i===pos&&!x.sold){if(!x.endsAt||x.endsAt<=now){x.endsAt=now+180000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.current)||1);}x.status='Live';}else if(!x.sold){x.endsAt=0;x.status='Auction queue';}});});}
+function queueMatches(x,c){
+ if(!x||x.sold||x.method!=='auction'||!c)return false;
+ const q=queueCriteria(c),d=x.internal||{};
+ const eq=(value,expected)=>String(value??'').trim().toUpperCase()===String(expected??'').trim().toUpperCase();
+ if(q.auctionType&&!eq(d.auctionType??x.auctionType,q.auctionType))return false;
+ const sp=Number(d.startingPrice??x.startingPrice??x.current??0);
+ if(q.startingMin!=null&&(d.startingPrice==null&&x.startingPrice==null))return false;
+ if(q.startingMax!=null&&(d.startingPrice==null&&x.startingPrice==null))return false;
+ if(q.startingMin!=null&&sp<Number(q.startingMin))return false;
+ if(q.startingMax!=null&&sp>Number(q.startingMax))return false;
+ const year=Number(d.year??x.year??inferYear(x));
+ if(q.yearMin!=null&&(d.year==null&&x.year==null))return false;
+ if(q.yearMax!=null&&(d.year==null&&x.year==null))return false;
+ if(q.yearMin!=null&&year<Number(q.yearMin))return false;
+ if(q.yearMax!=null&&year>Number(q.yearMax))return false;
+ if(q.eras?.length&&!q.eras.some(v=>eq(d.era??x.era,v)))return false;
+ if(q.conditions?.length&&!q.conditions.some(v=>eq(d.condition,v)))return false;
+ if(q.languages?.length&&!q.languages.some(v=>eq(d.language??x.lang,v)))return false;
+ if(q.variants?.length&&!q.variants.some(v=>eq(d.variant??x.variant,v)))return false;
+ if(q.presentations?.length&&!q.presentations.some(v=>eq(d.presentation,v)))return false;
+ return true;
+}
+function ensureQueueState(s=state){
+ s.channelQueues=s.channelQueues&&typeof s.channelQueues==='object'?s.channelQueues:{};
+ channels.forEach(c=>{if(!Array.isArray(s.channelQueues[c.id]))s.channelQueues[c.id]=[];});
+ return s.channelQueues;
+}
+function evaluateAndEnqueue(x,s=state){
+ if(!x||x.sold||x.method!=='auction')return null;
+ const queues=ensureQueueState(s);
+ let target=null;
+ for(const c of channels){if(queueMatches(x,c)){target=c;break;}}
+ const oldId=x.channelId;
+ channels.forEach(c=>{queues[c.id]=(queues[c.id]||[]).filter(id=>id!==x.id);});
+ if(!target){x.channel=null;x.channelId=null;x.status='Unassigned';x.endsAt=0;return null;}
+ x.channelId=target.id;x.channel=target.name;x.auctionType=target.auctionType;
+ x.internal=x.internal||{};x.internal.auctionType=x.auctionType;
+ queues[target.id].push(x.id);
+ return {channel:target,changed:oldId!==target.id};
+}
+function queuePool(cid,s=state){const c=channel(cid);if(!c)return [];const queues=ensureQueueState(s);const ids=queues[cid]||[];return ids.map(id=>item(id)).filter(x=>x&&queueMatches(x,c));}
+function rebuildQueues(s=state){ensureQueueState(s);channels.forEach(c=>s.channelQueues[c.id]=[]);items.filter(x=>x.method==='auction'&&!x.sold).forEach(x=>evaluateAndEnqueue(x,s));return s.channelQueues;}
+function normalizeAuctions(s=state){
+ const now=Date.now();
+ const queuesReady=s.channelQueues&&channels.every(c=>Array.isArray(s.channelQueues[c.id]));
+ if(!queuesReady)rebuildQueues(s);
+ channels.forEach(c=>{
+  const pool=queuePool(c.id,s);
+  if(!pool.length){s.channelPos[c.id]=0;return;}
+  let pos=Math.min(Number(s.channelPos[c.id]||0),pool.length-1);if(!Number.isFinite(pos)||pos<0)pos=0;s.channelPos[c.id]=pos;
+  pool.forEach((x,i)=>{
+   x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
+   if(i===pos&&!x.sold){if(!x.endsAt||x.endsAt<=now){x.endsAt=now+180000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.current)||1);}x.status='Live';}
+   else if(!x.sold){x.endsAt=0;x.status='Auction queue';}
+  });
+ });
+}
 function save(){state.lastTick=Date.now();state.proxyBids=state.proxyBids||{};state.unread=state.notifications.filter(n=>!n.read).length;state.itemState={};items.forEach(x=>state.itemState[x.id]={endsAt:x.endsAt,current:x.current,bidCount:x.bidCount,sold:x.sold,status:x.status,auction:x.auction,method:x.method,price:x.price,internal:x.internal});try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
 function money(n){return '$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2,minimumFractionDigits:0})}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -305,7 +336,7 @@ function itemCard(x){
   if(auction&&x.status!=='Live')return '';
   const title=fullItemTitle(x);
   const method=auction?'AUCTION':'BUY NOW';
-  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?`<span data-item-timer="${x.id}">${fmt(secondsLeft(x))}</span> remaining`:'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="buyNow('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
+  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?fmt(secondsLeft(x))+' remaining':'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="buyNow('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
 }
 function fullItemTitle(x){return x.fullName||`${x.year||inferYear(x)} Pokemon ${x.set||''} ${x.variant||''} ${x.name||''}${isGraded(x)?` ${x.grader||graderFromGrade(x.grade)||''} ${x.grade||''}`:''}`.replace(/\s+/g,' ').trim();}
 function inferYear(x){const m=String(x.name||'').match(/\b(19|20)\d{2}\b/);return m?m[0]:'2025';}
@@ -315,8 +346,7 @@ function exploreFilterModal(){const f=state.exploreFilters||{};const cats=[...ne
 function applyExploreFilters(){state.exploreFilters={text:document.getElementById('rfText')?.value.trim()||'',category:document.getElementById('rfCategory')?.value||'',year:document.getElementById('rfYear')?.value||'',condition:document.getElementById('rfCondition')?.value||'',grader:document.getElementById('rfGrader')?.value.trim()||'',gradeMin:document.getElementById('rfMin')?.value||'',gradeMax:document.getElementById('rfMax')?.value||'',presentation:document.getElementById('rfPresentation')?.value||'',language:document.getElementById('rfLanguage')?.value||'',variant:document.getElementById('rfVariant')?.value||'',method:document.getElementById('rfMethod')?.value||'',auctionType:document.getElementById('rfAuctionType')?.value||''};closeModal();}
 function explore(){
   const f=state.exploreFilters||{};
-  const activeAuctionIds=new Set(channels.map(c=>activeForChannel(c.id)).filter(Boolean).map(x=>x.id));
-  let list=items.filter(x=>!x.sold && (x.method==='buy' || (x.method==='auction' && x.status==='Live' && activeAuctionIds.has(x.id))));
+  let list=items.filter(x=>!x.sold && (x.method==='buy' || (x.method==='auction' && x.status==='Live')));
   if(f.text)list=list.filter(x=>fullItemTitle(x).toLowerCase().includes(f.text.toLowerCase()));
   if(f.category)list=list.filter(x=>x.category===f.category||x.channel===f.category||x.channelId===f.category);
   if(f.year)list=list.filter(x=>String(x.year||inferYear(x))===String(f.year));
@@ -343,7 +373,7 @@ function openItem(id){const x=item(id);if(!x)return;state.activeItem=id;state.mo
 function itemSummaryModal(id){const x=item(id);if(!x)return '<div class="modal"><div class="empty">Item not found.</div></div>';const auction=x.method==='auction';const live=auction&&x.status==='Live';const c=channel(x.channelId);const d=x.internal||{};return `<div class="modal ruItemSummary"><div class="modalHead"><div><div class="eyebrow">${auction?'AUCTION ITEM':'BUY NOW ITEM'}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(auction?x.current:x.price)}</div><div class="notice"><b>${auction?(live?'Live now in '+esc(c?.name||'auction channel'):'Queued for auction'):'Available for immediate purchase.'}</b></div><div class="list"><div class="listrow"><span>Year / Era</span><b>${esc(String(d.year??inferYear(x)))} · ${esc(d.era||'—')}</b></div><div class="listrow"><span>Condition</span><b>${esc(d.condition||x.grade||'—')}</b></div><div class="listrow"><span>Language</span><b>${esc(d.language||x.lang||'—')}</b></div><div class="listrow"><span>Variant</span><b>${esc(d.variant||x.variant||'—')}</b></div><div class="listrow"><span>Presentation</span><b>${esc(d.presentation||'standard')}</b></div>${auction?`<div class="listrow"><span>Auction type</span><b>${esc(d.auctionType||x.auctionType||'—')}</b></div><div class="listrow"><span>Starting price</span><b>${money(d.startingPrice??x.startingPrice??1)}</b></div>`:''}</div><div class="actions"><button class="primary" onclick="closeModal();${auction?(live?`openAuction('${x.id}')`:`openQueue('${x.channelId}')`):`buyNow('${x.id}')`}">${auction?(live?'Join Auction':'View Queue'):'Buy Now · '+money(x.price)}</button>${!auction?`<button class="secondary" onclick="makeOffer('${x.id}')">Make Offer</button>`:''}</div></div></div></div>`}
 function openQueue(cid){openModal('queue',cid)}
 function queueModal(cid){const c=channel(cid),pool=queuePool(cid),pos=state.channelPos[cid]||0;return `<div class="modal full queueShell"><div class="modalHead"><div><div class="eyebrow">QUEUE CRITERIA</div><h2>${esc(c.name)}</h2><div class="ruQueueCriteria">${esc(criteriaText(c))}</div></div><button class="close" onclick="closeModal()">×</button></div><div class="queueScroll">${pool.map((x,i)=>`<div class="queueItem ${i===pos?'activeRow':''}" onclick="queueSelect('${cid}',${i})"><div class="queueNum">${i+1}</div><img class="queueImg" src="${x.img}" alt="${esc(x.name)}"><div><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">${i===pos?'LIVE':'QUEUED'} · ${i===pos?fmt(secondsLeft(x)):'Upcoming'}</div></div><div style="text-align:right">${i===pos?`<span class="queueStatus live">LIVE</span><div class="tiny muted">${money(x.current)}</div>`:`<span class="queueStatus queued">QUEUED</span><button class="secondary ruQueueOffer" onclick="event.stopPropagation();makeOffer('${x.id}')">Offer</button>`}</div></div>`).join('')}</div></div>`}
-function queueSelect(cid,i){const pool=items.filter(x=>x.channelId===cid),x=pool[i],pos=state.channelPos[cid];if(i===pos){closeModal();openAuction(x.id);return}openModal('queueItem',{cid,i,id:x.id})}
+function queueSelect(cid,i){const pool=queuePool(cid),x=pool[i],pos=state.channelPos[cid];if(i===pos){closeModal();openAuction(x.id);return}openModal('queueItem',{cid,i,id:x.id})}
 function queueItemModal(d){const x=item(d.id),c=channel(d.cid);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">QUEUE POSITION ${d.i+1}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(x.current||x.price||1)}</div><p class="muted">Queued in ${esc(c.name)}. This item cannot receive a public bid until it reaches the active slot.</p><div class="actions"><button class="primary" onclick="makeOffer('${x.id}')">Make Offer</button><button class="secondary" onclick="closeModal();openQueue('${d.cid}')">Back to Queue</button></div></div></div></div>`}
 function elasticPreview(x){
   if(!x||x.auctionType!=='ELASTIC')return {active:false};
@@ -558,7 +588,25 @@ function acceptOffer(oid){const o=state.offers.find(x=>x.id===oid);if(!o||o.stat
 function ignoreOffer(oid){const o=state.offers.find(x=>x.id===oid);if(!o||o.status!=='active')return;o.status='ignored';save();activity('Offer ignored; inventory remains available.');}
 function changeMethod(id){openModal('method',id)}
 function methodModal(id){const x=item(id);if(!x)return '';const current=x.method==='buy'?'BUY NOW':(x.privateAuction?.active?'PRIVATE AUCTION':'PUBLIC AUCTION');return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">SELLING METHOD</div><h2>${esc(x.name)}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="methodBox current"><div class="eyebrow">CURRENT METHOD</div><b>${current}</b><p class="tiny muted">Choose a new selling state explicitly. RapidUp will update the inventory object rather than merely showing a suggestion.</p></div><div class="sectionhead"><h3>Available methods</h3></div><div class="methodGrid"><button class="methodOption ${x.method==='buy'?'current':''}" onclick="convertMethod('${id}','buy')"><b>BUY NOW</b><span class="tiny muted">Immediate execution at a listed price.</span></button><button class="methodOption ${x.method==='auction'&&!x.privateAuction?.active?'current':''}" onclick="convertMethod('${id}','auction')"><b>PUBLIC AUCTION</b><span class="tiny muted">Move into a specialized public channel.</span></button><button class="methodOption ${x.privateAuction?.active?'current':''}" onclick="startPrivateFromMethod('${id}')"><b>PRIVATE AUCTION</b><span class="tiny muted">Demand-based response to active committed offers.</span></button></div><div class="notice" style="margin-top:13px"><b>What will happen?</b><br>${x.method==='buy'?'Changing away from Buy Now removes immediate purchase availability until you return it.':'Changing to Buy Now makes the listed price immediately executable.'} Public auction uses the selected channel's 3:00 lifecycle. Private Auction requires active demonstrated demand.</div></div>`}
-function convertMethod(id,method){const x=item(id);if(!x||x.sold)return;if(method==='buy'){x.method='buy';x.type='Buy Now';x.privateAuction=null;x.price=Math.max(1,Number(x.price||x.current||x.market||1));x.endsAt=0;x.status='Available now';}else if(method==='auction'){x.method='auction';x.type='Auction';x.privateAuction=null;const c=channels.find(c=>c.id===x.channelId)||channels[0];x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.current=Math.max(1,Number(x.current||1));x.bidCount=0;const pool=items.filter(i=>i.channelId===c.id&&!i.sold);const idx=pool.findIndex(i=>i.id===x.id);if(idx<0){x.endsAt=Date.now()+180000;x.status='Live'}else{state.channelPos[c.id]=idx;x.endsAt=Date.now()+180000;x.status='Live'}}save();closeModal();activity(`${x.name} moved to ${method==='buy'?'BUY NOW':'PUBLIC AUCTION'}.`)}
+function updateItem(itemId,newAttrs={}){
+ const x=item(itemId);if(!x)return null;
+ x.internal=x.internal||{};
+ const sellerFields=['auctionType','startingPrice','presentation'];
+ Object.keys(newAttrs).forEach(k=>{
+  const v=newAttrs[k];
+  x[k]=v;
+  if(['category','year','era','condition','language','variant','presentation','auctionType','startingPrice'].includes(k))x.internal[k]=v;
+  if(k==='method'){x.method=v;x.type=v==='auction'?'Auction':'Buy Now';}
+ });
+ if(x.method==='auction'){
+  const result=evaluateAndEnqueue(x);
+  if(result){x.status='Auction queue';x.endsAt=0;}
+ }else{
+  ensureQueueState(state);channels.forEach(c=>state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(id=>id!==x.id));x.channel=null;x.channelId=null;x.endsAt=0;x.status='Available now';
+ }
+ normalizeAuctions(state);save();render();return x;
+}
+function convertMethod(id,method){const x=item(id);if(!x||x.sold)return;if(method==='buy'){x.method='buy';x.type='Buy Now';x.privateAuction=null;x.price=Math.max(1,Number(x.price||x.current||x.market||1));x.endsAt=0;x.status='Available now';ensureQueueState(state);channels.forEach(c=>state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(qid=>qid!==x.id));x.channel=null;x.channelId=null;}else if(method==='auction'){x.method='auction';x.type='Auction';x.privateAuction=null;x.current=Math.max(1,Number(x.current||1));x.bidCount=0;const result=evaluateAndEnqueue(x);if(result){x.status='Auction queue';x.endsAt=0;}}normalizeAuctions(state);save();closeModal();activity(`${x.name} moved to ${method==='buy'?'BUY NOW':'PUBLIC AUCTION'}.`)}
 function startPrivateFromMethod(id){const os=activeOffers(id);if(!os.length)return setToast('Private Auction requires active committed demand.');counterAll(id)}
 function counterAll(id){const os=activeOffers(id);if(!os.length)return setToast('No active committed demand to counter.');const high=Math.max(...os.map(o=>o.amount));const current=Math.max(high+25,Math.ceil(high*1.12));state.privateAuctions[id]={active:true,item:id,current,previousSellerCounter:null,deadline:Date.now()+120000,wave:1,participants:os.length,responses:os.map(o=>({offerId:o.id,amount:o.amount,engaged:true,buyer:o.buyer})),history:[{wave:1,seller:current,responses:os.map(o=>o.amount)}]};const x=item(id);x.privateAuction={active:true};notify(`Seller opened a demand-based private auction on ${x.name}.`,'private',id,'PRIVATE AUCTION');save();openModal('privateSeller',id)}
 function privateBuyer(id){let p=state.privateAuctions[id],x=item(id);if(!p||!p.active)return `<div class="modal"><div class="modalHead"><h2>Private auction closed</h2><button class="close" onclick="closeModal()">×</button></div><div class="empty">This negotiation is no longer active.</div></div>`;const mine=p.responses.find(r=>r.buyer==='You');const myAmount=mine?.amount||myOffer(id)?.amount||0;return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">DEMAND-BASED PRIVATE AUCTION</div><h2>${esc(x.name)}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice">This private auction exists because committed demand already existed and the seller chose to respond. You see only your relationship with the seller.</div><div class="privateStage"><div class="eyebrow">CURRENT SELLER COUNTER</div><div class="privatePrice">${money(p.current)}</div><div class="tiny muted">Wave ${p.wave} · respond by ${new Date(p.deadline).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}</div><div class="bar" style="margin-top:12px"><span id="privateBuyerBar" style="width:100%"></span></div></div><div class="card" style="margin-top:12px"><div class="eyebrow">YOUR CURRENT OFFER</div><div class="big">${money(myAmount)}</div><input id="privateInput" class="input" type="number" min="1" placeholder="Your counter" style="margin:10px 0"><div class="actions"><button class="primary" onclick="privateAccept('${id}')">Accept ${money(p.current)}</button><button class="secondary" onclick="privateCounter('${id}')">Counter</button><button class="secondary" onclick="privateExit('${id}')">Exit</button></div></div><div class="privacyNote" style="margin-top:12px">Other participants may exist, but their prices, identities and aggregate responses are intentionally invisible to you.</div></div>`}
@@ -586,44 +634,28 @@ function orderModal(index){const w=state.won[index];if(!w)return `<div class="mo
 function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='itemSummary')content=itemSummaryModal(data);else if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
 function render(){let body;if(state.page==='explore')body=explore();else if(state.page==='auctions')body=auctions();else if(state.page==='buy')body=buy();else if(state.page==='auction')body=auctionPage();else if(state.page==='item')body=itemPage();else if(state.page==='buyer')body=buyerHub();else if(state.page==='seller')body=sellerHub();else body=explore();document.body.classList.toggle('auction-mode',state.page==='auction');document.getElementById('app').innerHTML=(state.page==='auction'?'':header())+body+modals()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');}
 function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.status==='active'&&o.expires<=now){o.status='expired';changed=true;}});return changed}
-function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId),pool=items.filter(i=>i.channelId===c.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+180000;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
-function tick() {
-  const now = Date.now();
-  
-  channels.forEach(c => {
-    const activeItem = activeForChannel(c.id);
-    if (!activeItem) return;
-
-    // Check if the current live auction has ended
-    if (activeItem.endsAt > 0 && activeItem.endsAt <= now) {
-      activeItem.sold = true;
-      activeItem.status = 'Ended';
-      activeItem.endsAt = 0;
-
-      // Advance the channel queue to the next item
-      const pool = items.filter(x => x.channelId === c.id);
-      state.channelPos[c.id] = ((state.channelPos[c.id] || 0) + 1) % pool.length;
-
-      // Initialize the next item in the queue
-      const nextItem = pool[state.channelPos[c.id]];
-      if (nextItem) {
-        nextItem.endsAt = now + 180000; // Reset timer (3 minutes)
-        nextItem.status = 'Live';
-        nextItem.sold = false;
-
-        // If the user is currently viewing this channel's auction, switch their view
-        if (state.page === 'auction' && state.activeItem === activeItem.id) {
-          state.activeItem = nextItem.id;
-        }
-
-        notify(`${nextItem.name} is now live in ${c.name}.`, 'auction', nextItem.id, 'AUCTION LIVE');
-      }
-    }
-  });
-
-  // Keep precise clock elements synced across UI updates
-  updatePreciseTimerDisplays();
-  save();
+function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId);const pool=queuePool(c?.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;ensureQueueState(state);state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(id=>id!==x.id);if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+180000;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
+function tick(){
+ const now=Date.now();
+ let changed=expireOffers(now);
+ items.filter(x=>x.method==='auction'&&!x.sold&&x.status==='Live').forEach(x=>{
+  // Elastic decay and consumed-integer state persist for the lifetime of the
+  // active auction. Crossing N → N-1 must never reset the coefficient or make
+  // a previously consumed integer available again. A fresh auction receives
+  // a fresh Elastic state in finishAuction().
+  if(remainingMs(x)<=0){finishAuction(x);changed=true}
+ });
+ if(state.modal?.type==='privateBuyer'||state.modal?.type==='privateSeller'){
+  const p=state.privateAuctions[state.modal.data];
+  if(p?.active&&p.deadline<=now){p.responses=p.responses.map(r=>({...r,engaged:false}));p.active=false;p.activeParticipants=0;changed=true;}
+ }
+ if(changed){save();render();updatePreciseTimerDisplays();return;}
+ // All visible countdowns derive from the same authoritative endsAt value.
+ const x=state.page==='auction'?item(state.activeItem):null;
+ if(x){const cur=document.getElementById('auctionCurrent');if(cur)cur.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const fb=document.getElementById('fastBidButton');if(fb)fb.textContent=`BID ${money(minBid(x))}`;
+  if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.used?'integer already consumed':'predicted from current integer'):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
+ save();
+ updatePreciseTimerDisplays();
 }
 
 window.addEventListener('error',function(e){console.error('RapidUp runtime error:',e.error||e.message)});
@@ -635,6 +667,5 @@ document.addEventListener('click',function(e){
  if(actionEl){e.preventDefault();const a=actionEl.getAttribute('data-ru-action');if(a==='notifications')openModal('notifications');else if(a==='profile')openProfile();}
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
-function preciseTimerLoop(){updatePreciseTimerDisplays();requestAnimationFrame(preciseTimerLoop)}
-state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();preciseTimerLoop();setInterval(tick,250);
+state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
 </script></body></html>
