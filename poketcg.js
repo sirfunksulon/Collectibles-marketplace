@@ -1,34 +1,22 @@
-// poketcg.js
-
 const POKEMON_API_URL = 'https://api.pokemontcg.io/v2/cards';
 
 async function fetchPokemonCard(cardName) {
-  const query = String(cardName || '').trim();
-
-  if (!query) {
-    return [];
-  }
-
   try {
-    const url = `${POKEMON_API_URL}?q=name:"${encodeURIComponent(query)}"&pageSize=250`;
+    const query = `name:"${String(cardName).replace(/"/g, '\\"')}"`;
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
+    const response = await fetch(
+      `${POKEMON_API_URL}?q=${encodeURIComponent(query)}`
+    );
 
     if (!response.ok) {
       throw new Error(`Pokémon TCG API returned ${response.status}`);
     }
 
-    const result = await response.json();
+    const data = await response.json();
 
-    return Array.isArray(result.data) ? result.data : [];
-
+    return Array.isArray(data.data) ? data.data : [];
   } catch (error) {
     console.error('Error fetching Pokémon TCG API data:', error);
-    throw error;
+    return [];
   }
 }
