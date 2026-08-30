@@ -174,12 +174,61 @@ const IMG={
   cards:'https://images.unsplash.com/photo-1601645191163-3fc0d5d64e35?auto=format&fit=crop&w=1200&q=86',
   vintage:'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?auto=format&fit=crop&w=1200&q=86'
 };
-const channels=[
- {id:'c1',name:'Modern Chase',category:'Modern Pokémon',auctionType:'ELASTIC',criteria:{auctionType:'ELASTIC',startingMin:1,startingMax:100,yearMin:2020,yearMax:2026,eras:['Modern'],conditions:['Raw','Graded'],languages:['English'],variants:[],presentations:['Standard','Premium']},description:'High-demand modern chase cards, alternate arts and premium modern singles.',info:'Three-minute perpetual public auctions. Elastic bidding can extend the clock during the final 30-second zone using RapidUp’s inverse mirrored-number model. Each qualifying re-up halves the coefficient; consumed integers remain consumed within the active decay cycle; each subsequent lower integer begins a new cycle.',color:'elastic'},
- {id:'c2',name:'Vintage English',category:'Vintage Pokémon',auctionType:'SUDDEN DEATH',criteria:{auctionType:'SUDDEN DEATH',startingMin:1,startingMax:100,yearMin:1999,yearMax:2003,eras:['Vintage'],conditions:['Raw','Graded'],languages:['English'],variants:[],presentations:['Standard','Premium']},description:'Vintage English cards, WOTC-era pieces and established collector favorites.',info:'Three-minute perpetual public auctions. Bidding is completely independent of the timer. At 0:00 the current high bid wins and the next queue position becomes active.',color:'sudden'},
- {id:'c3',name:'Japanese & Regional',category:'Japanese / Regional',auctionType:'ELASTIC',criteria:{auctionType:'ELASTIC',startingMin:1,startingMax:100,yearMin:2004,yearMax:2019,eras:['Mid Era'],conditions:['Raw','Graded'],languages:['Japanese'],variants:[],presentations:['Standard','Premium']},description:'Japanese-language cards, regional releases and language-specific variants.',info:'Three-minute perpetual public auctions using the inverse elastic model. Qualifying bids in the 1–30 second zone can add decimal time; coefficient decay and cycle-local one-use integer states prevent runaway extension.',color:'elastic'},
- {id:'c4',name:'Graded Chase',category:'Graded Collectibles',auctionType:'SUDDEN DEATH',criteria:{auctionType:'SUDDEN DEATH',startingMin:1,startingMax:250,yearMin:1999,yearMax:2026,eras:['Vintage','Mid Era','Modern'],conditions:['Graded'],languages:['English'],variants:[],presentations:['Standard','Premium']},description:'Graded chase cards and premium slabs across eras and sets.',info:'Three-minute perpetual sudden-death auctions. The clock never responds to bids. The next slab enters at 3:00 as soon as the current one closes.',color:'sudden'}
+function getCardEra(year){
+ const y=Number(year);
+ if(y>=1996&&y<=2002)return 'Classic';
+ if(y>=2003&&y<=2013)return 'Mid Era';
+ if(y>=2014)return 'Modern';
+ return 'Unknown';
+}
+
+const CHANNEL_ERA_DEFS=[
+ {key:'Classic',yearMin:1996,yearMax:2002},
+ {key:'Mid Era',yearMin:2003,yearMax:2013},
+ {key:'Modern',yearMin:2014,yearMax:new Date().getFullYear()}
 ];
+const CHANNEL_CONDITIONS=['Raw','Graded'];
+const CHANNEL_AUCTION_TYPES=['ELASTIC','SUDDEN DEATH'];
+
+function buildChannelDefinitions(){
+ const out=[];
+ let n=1;
+ CHANNEL_ERA_DEFS.forEach(era=>{
+  CHANNEL_CONDITIONS.forEach(condition=>{
+   CHANNEL_AUCTION_TYPES.forEach(auctionType=>{
+    const id='c'+n++;
+    const label=auctionType==='ELASTIC'?'Elastic':'Sudden Death';
+    out.push({
+     id,
+     key:`${era.key}_${condition}_${auctionType}`,
+     name:`${era.key} · ${condition} · ${label}`,
+     category:'Pokemon',
+     auctionType,
+     criteria:{
+      category:'Pokemon',
+      auctionType,
+      startingMin:1,
+      startingMax:100,
+      yearMin:era.yearMin,
+      yearMax:era.yearMax,
+      eras:[era.key],
+      conditions:[condition],
+      languages:[],
+      variants:[],
+      presentations:['Standard','Premium']
+     },
+     description:`${era.key} Pokémon ${condition.toLowerCase()} cards running ${label} auctions.`,
+     info:`Metadata-driven ${era.key} channel for ${condition.toLowerCase()} Pokémon inventory. Language, variant and presentation remain open; auction type and starting-price eligibility are enforced by the channel rules.`,
+     color:auctionType==='ELASTIC'?'elastic':'sudden'
+    });
+   });
+  });
+ });
+ return out;
+}
+
+const channels=buildChannelDefinitions();
+
 const seedNames=['Umbreon VMAX','Rayquaza VMAX','Espeon VMAX','Pikachu VMAX','Mew ex','Tyranitar V','Gengar VMAX','Mewtwo VSTAR','Blastoise','Charizard ex','Gardevoir','Lugia V','Entei','Alakazam V','Zekrom','Reshiram & Charizard GX','Sylveon VMAX','Magikarp Wailord GX','Giratina V','Dragonite V','Mewtwo GX','Jolteon VMAX','Aerodactyl V','Machamp V','Darkrai VSTAR','Arceus VSTAR','Celebi VMAX','Rayquaza V','Pikachu ex','Charizard VMAX'];
 const sets=['Evolving Skies','Silver Tempest','Secret Wonders','Shining Legends','Vivid Voltage','Lost Origin','Crown Zenith','Astral Radiance','Celebrations','Obsidian Flames','151','Brilliant Stars'];
 const variants=['Alternate Art','Holo','Special Illustration Rare','Illustration Rare','Secret Rare','Classic Collection','Promo','Reverse Holo'];
@@ -189,7 +238,7 @@ function makeAuctionItem(id,k,seedGroup){
  const nm=seedNames[(seedGroup*17+k)%seedNames.length];
  const base=35+((seedGroup*50+k)*7)%430;
  const year=seedGroup===0?2020+(k%7):seedGroup===1?1999+(k%5):seedGroup===2?2004+(k%16):1999+(k%28);
- const era=year<=2003?'Vintage':year<=2019?'Mid Era':'Modern';
+ const era=getCardEra(year);
  const lang=seedGroup===2?'Japanese':'English';
  const condition=(seedGroup===3||k%3!==0)?'Graded':'Raw';
  const grade=condition==='Graded'?grades[(k+seedGroup)%grades.length]:'Raw';
@@ -210,7 +259,7 @@ items.push(
 );
 function initialState(){
  const now=Date.now();
- const s={page:'explore',activeItem:'a1',queueChannel:null,modal:null,profile:false,userMode:'buyer',search:'',sort:'activity',buyerTab:'overview',sellerTab:'overview',activity:'',toast:'',channelPos:{c1:0,c2:0,c3:0,c4:0},channelQueues:null,lastTick:now,offers:[],bids:[],won:[],purchases:[],notifications:[],interests:['Umbreon VMAX','Lugia V','Japanese','PSA 10'],privateAuctions:{},proxyBids:{},readNotifications:[],seeded:true};
+ const s={page:'explore',activeItem:'a1',queueChannel:null,modal:null,profile:false,userMode:'buyer',search:'',sort:'activity',buyerTab:'overview',sellerTab:'overview',activity:'',toast:'',channelPos:Object.fromEntries(channels.map(c=>[c.id,0])),channelQueues:null,lastTick:now,offers:[],bids:[],won:[],purchases:[],notifications:[],interests:['Umbreon VMAX','Lugia V','Japanese','PSA 10'],privateAuctions:{},proxyBids:{},readNotifications:[],seeded:true};
  s.offers=[
   {id:'o-seed-1',item:'b1',buyer:'You',amount:150,status:'active',created:now-2*3600000,expires:now+22*3600000,wave:0},
   {id:'o-seed-2',item:'b1',buyer:'Buyer B',amount:121,status:'active',created:now-1*3600000,expires:now+23*3600000,wave:0},
@@ -261,21 +310,55 @@ function ensureQueueState(s=state){
  channels.forEach(c=>{if(!Array.isArray(s.channelQueues[c.id]))s.channelQueues[c.id]=[];});
  return s.channelQueues;
 }
-function evaluateAndEnqueue(x,s=state){
- if(!x||x.sold||x.method!=='auction')return null;
+
+function routeItemToQueue(item, channelList=channels, s=state){
+ if(!item||item.sold||item.method!=='auction')return null;
  const queues=ensureQueueState(s);
- let target=null;
- for(const c of channels){if(queueMatches(x,c)){target=c;break;}}
- const oldId=x.channelId;
- channels.forEach(c=>{queues[c.id]=(queues[c.id]||[]).filter(id=>id!==x.id);});
- if(!target){x.channel=null;x.channelId=null;x.status='Unassigned';x.endsAt=0;return null;}
- x.channelId=target.id;x.channel=target.name;x.auctionType=target.auctionType;
- x.internal=x.internal||{};x.internal.auctionType=x.auctionType;
- queues[target.id].push(x.id);
- return {channel:target,changed:oldId!==target.id};
+ const era=getCardEra(item.year??item.internal?.year);
+ const condition=item.condition??item.internal?.condition;
+ const auctionType=item.auctionType??item.internal?.auctionType;
+ const permutationKey=`${era}_${condition}_${auctionType}`;
+ let target=channelList.find(c=>c.key===permutationKey&&queueMatches(item,c));
+ if(!target)target=channelList.find(c=>queueMatches(item,c));
+ channelList.forEach(c=>{queues[c.id]=(queues[c.id]||[]).filter(id=>id!==item.id);});
+ if(!target){
+  item.channel=null;item.channelId=null;item.status='Unassigned';item.endsAt=0;
+  return null;
+ }
+ item.channel=target.name;
+ item.channelId=target.id;
+ item.auctionType=auctionType;
+ item.internal=item.internal||{};
+ item.internal.auctionType=auctionType;
+ item.internal.era=era;
+ queues[target.id].push(item.id);
+ return target;
 }
-function queuePool(cid,s=state){const c=channel(cid);if(!c)return [];const queues=ensureQueueState(s);const ids=queues[cid]||[];return ids.map(id=>item(id)).filter(x=>x&&queueMatches(x,c));}
-function rebuildQueues(s=state){ensureQueueState(s);channels.forEach(c=>s.channelQueues[c.id]=[]);items.filter(x=>x.method==='auction'&&!x.sold).forEach(x=>evaluateAndEnqueue(x,s));return s.channelQueues;}
+
+function evaluateAndEnqueue(x,s=state){
+ const oldId=x?.channelId??null;
+ const target=routeItemToQueue(x,channels,s);
+ return target?{channel:target,changed:oldId!==target.id}:null;
+}
+
+function queuePool(cid,s=state){
+ const c=channel(cid);if(!c)return [];
+ const queues=ensureQueueState(s),ids=queues[cid]||[];
+ return ids.map(id=>item(id)).filter(x=>x&&queueMatches(x,c));
+}
+
+function getActiveChannels(channelList=channels,s=state){
+ const queues=ensureQueueState(s);
+ return channelList.filter(c=>Array.isArray(queues[c.id])&&queues[c.id].length>0&&queuePool(c.id,s).length>0);
+}
+
+function rebuildQueues(s=state){
+ ensureQueueState(s);
+ channels.forEach(c=>s.channelQueues[c.id]=[]);
+ items.filter(x=>x.method==='auction'&&!x.sold).forEach(x=>evaluateAndEnqueue(x,s));
+ return s.channelQueues;
+}
+
 function normalizeAuctions(s=state){
  const now=Date.now();
  const queuesReady=s.channelQueues&&channels.every(c=>Array.isArray(s.channelQueues[c.id]));
@@ -285,12 +368,13 @@ function normalizeAuctions(s=state){
   if(!pool.length){s.channelPos[c.id]=0;return;}
   let pos=Math.min(Number(s.channelPos[c.id]||0),pool.length-1);if(!Number.isFinite(pos)||pos<0)pos=0;s.channelPos[c.id]=pos;
   pool.forEach((x,i)=>{
-   x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
+   x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.era=getCardEra(x.internal.year??x.year);x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
    if(i===pos&&!x.sold){if(!x.endsAt||x.endsAt<=now){x.endsAt=now+180000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.current)||1);}x.status='Live';}
    else if(!x.sold){x.endsAt=0;x.status='Auction queue';}
   });
  });
 }
+
 function save(){state.lastTick=Date.now();state.proxyBids=state.proxyBids||{};state.unread=state.notifications.filter(n=>!n.read).length;state.itemState={};items.forEach(x=>state.itemState[x.id]={endsAt:x.endsAt,current:x.current,bidCount:x.bidCount,sold:x.sold,status:x.status,auction:x.auction,method:x.method,price:x.price,internal:x.internal});try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
 function money(n){return '$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2,minimumFractionDigits:0})}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -367,7 +451,11 @@ function explore(){
   const methods=[['','All selling methods'],['auction','Auction'],['buy','Buy Now']];
   return `<main><div class="ruExploreTop"><h1>Explore</h1><button class="icon ruSearchIcon" aria-label="Search and filters" onclick="openModal('exploreFilters')">⌕</button></div><div class="ruExploreBar"><div class="ruFilterSelect"><select onchange="state.exploreFilters=state.exploreFilters||{};state.exploreFilters.category=this.value;render()"><option value="">All categories</option>${cats.map(c=>`<option value="${esc(c)}" ${f.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select><select onchange="state.exploreFilters=state.exploreFilters||{};state.exploreFilters.method=this.value;render()">${methods.map(([v,l])=>`<option value="${v}" ${f.method===v?'selected':''}>${l}</option>`).join('')}</select></div><span class="tiny muted">${list.length} results</span></div><div class="grid">${list.slice(0,24).map(itemCard).join('')}</div></main>`;
 }
-function auctions(){return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1></section><div class="ruChannelGrid">${channels.map(c=>{const x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div></div><div style="display:flex;flex-direction:column;gap:7px"><button class="primary" onclick="openAuction('${x.id}')">Join</button><button class="secondary" onclick="openQueue('${c.id}')">Queue</button></div></article>`}).join('')}</div></main>`}
+function auctions(){
+ const activeChannels=getActiveChannels();
+ return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1><p>Only channels with inventory in their live auction queue appear here. Empty channel permutations remain available to the routing engine without cluttering the directory.</p></section><div class="ruChannelGrid">${activeChannels.map(c=>{const x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div></div><div style="display:flex;flex-direction:column;gap:7px"><button class="primary" onclick="openAuction('${x.id}')">Join</button><button class="secondary" onclick="openQueue('${c.id}')">Queue</button></div></article>`}).join('')}</div>${activeChannels.length?'':`<div class="empty">No auction channels currently contain eligible inventory.</div>`}</main>`
+}
+
 function openAuction(id){const x=item(id);if(!x||x.sold)return setToast('That auction is no longer available.');if(x.status!=='Live')return openQueue(x.channelId);state.activeItem=id;state.page='auction';state.modal=null;render();window.scrollTo(0,0)}
 function openItem(id){const x=item(id);if(!x)return;state.activeItem=id;state.modal={type:'itemSummary',data:id};state.profile=false;render();window.scrollTo(0,0)}
 function itemSummaryModal(id){const x=item(id);if(!x)return '<div class="modal"><div class="empty">Item not found.</div></div>';const auction=x.method==='auction';const live=auction&&x.status==='Live';const c=channel(x.channelId);const d=x.internal||{};return `<div class="modal ruItemSummary"><div class="modalHead"><div><div class="eyebrow">${auction?'AUCTION ITEM':'BUY NOW ITEM'}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(auction?x.current:x.price)}</div><div class="notice"><b>${auction?(live?'Live now in '+esc(c?.name||'auction channel'):'Queued for auction'):'Available for immediate purchase.'}</b></div><div class="list"><div class="listrow"><span>Year / Era</span><b>${esc(String(d.year??inferYear(x)))} · ${esc(d.era||'—')}</b></div><div class="listrow"><span>Condition</span><b>${esc(d.condition||x.grade||'—')}</b></div><div class="listrow"><span>Language</span><b>${esc(d.language||x.lang||'—')}</b></div><div class="listrow"><span>Variant</span><b>${esc(d.variant||x.variant||'—')}</b></div><div class="listrow"><span>Presentation</span><b>${esc(d.presentation||'standard')}</b></div>${auction?`<div class="listrow"><span>Auction type</span><b>${esc(d.auctionType||x.auctionType||'—')}</b></div><div class="listrow"><span>Starting price</span><b>${money(d.startingPrice??x.startingPrice??1)}</b></div>`:''}</div><div class="actions"><button class="primary" onclick="closeModal();${auction?(live?`openAuction('${x.id}')`:`openQueue('${x.channelId}')`):`buyNow('${x.id}')`}">${auction?(live?'Join Auction':'View Queue'):'Buy Now · '+money(x.price)}</button>${!auction?`<button class="secondary" onclick="makeOffer('${x.id}')">Make Offer</button>`:''}</div></div></div></div>`}
