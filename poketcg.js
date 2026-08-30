@@ -162,22 +162,99 @@ function cardHasVariant(card, variant) {
  * ------------------------------------------------------------
  * PARTIAL / AUTOCOMPLETE SEARCH
  *
- * These use wildcard queries supported by the Pokémon TCG API.
+ * Pokémon searching uses substring matching.
+ *
+ * Examples:
+ *
+ * P      → Pikachu, Pidgey, Popplio, Unown [P], etc.
+ * Pi     → Pikachu, Pidgey, etc.
+ * Pika   → Pikachu
+ * Unown  → Unown [A], Unown [B], Unown [P], etc.
+ *
+ * The API is used to retrieve candidate records.
+ * Local filtering then performs the actual "contains" match.
  * ------------------------------------------------------------
  */
 
 async function searchByPokemon(value) {
-  const q = escapePokemonQuery(value);
+  const searchValue = String(value || '')
+    .trim()
+    .toLowerCase();
 
-  if (!q) {
+  if (!searchValue) {
     return [];
   }
 
-  const results = await pokemonTcgRequest(
-    `name:${q}*`
+  /*
+   * First search locally.
+   *
+   * This is important because once cards have already been
+   * retrieved, typing another character should be effectively
+   * instantaneous and should not require another API request.
+   */
+  const localResults = [
+    ...pokemonCardMemory.values()
+  ].filter(card =>
+    String(card?.name || '')
+      .toLowerCase()
+      .includes(searchValue)
   );
 
-  return uniqueCards(results);
+  /*
+   * Also perform an API lookup using the entered text.
+   *
+   * The API query uses a wildcard so that names beginning with
+   * the entered text are retrieved. We then perform our own
+   * substring filtering against the returned records.
+   */
+  const q = escapePokemonQuery(value);
+
+  let apiResults = [];
+
+  try {
+    apiResults = await pokemonTcgRequest(
+      `name:${q}*`
+    );
+  } catch (error) {
+    /*
+     * If the API fails but we have locally cached records,
+     * return those rather than destroying the lookup experience.
+     */
+    console.error(
+      'Pokémon name lookup failed:',
+      error
+    );
+  }
+
+  /*
+   * Merge API and local results.
+   */
+  const combined = uniqueCards([
+    ...apiResults,
+    ...localResults
+  ]);
+
+  /*
+   * TRUE SUBSTRING MATCH.
+   *
+   * This is the critical behavior:
+   *
+   * "P" matches anything containing P.
+   *
+   * Therefore:
+   *
+   * Pikachu       ✓
+   * Pidgey        ✓
+   * Popplio       ✓
+   * Unown [P]     ✓
+   *
+   * "PI" similarly narrows to names containing "pi".
+   */
+  return combined.filter(card =>
+    String(card?.name || '')
+      .toLowerCase()
+      .includes(searchValue)
+  );
 }
 
 
@@ -188,11 +265,42 @@ async function searchBySet(value) {
     return [];
   }
 
-  const results = await pokemonTcgRequest(
-    `set.name:${q}*`
+  /*
+   * Search locally first for instant filtering.
+   */
+  const searchValue = String(value || '')
+    .trim()
+    .toLowerCase();
+
+  const localResults = [
+    ...pokemonCardMemory.values()
+  ].filter(card =>
+    String(card?.set?.name || '')
+      .toLowerCase()
+      .includes(searchValue)
   );
 
-  return uniqueCards(results);
+  let apiResults = [];
+
+  try {
+    apiResults = await pokemonTcgRequest(
+      `set.name:${q}*`
+    );
+  } catch (error) {
+    console.error(
+      'Set lookup failed:',
+      error
+    );
+  }
+
+  return uniqueCards([
+    ...apiResults,
+    ...localResults
+  ]).filter(card =>
+    String(card?.set?.name || '')
+      .toLowerCase()
+      .includes(searchValue)
+  );
 }
 
 
@@ -219,11 +327,32 @@ async function searchByCard(value) {
   const numberMatch = clean.match(/^(\d+)(?:\/\d+)?$/);
 
   if (numberMatch) {
-    return uniqueCards(
-      await pokemonTcgRequest(
-        `number:${numberMatch[1]}`
-      )
+    const number = numberMatch[1];
+
+    const localResults = [
+      ...pokemonCardMemory.values()
+    ].filter(card =>
+      String(card?.number || '')
+        .split('/')[0] === number
     );
+
+    let apiResults = [];
+
+    try {
+      apiResults = await pokemonTcgRequest(
+        `number:${number}`
+      );
+    } catch (error) {
+      console.error(
+        'Card number lookup failed:',
+        error
+      );
+    }
+
+    return uniqueCards([
+      ...apiResults,
+      ...localResults
+    ]);
   }
 
   /*
@@ -271,7 +400,20 @@ async function searchByCard(value) {
 
   const results = await Promise.all(searches);
 
-  return uniqueCards(results.flat());
+  /*
+   * Also search the local memory so already-loaded cards
+   * participate immediately.
+   */
+  const localResults = [
+    ...pokemonCardMemory.values()
+  ].filter(card =>
+    cardMatchesText(card, namePart || clean)
+  );
+
+  return uniqueCards([
+    ...results.flat(),
+    ...localResults
+  ]);
 }
 
 
@@ -648,19 +790,29 @@ function filterPokemonCards(cards, criteria) {
 
   return source.filter(record => {
 
+    /*
+     * Pokémon uses TRUE substring matching.
+     *
+     * This means:
+     *
+     * P → Pikachu, Pidgey, Unown [P], etc.
+     * PI → names containing "pi"
+     */
     if (
       pokemon &&
-      !cardMatchesText(
-        {
-          name: record?.name
-        },
-        pokemon
-      )
+      !String(record?.name || '')
+        .toLowerCase()
+        .includes(
+          pokemon.toLowerCase()
+        )
     ) {
       return false;
     }
 
 
+    /*
+     * Set also uses substring matching.
+     */
     if (
       set &&
       !String(record?.set?.name || '')
@@ -673,6 +825,9 @@ function filterPokemonCards(cards, criteria) {
     }
 
 
+    /*
+     * Card searches name and number.
+     */
     if (card) {
       const cardText = [
         record?.name,
