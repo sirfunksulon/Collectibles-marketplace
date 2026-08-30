@@ -136,6 +136,29 @@ body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
  .auctionScreen .ruChannelInfo{left:14px!important;bottom:22px!important;font-size:10px!important}
 }
 </style>
+<style>
+/* RapidUp — surgical consignment mobile usability fix. Scoped only to the consignment modal. */
+.consignmentModal{width:min(900px,100%);max-width:900px;overflow-x:hidden}
+.consignmentModal *{min-width:0}
+.consignmentModal input{max-width:100%}
+@media(max-width:620px){
+  .overlay{overflow-x:hidden}
+  .consignmentModal{width:100%;max-width:100%;padding:16px;border-radius:24px 24px 0 0;overflow-x:hidden}
+  .consignmentModal .modalHead{gap:10px;margin-bottom:14px}
+  .consignmentModal .modalHead h2{font-size:26px;line-height:1.02}
+  .consignmentModal .notice{font-size:13px;line-height:1.45}
+  .consignmentModal .consignGrid{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:16px}
+  .consignmentModal .consignField{width:100%;min-width:0}
+  .consignmentModal .consignField .input{width:100%;min-width:0}
+  .consignmentModal .consignSuggestions{position:static;width:100%;max-width:100%;margin-top:6px;max-height:190px;overflow-x:hidden;overflow-y:auto;border-radius:12px;box-shadow:none;padding:4px}
+  .consignmentModal .consignOption{width:100%;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:break-word;padding:11px 10px}
+  .consignmentModal .consignOption small{white-space:normal;overflow-wrap:anywhere}
+  .consignmentModal .consignPreview{padding:14px;margin-top:14px}
+  .consignmentModal .consignPreview .big{font-size:22px!important;line-height:1.12}
+  .consignmentModal .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .consignmentModal .actions button{width:100%;min-width:0}
+}
+</style>
 </head>
 <body><div id="app"></div>
 
