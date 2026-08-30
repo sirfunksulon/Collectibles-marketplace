@@ -1,22 +1,59 @@
 const POKEMON_API_URL = 'https://api.pokemontcg.io/v2/cards';
 
-async function pokemonTcgRequest(query, pageSize = 250) {
-  const url = `${POKEMON_API_URL}?q=${encodeURIComponent(query)}&pageSize=${pageSize}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Pokémon TCG API returned ${response.status}`);
-  }
-
-  const data = await response.json();
-  return Array.isArray(data.data) ? data.data : [];
-}
+const pokemonTcgCache = new Map();
 
 function escapePokemonTcgQuery(value) {
   return String(value ?? '')
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .trim();
+}
+
+async function pokemonTcgRequest(query, pageSize = 250) {
+  const cacheKey = `${query}|${pageSize}`;
+
+  if (pokemonTcgCache.has(cacheKey)) {
+    return pokemonTcgCache.get(cacheKey);
+  }
+
+  const url =
+    `${POKEMON_API_URL}?q=${encodeURIComponent(query)}` +
+    `&pageSize=${pageSize}`;
+
+  let lastError;
+
+  // Small retry protects against temporary API/network failures.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Pokémon TCG API returned ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      const results = Array.isArray(data.data) ? data.data : [];
+
+      pokemonTcgCache.set(cacheKey, results);
+
+      return results;
+    } catch (error) {
+      lastError = error;
+
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 function variantNamesFromCard(card) {
@@ -39,6 +76,7 @@ function variantNamesFromCard(card) {
 
   if (card?.rarity) {
     const rarity = String(card.rarity).toLowerCase();
+
     if (rarity.includes('illustration rare')) {
       names.push('Illustration Rare');
     }
@@ -59,8 +97,8 @@ function variantNamesFromCard(card) {
   return [...new Set(names)];
 }
 
-// Public compatibility helper used by RapidUp.
-// A card-name search remains the default behavior.
+// Existing compatibility function.
+// RapidUp can continue calling fetchPokemonCard().
 async function fetchPokemonCard(cardName) {
   const q = String(cardName ?? '').trim();
 
@@ -68,22 +106,12 @@ async function fetchPokemonCard(cardName) {
     return [];
   }
 
-  try {
-    return await pokemonTcgRequest(
-      `name:"${escapePokemonTcgQuery(q)}"`
-    );
-  } catch (error) {
-    console.error(
-      'Error fetching Pokémon TCG API data:',
-      error
-    );
-
-    return [];
-  }
+  return pokemonTcgRequest(
+    `name:"${escapePokemonTcgQuery(q)}"`
+  );
 }
 
-// Generic lookup used by the RapidUp Consignment Inventory Generator.
-// The HTML combines and refines the returned records.
+// Generic lookup used by the RapidUp Consignment Generator.
 async function searchPokemonCards(criteria = {}) {
   const pokemon = String(criteria.pokemon ?? '').trim();
   const set = String(criteria.set ?? '').trim();
@@ -91,9 +119,6 @@ async function searchPokemonCards(criteria = {}) {
   const variant = String(criteria.variant ?? '').trim();
 
   let query = '';
-
-  // Use the most structurally specific field as the API lookup anchor.
-  // RapidUp applies the remaining populated fields after the records return.
 
   if (card) {
     const number = card.replace(/^#/, '').trim();
@@ -104,33 +129,24 @@ async function searchPokemonCards(criteria = {}) {
     } else {
       query =
         `name:"${escapePokemonTcgQuery(card)}"`;
-      } else if (variant) {
-
-    // Variant names are not consistently represented as a
-    // searchable Cardex field, so retrieve Pokémon records
-    // and allow RapidUp to filter the variant locally.
-
+    }
+  } else if (set) {
+    query =
+      `set.name:"${escapePokemonTcgQuery(set)}"`;
+  } else if (pokemon) {
+    query =
+      `name:"${escapePokemonTcgQuery(pokemon)}"`;
+  } else if (variant) {
+    // Variant is not consistently searchable through the API,
+    // so retrieve Pokémon cards and let RapidUp filter them.
     query = 'supertype:Pokémon';
-
   } else {
     return [];
   }
 
-  try {
-    return await pokemonTcgRequest(query);
-  } catch (error) {
-    console.error(
-      'Error searching Pokémon TCG API:',
-      error
-    );
-
-    throw error;
-  }
+  return pokemonTcgRequest(query, 250);
 }
 
-// Compatibility helper for RapidUp's card normalization.
 function getPokemonCardVariants(card) {
   return variantNamesFromCard(card);
 }
-    }
-    
