@@ -805,37 +805,748 @@ function interestsModal(){return `<div class="modal"><div class="modalHead"><div
 function addInterest(){const v=document.getElementById('interestInput')?.value.trim();if(!v)return;state.interests.push(v);save();openModal('interests');notify(`Concierge is now watching ${v}.`,'buyer',null,'CONCIERGE')}
 function consignModal(){return `<div class="modal consignmentModal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB</div><h2>Consignment Inventory Generator</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice">Identify the collectible using any information you know. Start typing in any field. Results update automatically and each field can narrow the others. RapidUp seller-controlled marketplace attributes remain separate.</div><div class="consignGrid" style="margin-top:18px"><label class="consignField"><span class="eyebrow">Pokémon / Character</span><input id="consignPokemon" class="input" placeholder="Type or select Pokémon…" autocomplete="off" onfocus="openConsignmentSuggestions('pokemon')" oninput="consignmentPokemonChanged(this.value)"><div id="consignPokemonSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Set</span><input id="consignSet" class="input" placeholder="Type or select set…" autocomplete="off" onfocus="openConsignmentSuggestions('set')" oninput="consignmentSetChanged(this.value)"><div id="consignSetSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Card / Number</span><input id="consignCard" class="input" placeholder="Type card name or number…" autocomplete="off" onfocus="openConsignmentSuggestions('card')" oninput="consignmentCardChanged(this.value)"><div id="consignCardSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Variant</span><input id="consignVariant" class="input" placeholder="Type or select variant…" autocomplete="off" onfocus="openConsignmentSuggestions('variant')" oninput="consignmentVariantChanged(this.value)"><div id="consignVariantSuggestions" class="consignSuggestions" hidden></div></label></div><div id="consignStatus" class="tiny muted" style="margin-top:12px">Start typing in any field to search the Pokémon TCG database.</div><div id="consignPreview" class="consignPreview"><div class="eyebrow">STANDARDIZED TITLE PREVIEW</div><div id="consignTitlePreview" class="big" style="font-size:25px;margin-top:7px">Select a card and variant.</div></div><div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" id="consignSubmit" onclick="submitConsignment()" disabled>Stage Inventory</button></div></div>`}
 
-let consignmentCache={cards:[],searchResults:[],selectedPokemon:'',selectedSet:'',selectedCard:'',selectedVariant:'',activeField:'',requestToken:0,loading:false};
-function setConsignmentStatus(text,error=false){const el=document.getElementById('consignStatus');if(el){el.textContent=text;el.className=error?'warning tiny':'tiny muted'}}
-function normalizePokemonCard(card){const releaseDate=card?.set?.releaseDate||'',releaseYear=releaseDate?parseInt(releaseDate.slice(0,4),10):null;return{id:card.id,cardName:card.name||'',cardNumber:card.number||'',setId:card?.set?.id||'',setName:card?.set?.name||'',releaseYear:Number.isFinite(releaseYear)?releaseYear:null,pokemon:card.name||'',rarity:card.rarity||'',images:card.images||{},variants:typeof getPokemonCardVariants==='function'?getPokemonCardVariants(card):(card?.tcgplayer?.prices?Object.keys(card.tcgplayer.prices):[]),raw:card}}
-function uniqueConsignmentCards(cards){return[...new Map(cards.map(x=>{const n=normalizePokemonCard(x);return[n.id,n]})).values()].filter(x=>x.id&&x.cardName&&x.setName)}
-function selectedConsignmentCard(){return consignmentCache.searchResults.find(x=>x.id===consignmentCache.selectedCard)||consignmentCache.cards.find(x=>x.id===consignmentCache.selectedCard)||null}
-function closeConsignmentSuggestions(){document.querySelectorAll('.consignSuggestions').forEach(x=>x.hidden=true)}
-function openConsignmentSuggestions(field){consignmentCache.activeField=field;renderConsignmentSuggestions(field);const el=document.getElementById(`consign${field.charAt(0).toUpperCase()+field.slice(1)}Suggestions`);if(el)el.hidden=false}
-function suggestionElementId(field){return`consign${field.charAt(0).toUpperCase()+field.slice(1)}Suggestions`}
-function fieldInputId(field){return`consign${field.charAt(0).toUpperCase()+field.slice(1)}`}
-function consignmentFieldValue(field){return document.getElementById(fieldInputId(field))?.value.trim()||''}
-function activeConsignmentCards(){let cards=consignmentCache.searchResults.slice();const p=consignmentCache.selectedPokemon.trim().toLowerCase(),set=consignmentCache.selectedSet.trim().toLowerCase(),variant=consignmentCache.selectedVariant.trim().toLowerCase();if(p)cards=cards.filter(x=>x.cardName.toLowerCase().includes(p));if(set)cards=cards.filter(x=>x.setName.toLowerCase().includes(set)||x.setId.toLowerCase()===set);if(variant)cards=cards.filter(x=>(x.variants||[]).some(v=>String(v).toLowerCase().includes(variant)));return cards}
-function localConsignmentOptions(field){const cards=activeConsignmentCards();if(field==='pokemon')return[...new Set(cards.map(x=>x.cardName).filter(Boolean))].sort((a,b)=>a.localeCompare(b)).map(value=>({value,label:value}));if(field==='set'){const m=new Map();cards.forEach(x=>{if(x.setName&&!m.has(x.setId||x.setName))m.set(x.setId||x.setName,{value:x.setName,label:x.setName,sub:x.releaseYear?String(x.releaseYear):''})});return[...m.values()].sort((a,b)=>a.label.localeCompare(b.label))}if(field==='card')return cards.map(x=>({value:x.id,label:`${x.cardName} #${x.cardNumber}`,sub:x.setName}));if(field==='variant'){const vals=new Set();cards.forEach(x=>(x.variants||[]).forEach(v=>vals.add(v)));cards.forEach(x=>{if(x.rarity)vals.add(x.rarity)});return[...vals].sort().map(value=>({value,label:value}))}return[]}
-function renderConsignmentSuggestions(field){const el=document.getElementById(suggestionElementId(field));if(!el)return;const q=consignmentFieldValue(field).toLowerCase();let options=localConsignmentOptions(field);if(q)options=options.filter(o=>`${o.label} ${o.sub||''} ${o.value}`.toLowerCase().includes(q));options=options.slice(0,60);if(!options.length){el.innerHTML='<div class="consignLoading">No matching selections yet.</div>';return}el.innerHTML=options.map((o,i)=>`<button type="button" class="consignOption" onclick="selectConsignmentOption('${field}',${i})"><b>${esc(o.label)}</b>${o.sub?`<small>${esc(o.sub)}</small>`:''}</button>`).join('');el._options=options}
-function selectConsignmentOption(field,index){const el=document.getElementById(fieldInputId(field)),box=document.getElementById(suggestionElementId(field));const options=box?box._options||[]:[];const option=options[index];if(!el||!option)return;if(field==='card'){el.value=option.label;consignmentCache.selectedCard=option.value;const card=consignmentCache.searchResults.find(x=>x.id===option.value);if(card){consignmentCache.selectedPokemon=card.cardName;consignmentCache.selectedSet=card.setName;document.getElementById('consignPokemon').value=card.cardName;document.getElementById('consignSet').value=card.setName;populateConsignmentVariants(card)}}else if(field==='pokemon'){el.value=option.value;consignmentCache.selectedPokemon=option.value}else if(field==='set'){el.value=option.value;consignmentCache.selectedSet=option.value}else if(field==='variant'){el.value=option.value;consignmentCache.selectedVariant=option.value}closeConsignmentSuggestions();applyConsignmentFilters(field);if(field==='card'){const card=selectedConsignmentCard();if(card)populateConsignmentVariants(card)}updateConsignmentPreview()}
-function populateConsignmentVariants(card){const el=document.getElementById('consignVariant');if(!el)return;const values=[...(card?.variants||[])];const variants=[...new Set(values.filter(Boolean))];const box=document.getElementById('consignVariantSuggestions');if(box){box._options=variants.map(value=>({value,label:value}));box.innerHTML=box._options.map((o,i)=>`<button type="button" class="consignOption" onclick="selectConsignmentOption('variant',${i})"><b>${esc(o.label)}</b></button>`).join('')}el.disabled=false}
-function populateConsignmentCards(cards){consignmentCache.cards=cards;const card=document.getElementById('consignCard');if(card)card.disabled=false;renderConsignmentSuggestions('card')}
-function populateConsignmentSets(cards){renderConsignmentSuggestions('set')}
-function populateConsignmentPokemon(cards){renderConsignmentSuggestions('pokemon')}
-async function fetchConsignmentCardsByField(field,value){const q=value.trim();if(!q)return[];if(typeof searchPokemonCards==='function'){return await searchPokemonCards({[field]:q})}if(field==='pokemon'&&typeof fetchPokemonCard==='function')return await fetchPokemonCard(q);const term=field==='set'?`set.name:"${q.replace(/"/g,'\\"')}"`:field==='card'?( /^#?\d+(?:\/\d+)?$/.test(q)?`number:${q.replace(/^#/,'').split('/')[0]}`:`name:"${q.replace(/"/g,'\\"')}"`):`name:"${q.replace(/"/g,'\\"')}"`;const r=await fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(term)}&pageSize=250`);if(!r.ok)throw new Error(`Pokémon TCG API returned ${r.status}`);const d=await r.json();return d.data||[]}
-function applyConsignmentFilters(changedField){const cards=activeConsignmentCards();consignmentCache.cards=cards;populateConsignmentPokemon(cards);populateConsignmentSets(cards);populateConsignmentCards(cards);const current=selectedConsignmentCard();if(changedField!=='card'&&!current){consignmentCache.selectedCard='';document.getElementById('consignCard').value=''}if(changedField!=='variant'&&!current){consignmentCache.selectedVariant='';document.getElementById('consignVariant').value=''}if(current)populateConsignmentVariants(current);renderConsignmentSuggestions(consignmentCache.activeField);setConsignmentStatus(`${cards.length} matching card${cards.length===1?'':'s'} available.`)}
+let consignmentCache={
+  cards:[],
+  searchResults:[],
+  selectedPokemon:'',
+  selectedSet:'',
+  selectedCard:'',
+  selectedVariant:'',
+  activeField:'',
+  requestToken:0,
+  loading:false
+};
+
+function setConsignmentStatus(text,error=false){
+  const el=document.getElementById('consignStatus');
+  if(el){
+    el.textContent=text;
+    el.className=error?'warning tiny':'tiny muted';
+  }
+}
+
+function normalizePokemonCard(card){
+  const releaseDate=card?.set?.releaseDate||'';
+  const releaseYear=releaseDate?parseInt(releaseDate.slice(0,4),10):null;
+
+  return {
+    id:card?.id||'',
+    cardName:card?.name||'',
+    cardNumber:card?.number||'',
+    setId:card?.set?.id||'',
+    setName:card?.set?.name||'',
+    releaseYear:Number.isFinite(releaseYear)?releaseYear:null,
+    pokemon:card?.name||'',
+    images:card?.images||{},
+    variants:typeof getPokemonCardVariants==='function'
+      ? getPokemonCardVariants(card)
+      : [],
+    raw:card
+  };
+}
+
+function uniqueConsignmentCards(cards){
+  return [...new Map(
+    cards
+      .map(normalizePokemonCard)
+      .filter(x=>x.id&&x.cardName&&x.setName)
+      .map(x=>[x.id,x])
+  ).values()];
+}
+
+function selectedConsignmentCard(){
+  return consignmentCache.searchResults.find(
+    x=>x.id===consignmentCache.selectedCard
+  )||consignmentCache.cards.find(
+    x=>x.id===consignmentCache.selectedCard
+  )||null;
+}
+
+function closeConsignmentSuggestions(){
+  document.querySelectorAll('.consignSuggestions').forEach(x=>x.hidden=true);
+}
+
+function suggestionElementId(field){
+  return `consign${field.charAt(0).toUpperCase()+field.slice(1)}Suggestions`;
+}
+
+function fieldInputId(field){
+  return `consign${field.charAt(0).toUpperCase()+field.slice(1)}`;
+}
+
+function consignmentFieldValue(field){
+  return document.getElementById(fieldInputId(field))?.value.trim()||'';
+}
+
+function openConsignmentSuggestions(field){
+  consignmentCache.activeField=field;
+  renderConsignmentSuggestions(field);
+
+  const el=document.getElementById(suggestionElementId(field));
+  if(el)el.hidden=false;
+}
+
+function activeConsignmentCards(){
+  let cards=consignmentCache.searchResults.slice();
+
+  const p=consignmentCache.selectedPokemon.trim().toLowerCase();
+  const s=consignmentCache.selectedSet.trim().toLowerCase();
+  const v=consignmentCache.selectedVariant.trim().toLowerCase();
+
+  if(p){
+    cards=cards.filter(x=>
+      x.cardName.toLowerCase().includes(p)
+    );
+  }
+
+  if(s){
+    cards=cards.filter(x=>
+      x.setName.toLowerCase().includes(s)||
+      x.setId.toLowerCase()===s
+    );
+  }
+
+  if(v){
+    cards=cards.filter(x=>
+      (x.variants||[]).some(
+        value=>String(value).toLowerCase().includes(v)
+      )
+    );
+  }
+
+  return cards;
+}
+
+function localConsignmentOptions(field){
+  const cards=activeConsignmentCards();
+
+  if(field==='pokemon'){
+    return [...new Set(
+      cards.map(x=>x.cardName).filter(Boolean)
+    )]
+    .sort((a,b)=>a.localeCompare(b))
+    .map(value=>({value,label:value}));
+  }
+
+  if(field==='set'){
+    const map=new Map();
+
+    cards.forEach(x=>{
+      if(x.setName&&!map.has(x.setId||x.setName)){
+        map.set(
+          x.setId||x.setName,
+          {
+            value:x.setName,
+            label:x.setName,
+            sub:x.releaseYear?String(x.releaseYear):''
+          }
+        );
+      }
+    });
+
+    return [...map.values()]
+      .sort((a,b)=>a.label.localeCompare(b.label));
+  }
+
+  if(field==='card'){
+    return cards.map(x=>({
+      value:x.id,
+      label:`${x.cardName} #${x.cardNumber}`,
+      sub:x.setName
+    }));
+  }
+
+  if(field==='variant'){
+    const values=new Set();
+
+    cards.forEach(x=>{
+      (x.variants||[]).forEach(v=>{
+        if(v)values.add(v);
+      });
+    });
+
+    return [...values]
+      .sort()
+      .map(value=>({value,label:value}));
+  }
+
+  return [];
+}
+
+function renderConsignmentSuggestions(field){
+  const el=document.getElementById(
+    suggestionElementId(field)
+  );
+
+  if(!el)return;
+
+  const q=consignmentFieldValue(field).toLowerCase();
+
+  let options=localConsignmentOptions(field);
+
+  if(q){
+    options=options.filter(o=>
+      `${o.label} ${o.sub||''} ${o.value}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }
+
+  options=options.slice(0,60);
+
+  if(!options.length){
+    el.innerHTML='<div class="consignLoading">No matching selections yet.</div>';
+    el._options=[];
+    return;
+  }
+
+  el._options=options;
+
+  el.innerHTML=options.map(
+    (o,i)=>
+      `<button type="button" class="consignOption" onclick="selectConsignmentOption('${field}',${i})">
+        <b>${esc(o.label)}</b>
+        ${o.sub?`<small>${esc(o.sub)}</small>`:''}
+      </button>`
+  ).join('');
+}
+
+function selectConsignmentOption(field,index){
+  const input=document.getElementById(fieldInputId(field));
+  const box=document.getElementById(suggestionElementId(field));
+
+  const options=box?box._options||[]:[];
+  const option=options[index];
+
+  if(!input||!option)return;
+
+  if(field==='card'){
+    input.value=option.label;
+    consignmentCache.selectedCard=option.value;
+
+    const card=consignmentCache.searchResults.find(
+      x=>x.id===option.value
+    );
+
+    if(card){
+      consignmentCache.selectedPokemon=card.cardName;
+      consignmentCache.selectedSet=card.setName;
+
+      document.getElementById('consignPokemon').value=
+        card.cardName;
+
+      document.getElementById('consignSet').value=
+        card.setName;
+
+      populateConsignmentVariants(card);
+    }
+  }
+
+  if(field==='pokemon'){
+    input.value=option.value;
+    consignmentCache.selectedPokemon=option.value;
+  }
+
+  if(field==='set'){
+    input.value=option.value;
+    consignmentCache.selectedSet=option.value;
+  }
+
+  if(field==='variant'){
+    input.value=option.value;
+    consignmentCache.selectedVariant=option.value;
+  }
+
+  closeConsignmentSuggestions();
+  applyConsignmentFilters(field);
+
+  if(field==='card'){
+    const card=selectedConsignmentCard();
+    if(card)populateConsignmentVariants(card);
+  }
+
+  updateConsignmentPreview();
+}
+
+function populateConsignmentVariants(card){
+  const input=document.getElementById('consignVariant');
+  const box=document.getElementById('consignVariantSuggestions');
+
+  if(!input)return;
+
+  const variants=[
+    ...new Set(
+      (card?.variants||[]).filter(Boolean)
+    )
+  ];
+
+  if(box){
+    box._options=variants.map(
+      value=>({value,label:value})
+    );
+
+    box.innerHTML=box._options.map(
+      (o,i)=>
+        `<button type="button" class="consignOption" onclick="selectConsignmentOption('variant',${i})">
+          <b>${esc(o.label)}</b>
+        </button>`
+    ).join('');
+  }
+
+  input.disabled=false;
+}
+
+function populateConsignmentCards(cards){
+  consignmentCache.cards=cards;
+
+  const input=document.getElementById('consignCard');
+
+  if(input)input.disabled=false;
+
+  renderConsignmentSuggestions('card');
+}
+
+function applyConsignmentFilters(changedField){
+  const cards=activeConsignmentCards();
+
+  consignmentCache.cards=cards;
+
+  renderConsignmentSuggestions('pokemon');
+  renderConsignmentSuggestions('set');
+  renderConsignmentSuggestions('card');
+  renderConsignmentSuggestions('variant');
+
+  const current=selectedConsignmentCard();
+
+  if(!current&&changedField!=='card'){
+    consignmentCache.selectedCard='';
+    const card=document.getElementById('consignCard');
+    if(card)card.value='';
+  }
+
+  if(current){
+    populateConsignmentVariants(current);
+  }
+
+  renderConsignmentSuggestions(
+    consignmentCache.activeField
+  );
+
+  setConsignmentStatus(
+    `${cards.length} matching card${cards.length===1?'':'s'} available.`
+  );
+
+  updateConsignmentPreview();
+}
+
+async function fetchConsignmentCardsByField(field,value){
+  const q=String(value||'').trim();
+
+  if(!q)return[];
+
+  let term='';
+
+  if(field==='pokemon'){
+    term=`name:"${q.replace(/"/g,'\\"')}"`;
+  }
+
+  else if(field==='set'){
+    term=`set.name:"${q.replace(/"/g,'\\"')}"`;
+  }
+
+  else if(field==='card'){
+    const numberMatch=q.match(/^#?(\d+)(?:\/\d+)?$/);
+
+    if(numberMatch){
+      term=`number:${numberMatch[1]}`;
+    }else{
+      term=`name:"${q.replace(/"/g,'\\"')}"`;
+    }
+  }
+
+  else if(field==='variant'){
+    term=`name:"${q.replace(/"/g,'\\"')}"`;
+  }
+
+  const response=await fetch(
+    `${POKEMON_API_URL}?q=${encodeURIComponent(term)}&pageSize=250`
+  );
+
+  if(!response.ok){
+    throw new Error(
+      `Pokémon TCG API returned ${response.status}`
+    );
+  }
+
+  const data=await response.json();
+
+  return Array.isArray(data.data)?data.data:[];
+}
+
 let consignmentDebounce=null;
-function scheduleConsignmentLookup(field,value){clearTimeout(consignmentDebounce);const q=value.trim();if(!q){if(field==='pokemon')consignmentCache.selectedPokemon='';if(field==='set')consignmentCache.selectedSet='';if(field==='card'){consignmentCache.selectedCard='';consignmentCache.selectedVariant='';}if(field==='variant')consignmentCache.selectedVariant='';applyConsignmentFilters(field);return}consignmentDebounce=setTimeout(()=>lookupConsignmentField(field,q),300)}
-async function lookupConsignmentField(field,value){const token=++consignmentCache.requestToken;consignmentCache.loading=true;setConsignmentStatus(`Searching Pokémon TCG database for “${value}”…`);try{const results=uniqueConsignmentCards(await fetchConsignmentCardsByField(field,value));if(token!==consignmentCache.requestToken)return;consignmentCache.searchResults=results;consignmentCache.cards=results;if(field==='pokemon')consignmentCache.selectedPokemon=value;if(field==='set')consignmentCache.selectedSet=value;if(field==='card'){const match=results.find(x=>x.id===value)||results.find(x=>`${x.cardName} #${x.cardNumber}`.toLowerCase()===value.toLowerCase())||results.find(x=>x.cardName.toLowerCase().includes(value.toLowerCase())||x.cardNumber.toLowerCase()===value.replace(/^#/,'').toLowerCase());if(match){consignmentCache.selectedCard=match.id;document.getElementById('consignCard').value=`${match.cardName} #${match.cardNumber}`;consignmentCache.selectedPokemon=match.cardName;consignmentCache.selectedSet=match.setName;document.getElementById('consignPokemon').value=match.cardName;document.getElementById('consignSet').value=match.setName;populateConsignmentVariants(match)}}applyConsignmentFilters(field);renderConsignmentSuggestions(field);const el=document.getElementById(suggestionElementId(field));if(el)el.hidden=false;setConsignmentStatus(results.length?`${results.length} matching card${results.length===1?'':'s'} found. Select a result or refine another field.`:'No matching Pokémon cards found.',!results.length)}catch(error){if(token!==consignmentCache.requestToken)return;console.error('RapidUp Pokémon lookup failed:',error);setConsignmentStatus('Unable to reach the Pokémon TCG database. Please try again.',true)}finally{if(token===consignmentCache.requestToken)consignmentCache.loading=false}}
-function consignmentPokemonChanged(value){consignmentCache.selectedPokemon=value||'';consignmentCache.selectedCard='';consignmentCache.selectedVariant='';document.getElementById('consignCard').value='';document.getElementById('consignVariant').value='';scheduleConsignmentLookup('pokemon',value);openConsignmentSuggestions('pokemon');updateConsignmentPreview()}
-function consignmentSetChanged(value){consignmentCache.selectedSet=value||'';consignmentCache.selectedCard='';consignmentCache.selectedVariant='';document.getElementById('consignCard').value='';document.getElementById('consignVariant').value='';scheduleConsignmentLookup('set',value);openConsignmentSuggestions('set');updateConsignmentPreview()}
-function consignmentCardChanged(value){const v=(value||'').trim();const exact=consignmentCache.searchResults.find(x=>x.id===v);if(exact){consignmentCache.selectedCard=exact.id;populateConsignmentVariants(exact);updateConsignmentPreview();closeConsignmentSuggestions();return}const labelMatch=consignmentCache.searchResults.find(x=>`${x.cardName} #${x.cardNumber}`.toLowerCase()===v.toLowerCase());if(labelMatch){consignmentCache.selectedCard=labelMatch.id;consignmentCache.selectedPokemon=labelMatch.cardName;consignmentCache.selectedSet=labelMatch.setName;document.getElementById('consignPokemon').value=labelMatch.cardName;document.getElementById('consignSet').value=labelMatch.setName;populateConsignmentVariants(labelMatch);updateConsignmentPreview();closeConsignmentSuggestions();return}consignmentCache.selectedCard='';consignmentCache.selectedVariant='';document.getElementById('consignVariant').value='';scheduleConsignmentLookup('card',v);openConsignmentSuggestions('card');updateConsignmentPreview()}
-function consignmentVariantChanged(value){consignmentCache.selectedVariant=value||'';renderConsignmentSuggestions('variant');openConsignmentSuggestions('variant');updateConsignmentPreview()}
-function updateConsignmentPreview(){const preview=document.getElementById('consignTitlePreview'),submit=document.getElementById('consignSubmit');if(!preview)return;const card=selectedConsignmentCard(),variant=consignmentCache.selectedVariant;const title=card&&variant?`${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`:'Select a card and variant.';preview.textContent=title;if(submit)submit.disabled=!(card&&variant)}
-document.addEventListener('click',e=>{if(!e.target.closest('.consignField'))closeConsignmentSuggestions()});
-async function initConsignmentGenerator(){consignmentCache={cards:[],searchResults:[],selectedPokemon:'',selectedSet:'',selectedCard:'',selectedVariant:'',activeField:'',requestToken:0,loading:false};['consignPokemon','consignSet','consignCard','consignVariant'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});closeConsignmentSuggestions();updateConsignmentPreview();setConsignmentStatus('Start typing in any field to search the Pokémon TCG database.')}
-async function submitConsignment(){const card=selectedConsignmentCard(),variant=consignmentCache.selectedVariant;if(!card||!variant){setConsignmentStatus('Select a card and variant before staging.',true);return}const submit=document.getElementById('consignSubmit');if(submit){submit.disabled=true;submit.textContent='Staging…'}try{const title=`${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`;const itemId=`consign-${Date.now()}`;const year=card.releaseYear||new Date().getFullYear();items.push({id:itemId,name:card.cardName,set:`${card.setName} #${card.cardNumber}`,fullName:title,year,era:getCardEra(year),category:'Pokemon',method:'buy',type:'Buy Now',price:0,market:0,grade:'Raw',lang:'English',variant,img:card.images?.large||card.images?.small||IMG.cards,sold:false,staged:true,status:'Staged',consignment:{setId:card.setId,setName:card.setName,releaseYear:card.releaseYear,pokemon:card.pokemon,cardId:card.id,apiCardId:card.id,cardNumber:card.cardNumber,cardName:card.cardName,rarity:card.rarity,selectedVariant:variant,externalSource:'Pokemon TCG API'}});save();closeModal();state.sellerTab='inventory';state.toast=`Staged: ${title}`;render();setTimeout(()=>{state.toast='';render()},2600)}catch(e){setConsignmentStatus(`Unable to stage inventory: ${e.message}`,true);if(submit){submit.disabled=false;submit.textContent='Stage Inventory'}}}
+
+function scheduleConsignmentLookup(field,value){
+  clearTimeout(consignmentDebounce);
+
+  const q=String(value||'').trim();
+
+  if(!q){
+    if(field==='pokemon')
+      consignmentCache.selectedPokemon='';
+
+    if(field==='set')
+      consignmentCache.selectedSet='';
+
+    if(field==='card'){
+      consignmentCache.selectedCard='';
+      consignmentCache.selectedVariant='';
+    }
+
+    if(field==='variant')
+      consignmentCache.selectedVariant='';
+
+    applyConsignmentFilters(field);
+    return;
+  }
+
+  consignmentDebounce=setTimeout(
+    ()=>lookupConsignmentField(field,q),
+    250
+  );
+}
+
+async function lookupConsignmentField(field,value){
+  const token=++consignmentCache.requestToken;
+
+  consignmentCache.loading=true;
+
+  setConsignmentStatus(
+    `Searching Pokémon TCG database for “${value}”…`
+  );
+
+  try{
+    const results=uniqueConsignmentCards(
+      await fetchConsignmentCardsByField(field,value)
+    );
+
+    if(token!==consignmentCache.requestToken)return;
+
+    consignmentCache.searchResults=results;
+    consignmentCache.cards=results;
+
+    if(field==='pokemon')
+      consignmentCache.selectedPokemon=value;
+
+    if(field==='set')
+      consignmentCache.selectedSet=value;
+
+    if(field==='card'){
+      const clean=value.replace(/^#/,'').toLowerCase();
+
+      const match=
+        results.find(
+          x=>x.id.toLowerCase()===value.toLowerCase()
+        )||
+        results.find(
+          x=>
+            `${x.cardName} #${x.cardNumber}`
+              .toLowerCase()===value.toLowerCase()
+        )||
+        results.find(
+          x=>
+            x.cardName.toLowerCase().includes(
+              value.toLowerCase()
+            )||
+            x.cardNumber.toLowerCase()===clean
+        );
+
+      if(match){
+        consignmentCache.selectedCard=match.id;
+        consignmentCache.selectedPokemon=match.cardName;
+        consignmentCache.selectedSet=match.setName;
+
+        document.getElementById('consignCard').value=
+          `${match.cardName} #${match.cardNumber}`;
+
+        document.getElementById('consignPokemon').value=
+          match.cardName;
+
+        document.getElementById('consignSet').value=
+          match.setName;
+
+        populateConsignmentVariants(match);
+      }
+    }
+
+    applyConsignmentFilters(field);
+
+    renderConsignmentSuggestions(field);
+
+    const box=document.getElementById(
+      suggestionElementId(field)
+    );
+
+    if(box)box.hidden=false;
+
+    setConsignmentStatus(
+      results.length
+        ? `${results.length} matching card${results.length===1?'':'s'} found. Select a result or refine another field.`
+        : 'No matching Pokémon cards found.',
+      !results.length
+    );
+
+  }catch(error){
+    if(token!==consignmentCache.requestToken)return;
+
+    console.error(
+      'RapidUp Pokémon lookup failed:',
+      error
+    );
+
+    setConsignmentStatus(
+      'Unable to reach the Pokémon TCG database. Please try again.',
+      true
+    );
+
+  }finally{
+    if(token===consignmentCache.requestToken)
+      consignmentCache.loading=false;
+  }
+}
+
+function consignmentPokemonChanged(value){
+  consignmentCache.selectedPokemon=value||'';
+  consignmentCache.selectedCard='';
+  consignmentCache.selectedVariant='';
+
+  document.getElementById('consignCard').value='';
+  document.getElementById('consignVariant').value='';
+
+  scheduleConsignmentLookup('pokemon',value);
+  openConsignmentSuggestions('pokemon');
+  updateConsignmentPreview();
+}
+
+function consignmentSetChanged(value){
+  consignmentCache.selectedSet=value||'';
+  consignmentCache.selectedCard='';
+  consignmentCache.selectedVariant='';
+
+  document.getElementById('consignCard').value='';
+  document.getElementById('consignVariant').value='';
+
+  scheduleConsignmentLookup('set',value);
+  openConsignmentSuggestions('set');
+  updateConsignmentPreview();
+}
+
+function consignmentCardChanged(value){
+  const v=(value||'').trim();
+
+  const exact=consignmentCache.searchResults.find(
+    x=>x.id===v
+  );
+
+  if(exact){
+    consignmentCache.selectedCard=exact.id;
+    populateConsignmentVariants(exact);
+    updateConsignmentPreview();
+    closeConsignmentSuggestions();
+    return;
+  }
+
+  const labelMatch=consignmentCache.searchResults.find(
+    x=>
+      `${x.cardName} #${x.cardNumber}`
+        .toLowerCase()===v.toLowerCase()
+  );
+
+  if(labelMatch){
+    consignmentCache.selectedCard=labelMatch.id;
+    consignmentCache.selectedPokemon=labelMatch.cardName;
+    consignmentCache.selectedSet=labelMatch.setName;
+
+    document.getElementById('consignPokemon').value=
+      labelMatch.cardName;
+
+    document.getElementById('consignSet').value=
+      labelMatch.setName;
+
+    populateConsignmentVariants(labelMatch);
+    updateConsignmentPreview();
+    closeConsignmentSuggestions();
+    return;
+  }
+
+  consignmentCache.selectedCard='';
+  consignmentCache.selectedVariant='';
+
+  document.getElementById('consignVariant').value='';
+
+  scheduleConsignmentLookup('card',v);
+  openConsignmentSuggestions('card');
+  updateConsignmentPreview();
+}
+
+function consignmentVariantChanged(value){
+  consignmentCache.selectedVariant=value||'';
+
+  renderConsignmentSuggestions('variant');
+  openConsignmentSuggestions('variant');
+  updateConsignmentPreview();
+}
+
+function updateConsignmentPreview(){
+  const preview=document.getElementById(
+    'consignTitlePreview'
+  );
+
+  const submit=document.getElementById(
+    'consignSubmit'
+  );
+
+  if(!preview)return;
+
+  const card=selectedConsignmentCard();
+  const variant=consignmentCache.selectedVariant;
+
+  const title=
+    card&&variant
+      ? `${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`
+      : 'Select a card and variant.';
+
+  preview.textContent=title;
+
+  if(submit)
+    submit.disabled=!(card&&variant);
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.consignField'))
+    closeConsignmentSuggestions();
+});
+
+async function initConsignmentGenerator(){
+  consignmentCache={
+    cards:[],
+    searchResults:[],
+    selectedPokemon:'',
+    selectedSet:'',
+    selectedCard:'',
+    selectedVariant:'',
+    activeField:'',
+    requestToken:0,
+    loading:false
+  };
+
+  [
+    'consignPokemon',
+    'consignSet',
+    'consignCard',
+    'consignVariant'
+  ].forEach(id=>{
+    const el=document.getElementById(id);
+
+    if(el)el.value='';
+  });
+
+  closeConsignmentSuggestions();
+  updateConsignmentPreview();
+
+  setConsignmentStatus(
+    'Start typing in any field to search the Pokémon TCG database.'
+  );
+}
+
+async function submitConsignment(){
+  const card=selectedConsignmentCard();
+  const variant=consignmentCache.selectedVariant;
+
+  if(!card||!variant){
+    setConsignmentStatus(
+      'Select a card and variant before staging.',
+      true
+    );
+    return;
+  }
+
+  const submit=document.getElementById(
+    'consignSubmit'
+  );
+
+  if(submit){
+    submit.disabled=true;
+    submit.textContent='Staging…';
+  }
+
+  try{
+    const title=
+      `${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`;
+
+    const itemId=`consign-${Date.now()}`;
+    const year=
+      card.releaseYear||new Date().getFullYear();
+
+    items.push({
+      id:itemId,
+      name:card.cardName,
+      set:`${card.setName} #${card.cardNumber}`,
+      fullName:title,
+      year,
+      era:getCardEra(year),
+      category:'Pokemon',
+      method:'buy',
+      type:'Buy Now',
+      price:0,
+      market:0,
+      grade:'Raw',
+      lang:'English',
+      variant,
+      img:card.images?.large||
+          card.images?.small||
+          IMG.cards,
+      sold:false,
+      staged:true,
+      status:'Staged',
+      consignment:{
+        setId:card.setId,
+        setName:card.setName,
+        releaseYear:card.releaseYear,
+        pokemon:card.pokemon,
+        cardId:card.id,
+        apiCardId:card.id,
+        cardNumber:card.cardNumber,
+        cardName:card.cardName,
+        selectedVariant:variant,
+        externalSource:'Pokemon TCG API'
+      }
+    });
+
+    save();
+    closeModal();
+
+    state.sellerTab='inventory';
+    state.toast=`Staged: ${title}`;
+
+    render();
+
+    setTimeout(()=>{
+      state.toast='';
+      render();
+    },2600);
+
+  }catch(e){
+    setConsignmentStatus(
+      `Unable to stage inventory: ${e.message}`,
+      true
+    );
+
+    if(submit){
+      submit.disabled=false;
+      submit.textContent='Stage Inventory';
+    }
+  }
+}
 function settingsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Account & Settings</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="list"><div class="listrow"><span>Operating mode</span><b>${state.userMode.toUpperCase()}</b></div><div class="listrow"><span>Concierge notifications</span><b>On</b></div><div class="listrow"><span>Offer expiration</span><b>24 hours</b></div><div class="listrow"><span>Public auction start</span><b>3:00</b></div><div class="listrow"><span>Buyer demand privacy</span><b>Protected</b></div></div></div>`}
 function orderModal(index){const w=state.won[index];if(!w)return `<div class="modal"><div class="modalHead"><h2>Order</h2><button class="close" onclick="closeModal()">×</button></div><div class="empty">Transaction not found.</div></div>`;const x=item(w.item);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">WON ITEM</div><h2>Order</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="success"><b>Transaction secured.</b><br>${esc(x.name)} · ${money(w.price)}</div><div class="step"><b>Next</b>Confirm shipping and payment details in the eventual production checkout.</div><button class="primary" onclick="closeModal();activity('Order flow acknowledged for '+x.name+'.')">Continue</button></div>`}
 function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='itemSummary')content=itemSummaryModal(data);else if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
