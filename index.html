@@ -32,7 +32,7 @@ main{max-width:1280px;margin:auto;padding:30px 22px 90px}.hero{padding:34px 0 28
 @media(max-width:900px){.ruChannelGrid{grid-template-columns:1fr}.auctionScreen .auctionBottomOverlay{grid-template-columns:1fr 220px 260px}.auctionScreen .ruAuctionInfo{max-width:55%}}
 @media(max-width:620px){.ruFilterGrid{grid-template-columns:1fr}.ruFilterField.full{grid-column:auto}.auctionScreen{height:calc(100vh - 70px)}.auctionScreen .auctionBottomOverlay{left:12px;right:12px;bottom:10px;grid-template-columns:1fr 120px;gap:8px}.auctionScreen .overlayBidModes{grid-column:1/-1;grid-row:2}.auctionScreen .auctionIdentity{grid-column:1/-1}.auctionScreen .auctionLiveStats{grid-column:2;grid-row:1}.auctionScreen .ruAuctionInfo{left:12px;bottom:10px;max-width:55%;font-size:10px}.auctionScreen .elasticTransparency{right:12px;top:58px}.auctionScreen .auctionBack{top:8px;left:8px}}
 
-.consignmentModal{max-width:900px}.consignGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.consignGrid label{display:flex;flex-direction:column;gap:7px}.consignField{position:relative}.consignSuggestions{position:absolute;left:0;right:0;top:100%;margin-top:5px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.14);z-index:40;max-height:260px;overflow:auto;padding:5px}.consignOption{display:block;width:100%;border:0;background:#fff;text-align:left;border-radius:10px;padding:10px 11px;cursor:pointer;font:inherit;color:var(--ink)}.consignOption:hover,.consignOption:focus{background:var(--soft);outline:none}.consignOption small{display:block;color:var(--muted);font-size:11px;margin-top:2px}.consignPreview{margin-top:16px;border:1px solid var(--line);border-radius:17px;background:var(--soft);padding:16px}.consignPreview .big{overflow-wrap:anywhere}.consignLoading{font-size:12px;color:var(--muted);padding:7px 2px}.sellerConfig{border:1px solid var(--line);border-radius:18px;padding:16px;background:#fafaf7}.sellerConfigGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sellerConfigGrid label{display:flex;flex-direction:column;gap:7px}.sellerConfigGrid .input{background:#fff}@media(max-width:620px){.sellerConfigGrid{grid-template-columns:1fr}}@media(max-width:620px){.consignGrid{grid-template-columns:1fr}.consignSuggestions{max-height:220px}}
+.consignmentModal{max-width:900px}.consignGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.consignGrid label{display:flex;flex-direction:column;gap:7px}.consignField{position:relative}.consignSuggestions{position:absolute;left:0;right:0;top:100%;margin-top:5px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.14);z-index:40;max-height:260px;overflow:auto;padding:5px}.consignOption{display:block;width:100%;border:0;background:#fff;text-align:left;border-radius:10px;padding:10px 11px;cursor:pointer;font:inherit;color:var(--ink)}.consignOption:hover,.consignOption:focus{background:var(--soft);outline:none}.consignOption small{display:block;color:var(--muted);font-size:11px;margin-top:2px}.consignPreview{margin-top:16px;border:1px solid var(--line);border-radius:17px;background:var(--soft);padding:16px}.consignPreview .big{overflow-wrap:anywhere}.consignLoading{font-size:12px;color:var(--muted);padding:7px 2px}@media(max-width:620px){.consignGrid{grid-template-columns:1fr}.consignSuggestions{max-height:220px}}
 </style>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -170,7 +170,7 @@ button{transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
 </style>
 <script>
 /* RapidUp refinement build: this script extends the existing prototype into a stateful product simulation. */
-const STORAGE_KEY='rapidup_refinement_v27_indexed_inventory';
+const STORAGE_KEY='rapidup_refinement_v25';
 const IMG={
   lugia:'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?auto=format&fit=crop&w=1200&q=86',
   cards:'https://images.unsplash.com/photo-1601645191163-3fc0d5d64e35?auto=format&fit=crop&w=1200&q=86',
@@ -190,43 +190,101 @@ const CHANNEL_ERA_DEFS=[
  {key:'Modern',yearMin:2014,yearMax:new Date().getFullYear()}
 ];
 const CHANNEL_CONDITIONS=['Raw','Graded'];
-const CHANNEL_START_PRICES=[1,5,10,25,50,100];
 const CHANNEL_AUCTION_TYPES=['ELASTIC','SUDDEN DEATH'];
-const RAPIDUP_AUCTION_DURATION_MS=45000;
+
 function buildChannelDefinitions(){
- const out=[];let n=1;
- CHANNEL_START_PRICES.forEach(start=>CHANNEL_CONDITIONS.forEach(condition=>CHANNEL_ERA_DEFS.forEach(era=>CHANNEL_AUCTION_TYPES.forEach(auctionType=>{
-  const id='c'+n++,label=auctionType==='ELASTIC'?'Elastic':'Sudden Death',name=`${money(start)} Start ${condition} ${era.key} Pokemon | ${label}`;
-  out.push({id,key:`${start}_${condition}_${era.key}_${auctionType}`,name,category:'Pokemon',auctionType,startPrice:start,criteria:{category:'Pokemon',auctionType,startingMin:start,startingMax:start,startPrice:start,yearMin:era.yearMin,yearMax:era.yearMax,eras:[era.key],conditions:[condition],languages:[],variants:[],presentations:['Standard','Premium']},description:`${name} auction channel.`,info:`${name}. Language, variant and presentation remain open; the channel is defined by starting price, condition, era and auction type.`,color:auctionType==='ELASTIC'?'elastic':'sudden'});
- }))));
+ const out=[];
+ let n=1;
+ CHANNEL_ERA_DEFS.forEach(era=>{
+  CHANNEL_CONDITIONS.forEach(condition=>{
+   CHANNEL_AUCTION_TYPES.forEach(auctionType=>{
+    const id='c'+n++;
+    const label=auctionType==='ELASTIC'?'Elastic':'Sudden Death';
+    out.push({
+     id,
+     key:`${era.key}_${condition}_${auctionType}`,
+     name:`${era.key} · ${condition} · ${label}`,
+     category:'Pokemon',
+     auctionType,
+     criteria:{
+      category:'Pokemon',
+      auctionType,
+      startingMin:1,
+      startingMax:100,
+      yearMin:era.yearMin,
+      yearMax:era.yearMax,
+      eras:[era.key],
+      conditions:[condition],
+      languages:[],
+      variants:[],
+      presentations:['Standard','Premium']
+     },
+     description:`${era.key} Pokémon ${condition.toLowerCase()} cards running ${label} auctions.`,
+     info:`Metadata-driven ${era.key} channel for ${condition.toLowerCase()} Pokémon inventory. Language, variant and presentation remain open; auction type and starting-price eligibility are enforced by the channel rules.`,
+     color:auctionType==='ELASTIC'?'elastic':'sudden'
+    });
+   });
+  });
+ });
  return out;
 }
+
 const channels=buildChannelDefinitions();
 
+const seedNames=['Umbreon VMAX','Rayquaza VMAX','Espeon VMAX','Pikachu VMAX','Mew ex','Tyranitar V','Gengar VMAX','Mewtwo VSTAR','Blastoise','Charizard ex','Gardevoir','Lugia V','Entei','Alakazam V','Zekrom','Reshiram & Charizard GX','Sylveon VMAX','Magikarp Wailord GX','Giratina V','Dragonite V','Mewtwo GX','Jolteon VMAX','Aerodactyl V','Machamp V','Darkrai VSTAR','Arceus VSTAR','Celebi VMAX','Rayquaza V','Pikachu ex','Charizard VMAX'];
+const sets=['Evolving Skies','Silver Tempest','Secret Wonders','Shining Legends','Vivid Voltage','Lost Origin','Crown Zenith','Astral Radiance','Celebrations','Obsidian Flames','151','Brilliant Stars'];
+const variants=['Alternate Art','Holo','Special Illustration Rare','Illustration Rare','Secret Rare','Classic Collection','Promo','Reverse Holo'];
+const grades=['Raw','PSA 10','PSA 9','CGC 9.5','BGS 9.5'];
 let items=[];
-
+function makeAuctionItem(id,k,seedGroup){
+ const nm=seedNames[(seedGroup*17+k)%seedNames.length];
+ const base=35+((seedGroup*50+k)*7)%430;
+ const year=seedGroup===0?2020+(k%7):seedGroup===1?1999+(k%5):seedGroup===2?2004+(k%16):1999+(k%28);
+ const era=getCardEra(year);
+ const lang=seedGroup===2?'Japanese':'English';
+ const condition=(seedGroup===3||k%3!==0)?'Graded':'Raw';
+ const grade=condition==='Graded'?grades[(k+seedGroup)%grades.length]:'Raw';
+ const presentation=k%2===0?'Premium':'Standard';
+ const variant=variants[(k+seedGroup)%variants.length];
+ const startingPrice=1+((k+seedGroup)%6)*5;
+ const fullName=`${year} Pokemon ${sets[(seedGroup*3+k)%sets.length]} ${variant} ${nm} #${20+(k*7)%190}${condition==='Graded'?` ${grade}`:''}`;
+ return {id,name:nm,set:`${sets[(seedGroup*3+k)%sets.length]} #${20+(k*7)%190}`,fullName,year,era,category:'Pokemon',method:'auction',type:'Auction',channel:null,channelId:null,auctionType:seedGroup%2===0?'ELASTIC':'SUDDEN DEATH',market:base+35,grade,lang,variant,img:[IMG.lugia,IMG.cards,IMG.vintage][(k+seedGroup)%3],sold:false,current:startingPrice,bidCount:(k+seedGroup)%4,seconds:0,endsAt:0,startingPrice,internal:{category:'Pokemon',year,era,condition,language:lang,variant,presentation,auctionType:seedGroup%2===0?'ELASTIC':'SUDDEN DEATH',startingPrice},auction:{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2}};
+}
+for(let seedGroup=0;seedGroup<channels.length;seedGroup++){for(let k=0;k<50;k++)items.push(makeAuctionItem('a'+(seedGroup*50+k+1),k,seedGroup));}
+items.push(
+ {id:'b1',name:'Lugia V',set:'Silver Tempest #186',method:'buy',type:'Buy Now',price:129,market:154,grade:'PSA 10',lang:'English',variant:'Alternate Art',img:IMG.lugia,sold:false},
+ {id:'b2',name:'Charizard ex',set:'Obsidian Flames #223',method:'buy',type:'Buy Now',price:129,market:145,grade:'PSA 10',lang:'English',variant:'Special Illustration Rare',img:IMG.cards,sold:false},
+ {id:'b3',name:'Entei',set:'Secret Wonders #4',method:'buy',type:'Buy Now',price:179,market:210,grade:'Raw',lang:'English',variant:'Holo',img:IMG.vintage,sold:false},
+ {id:'b4',name:'Reshiram & Charizard GX',set:'Sun & Moon Promo',method:'buy',type:'Buy Now',price:199,market:245,grade:'PSA 10',lang:'English',variant:'Promo',img:IMG.lugia,sold:false},
+ {id:'b5',name:'Jolteon VMAX',set:'Evolving Skies #051',method:'buy',type:'Buy Now',price:214,market:242,grade:'PSA 10',lang:'English',variant:'Alternate Art',img:IMG.cards,sold:false},
+ {id:'b6',name:'Blastoise',set:'Base Set 2 #31',method:'buy',type:'Buy Now',price:168,market:190,grade:'PSA 8',lang:'English',variant:'Holo',img:IMG.vintage,sold:false}
+);
 function initialState(){
  const now=Date.now();
- return {page:'explore',activeItem:null,queueChannel:null,modal:null,profile:false,userMode:'buyer',search:'',sort:'activity',buyerTab:'overview',sellerTab:'overview',activity:'',toast:'',channelPos:Object.fromEntries(channels.map(c=>[c.id,0])),channelQueues:Object.fromEntries(channels.map(c=>[c.id,[]])),lastTick:now,offers:[],bids:[],won:[],purchases:[],cart:[],cartOpen:false,notifications:[],interests:[],privateAuctions:{},proxyBids:{},readNotifications:[],seeded:false};
+ const s={page:'explore',activeItem:'a1',queueChannel:null,modal:null,profile:false,userMode:'buyer',search:'',sort:'activity',buyerTab:'overview',sellerTab:'overview',activity:'',toast:'',channelPos:Object.fromEntries(channels.map(c=>[c.id,0])),channelQueues:null,lastTick:now,offers:[],bids:[],won:[],purchases:[],cart:[],cartOpen:false,notifications:[],interests:['Umbreon VMAX','Lugia V','Japanese','PSA 10'],privateAuctions:{},proxyBids:{},readNotifications:[],seeded:true};
+ s.offers=[
+  {id:'o-seed-1',item:'b1',buyer:'You',amount:150,status:'active',created:now-2*3600000,expires:now+22*3600000,wave:0},
+  {id:'o-seed-2',item:'b1',buyer:'Buyer B',amount:121,status:'active',created:now-1*3600000,expires:now+23*3600000,wave:0},
+  {id:'o-seed-3',item:'a1',buyer:'You',amount:150,status:'active',created:now-3*3600000,expires:now+9*3600000,wave:0},
+  {id:'o-seed-4',item:'a1',buyer:'Buyer D',amount:140,status:'active',created:now-4*3600000,expires:now+11*3600000,wave:0}
+ ];
+ s.bids=[{id:'bid-seed-1',item:'a1',amount:94,created:now-10000},{id:'bid-seed-2',item:'a2',amount:82,created:now-20000}];
+ s.privateAuctions={b1:{active:true,item:'b1',current:165,previousSellerCounter:150,deadline:now+110000,wave:2,participants:2,responses:[{offerId:'o-seed-1',amount:150,engaged:true,buyer:'You'},{offerId:'o-seed-2',amount:158,engaged:true,buyer:'Buyer B'}],history:[{wave:1,seller:165,responses:[145,158]}]}};items.find(x=>x.id==='b1').privateAuction={active:true};
+ s.notifications=[
+  {id:'n1',text:'Umbreon VMAX is now live in Modern Chase.',type:'AUCTION LIVE',target:'auction',item:'a1',read:false,created:now-4*60000},
+  {id:'n2',text:'A seller countered your offer on Lugia V.',type:'PRIVATE AUCTION',target:'private',item:'b1',read:false,created:now-18*60000},
+  {id:'n3',text:'Your offer on Umbreon VMAX expires in 9 hours.',type:'OFFER EXPIRING',target:'offer',item:'a1',read:false,created:now-34*60000},
+  {id:'n4',text:'A matching graded Lugia entered Buy Now.',type:'CONCIERGE',target:'item',item:'b1',read:true,created:now-3*3600000}
+ ];
+ return s;
 }
 let state=loadState();
 function loadState(){
- try{
-  const raw=localStorage.getItem(STORAGE_KEY);
-  if(raw){
-   const saved=JSON.parse(raw),base=initialState(),merged={...base,...saved};
-   merged.channelPos=merged.channelPos||Object.fromEntries(channels.map(c=>[c.id,0]));
-   merged.channelQueues=merged.channelQueues||Object.fromEntries(channels.map(c=>[c.id,[]]));
-   merged.offers=Array.isArray(merged.offers)?merged.offers:[];merged.bids=Array.isArray(merged.bids)?merged.bids:[];merged.won=Array.isArray(merged.won)?merged.won:[];merged.purchases=Array.isArray(merged.purchases)?merged.purchases:[];merged.cart=Array.isArray(merged.cart)?merged.cart:[];merged.notifications=Array.isArray(merged.notifications)?merged.notifications:[];merged.interests=Array.isArray(merged.interests)?merged.interests:[];merged.privateAuctions=merged.privateAuctions||{};merged.proxyBids=merged.proxyBids||{};
-   items=[];if(merged.itemState&&typeof merged.itemState==='object')Object.values(merged.itemState).forEach(savedItem=>{if(savedItem&&savedItem.id)items.push(savedItem);});
-   normalizeAuctions(merged);return merged;
-  }
- }catch(e){console.warn('RapidUp state reset',e)}
- const fresh=initialState();normalizeAuctions(fresh);return fresh;
+ try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const s=JSON.parse(raw);if(s&&s.channelPos&&Array.isArray(s.offers)){const base=initialState();const merged={...base,...s};items.forEach(x=>{const saved=(s.itemState||{})[x.id];if(saved)Object.assign(x,saved)});normalizeAuctions(merged);merged.proxyBids=merged.proxyBids||{};return merged;}}}catch(e){console.warn('RapidUp state reset',e)}
+ const s=initialState();normalizeAuctions(s);return s;
 }
-
 function queueCriteria(c){return c?.criteria||{}}
-function criteriaText(c){const q=queueCriteria(c),p=[];if(q.auctionType)p.push(q.auctionType);if(q.startingMin!=null||q.startingMax!=null)p.push(q.startingMin===q.startingMax?`Start ${money(q.startingMin)}`:`Start ${money(q.startingMin??0)}–${money(q.startingMax??q.startingMin??0)}`);if(q.yearMin!=null||q.yearMax!=null)p.push(`Years ${q.yearMin??'Any'}–${q.yearMax??'Any'}`);if(q.eras?.length)p.push(q.eras.join('/'));if(q.conditions?.length)p.push(q.conditions.join('/'));if(q.languages?.length)p.push(q.languages.join('/'));if(q.variants?.length)p.push(q.variants.join('/'));if(q.presentations?.length)p.push(q.presentations.join('/'));return p.join(' · ')}
+function criteriaText(c){const q=queueCriteria(c),p=[];if(q.auctionType)p.push(q.auctionType);if(q.startingMin!=null||q.startingMax!=null)p.push(`Start ${money(q.startingMin??0)}–${money(q.startingMax??q.startingMin??0)}`);if(q.yearMin!=null||q.yearMax!=null)p.push(`Years ${q.yearMin??'Any'}–${q.yearMax??'Any'}`);if(q.eras?.length)p.push(q.eras.join('/'));if(q.conditions?.length)p.push(q.conditions.join('/'));if(q.languages?.length)p.push(q.languages.join('/'));if(q.variants?.length)p.push(q.variants.join('/'));if(q.presentations?.length)p.push(q.presentations.join('/'));return p.join(' · ')}
 function queueMatches(x,c){
  if(!x||x.sold||x.method!=='auction'||!c)return false;
  const q=queueCriteria(c),d=x.internal||{};
@@ -261,8 +319,7 @@ function routeItemToQueue(item, channelList=channels, s=state){
  const era=getCardEra(item.year??item.internal?.year);
  const condition=item.condition??item.internal?.condition;
  const auctionType=item.auctionType??item.internal?.auctionType;
- const startPrice=Number(item.startingPrice??item.internal?.startingPrice??item.current??0);
- const permutationKey=`${startPrice}_${condition}_${era}_${auctionType}`;
+ const permutationKey=`${era}_${condition}_${auctionType}`;
  let target=channelList.find(c=>c.key===permutationKey&&queueMatches(item,c));
  if(!target)target=channelList.find(c=>queueMatches(item,c));
  channelList.forEach(c=>{queues[c.id]=(queues[c.id]||[]).filter(id=>id!==item.id);});
@@ -270,35 +327,12 @@ function routeItemToQueue(item, channelList=channels, s=state){
   item.channel=null;item.channelId=null;item.status='Unassigned';item.endsAt=0;
   return null;
  }
- const existingIds=(queues[target.id]||[]).filter(id=>id!==item.id);
- const existing=existingIds.map(id=>items.find(z=>z.id===id)).find(x=>x&&!x.sold&&x.status==='Live');
- if(existing){
-  /* Keep the item in the channel's public queue behind the live item. */
-  item.channel=target.name;
-  item.channelId=target.id;
-  item.auctionType=auctionType;
-  item.startingPrice=startPrice;
-  item.current=startPrice;
-  item.internal=item.internal||{};
-  item.internal.auctionType=auctionType;
-  item.internal.startingPrice=startPrice;
-  item.internal.era=era;
-  queues[target.id]=(queues[target.id]||[]).filter(id=>id!==item.id);
-  queues[target.id].push(item.id);
-  item.status='Queued';
-  item.endsAt=0;
-  return target;
- }
  item.channel=target.name;
  item.channelId=target.id;
  item.auctionType=auctionType;
- item.startingPrice=startPrice;
- item.current=startPrice;
  item.internal=item.internal||{};
  item.internal.auctionType=auctionType;
- item.internal.startingPrice=startPrice;
  item.internal.era=era;
- queues[target.id]=(queues[target.id]||[]).filter(id=>id!==item.id);
  queues[target.id].push(item.id);
  return target;
 }
@@ -328,18 +362,22 @@ function rebuildQueues(s=state){
 }
 
 function normalizeAuctions(s=state){
- const now=Date.now();ensureQueueState(s);
- channels.forEach(c=>s.channelQueues[c.id]=[]);
- items.filter(x=>x.method==='auction'&&!x.sold).forEach(x=>evaluateAndEnqueue(x,s));
+ const now=Date.now();
+ const queuesReady=s.channelQueues&&channels.every(c=>Array.isArray(s.channelQueues[c.id]));
+ if(!queuesReady)rebuildQueues(s);
  channels.forEach(c=>{
-  const pool=queuePool(c.id,s);if(!pool.length){s.channelPos[c.id]=0;return;}
-  const x=pool[0];s.channelPos[c.id]=0;x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.era=getCardEra(x.internal.year??x.year);x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.startingPrice=x.internal.startingPrice;x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
-  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+RAPIDUP_AUCTION_DURATION_MS;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
-  x.status='Live';
+  const pool=queuePool(c.id,s);
+  if(!pool.length){s.channelPos[c.id]=0;return;}
+  let pos=Math.min(Number(s.channelPos[c.id]||0),pool.length-1);if(!Number.isFinite(pos)||pos<0)pos=0;s.channelPos[c.id]=pos;
+  pool.forEach((x,i)=>{
+   x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.era=getCardEra(x.internal.year??x.year);x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
+   if(i===pos&&!x.sold){if(!x.endsAt||x.endsAt<=now){x.endsAt=now+180000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.current)||1);}x.status='Live';}
+   else if(!x.sold){x.endsAt=0;x.status='Auction queue';}
+  });
  });
 }
 
-function save(){state.lastTick=Date.now();state.proxyBids=state.proxyBids||{};state.unread=state.notifications.filter(n=>!n.read).length;state.itemState={};items.forEach(x=>{state.itemState[x.id]=JSON.parse(JSON.stringify(x));});try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
+function save(){state.lastTick=Date.now();state.proxyBids=state.proxyBids||{};state.unread=state.notifications.filter(n=>!n.read).length;state.itemState={};items.forEach(x=>state.itemState[x.id]={endsAt:x.endsAt,current:x.current,bidCount:x.bidCount,sold:x.sold,status:x.status,auction:x.auction,method:x.method,price:x.price,internal:x.internal});try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
 function money(n){return '$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2,minimumFractionDigits:0})}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function item(id){return items.find(x=>x.id===id)} function channel(id){return channels.find(x=>x.id===id)}
@@ -363,8 +401,8 @@ function fmt(sec){
   return `${m}:${String(s).padStart(2,'0')}:${String(Math.min(99,hundredths)).padStart(2,'0')}`;
 }
 function fmtPrecise(sec){return `${Math.max(0,Number(sec)||0).toFixed(2)}s`}
-function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.inorganic?'+0.00s':(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s')):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+RAPIDUP_AUCTION_DURATION_MS;return live}return null}
+function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;let pos=Number(state.channelPos[cid]??0);if(!Number.isFinite(pos)||pos<0)pos=0;if(pos>=pool.length)pos=0;state.channelPos[cid]=pos;const live=pool[pos];if(live&&!live.sold){if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return pool.find(x=>x.status==='Live'&&!x.sold)||pool[0]}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
@@ -417,98 +455,170 @@ function explore(){
 }
 function auctions(){
  const activeChannels=getActiveChannels();
- return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1><p>Specialized channels run one live auction at a time while every eligible consignment remains visible in the public queue.</p></section><div class="ruChannelGrid">${activeChannels.map(c=>{const pool=queuePool(c.id),x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div><div class="tiny muted" style="margin-top:6px"><b>${pool.length}</b> item${pool.length===1?'':'s'} in public queue${pool.length>1?` · ${pool.length-1} upcoming`:''}</div></div><div class="actions"><button class="primary" onclick="openAuction('${x.id}')">Join</button><button class="secondary" onclick="openQueue('${c.id}')">View Queue</button></div></article>`}).join('')}</div>${activeChannels.length?'':`<div class="empty">No auction channels currently contain eligible inventory.</div>`}</main>`
+ return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1><p>Only channels with inventory in their live auction queue appear here. Empty channel permutations remain available to the routing engine without cluttering the directory.</p></section><div class="ruChannelGrid">${activeChannels.map(c=>{const x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div></div><div style="display:flex;flex-direction:column;gap:7px"><button class="primary" onclick="openAuction('${x.id}')">Join</button><button class="secondary" onclick="openQueue('${c.id}')">Queue</button></div></article>`}).join('')}</div>${activeChannels.length?'':`<div class="empty">No auction channels currently contain eligible inventory.</div>`}</main>`
 }
 
-function openAuction(id){const x=item(id);if(!x||x.sold)return setToast('That auction is no longer available.');if(x.status!=='Live')return setToast('That auction is not currently live.');state.activeItem=id;state.page='auction';state.modal=null;render();window.scrollTo(0,0)}
+function openAuction(id){const x=item(id);if(!x||x.sold)return setToast('That auction is no longer available.');if(x.status!=='Live')return openQueue(x.channelId);state.activeItem=id;state.page='auction';state.modal=null;render();window.scrollTo(0,0)}
 function openItem(id){const x=item(id);if(!x)return;state.activeItem=id;state.modal={type:'itemSummary',data:id};state.profile=false;render();window.scrollTo(0,0)}
-function itemSummaryModal(id){const x=item(id);if(!x)return '<div class="modal"><div class="empty">Item not found.</div></div>';const auction=x.method==='auction';const live=auction&&x.status==='Live';const c=channel(x.channelId);const d=x.internal||{};return `<div class="modal ruItemSummary"><div class="modalHead"><div><div class="eyebrow">${auction?'AUCTION ITEM':'BUY NOW ITEM'}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(auction?x.current:x.price)}</div><div class="notice"><b>${auction?(live?'Live now in '+esc(c?.name||'auction channel'):'Not currently live'):'Available for immediate purchase.'}</b></div><div class="list"><div class="listrow"><span>Year / Era</span><b>${esc(String(d.year??inferYear(x)))} · ${esc(d.era||'—')}</b></div><div class="listrow"><span>Condition</span><b>${esc(d.condition||x.grade||'—')}</b></div><div class="listrow"><span>Language</span><b>${esc(d.language||x.lang||'—')}</b></div><div class="listrow"><span>Variant</span><b>${esc(d.variant||x.variant||'—')}</b></div><div class="listrow"><span>Presentation</span><b>${esc(d.presentation||'standard')}</b></div>${auction?`<div class="listrow"><span>Auction type</span><b>${esc(d.auctionType||x.auctionType||'—')}</b></div><div class="listrow"><span>Starting price</span><b>${money(d.startingPrice??x.startingPrice??1)}</b></div>`:''}</div><div class="actions"><button class="primary" onclick="closeModal();${auction?(live?`openAuction('${x.id}')`:`setToast('This auction is not currently live.')`):`addToCart('${x.id}')`}">${auction?(live?'Join Auction':'Unavailable'):'Buy Now · '+money(x.price)}</button>${!auction?`<button class="secondary" onclick="makeOffer('${x.id}')">Make Offer</button>`:''}</div></div></div></div>`}
+function itemSummaryModal(id){const x=item(id);if(!x)return '<div class="modal"><div class="empty">Item not found.</div></div>';const auction=x.method==='auction';const live=auction&&x.status==='Live';const c=channel(x.channelId);const d=x.internal||{};return `<div class="modal ruItemSummary"><div class="modalHead"><div><div class="eyebrow">${auction?'AUCTION ITEM':'BUY NOW ITEM'}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(auction?x.current:x.price)}</div><div class="notice"><b>${auction?(live?'Live now in '+esc(c?.name||'auction channel'):'Queued for auction'):'Available for immediate purchase.'}</b></div><div class="list"><div class="listrow"><span>Year / Era</span><b>${esc(String(d.year??inferYear(x)))} · ${esc(d.era||'—')}</b></div><div class="listrow"><span>Condition</span><b>${esc(d.condition||x.grade||'—')}</b></div><div class="listrow"><span>Language</span><b>${esc(d.language||x.lang||'—')}</b></div><div class="listrow"><span>Variant</span><b>${esc(d.variant||x.variant||'—')}</b></div><div class="listrow"><span>Presentation</span><b>${esc(d.presentation||'standard')}</b></div>${auction?`<div class="listrow"><span>Auction type</span><b>${esc(d.auctionType||x.auctionType||'—')}</b></div><div class="listrow"><span>Starting price</span><b>${money(d.startingPrice??x.startingPrice??1)}</b></div>`:''}</div><div class="actions"><button class="primary" onclick="closeModal();${auction?(live?`openAuction('${x.id}')`:`openQueue('${x.channelId}')`):`addToCart('${x.id}')`}">${auction?(live?'Join Auction':'View Queue'):'Buy Now · '+money(x.price)}</button>${!auction?`<button class="secondary" onclick="makeOffer('${x.id}')">Make Offer</button>`:''}</div></div></div></div>`}
 function openQueue(cid){openModal('queue',cid)}
 function queueModal(cid){const c=channel(cid),pool=queuePool(cid),pos=state.channelPos[cid]||0;return `<div class="modal full queueShell"><div class="modalHead"><div><div class="eyebrow">QUEUE CRITERIA</div><h2>${esc(c.name)}</h2><div class="ruQueueCriteria">${esc(criteriaText(c))}</div></div><button class="close" onclick="closeModal()">×</button></div><div class="queueScroll">${pool.map((x,i)=>`<div class="queueItem ${i===pos?'activeRow':''}" onclick="queueSelect('${cid}',${i})"><div class="queueNum">${i+1}</div><img class="queueImg" src="${x.img}" alt="${esc(x.name)}"><div><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">${i===pos?'LIVE':'QUEUED'} · ${i===pos?fmt(secondsLeft(x)):'Upcoming'}</div></div><div style="text-align:right">${i===pos?`<span class="queueStatus live">LIVE</span><div class="tiny muted">${money(x.current)}</div>`:`<span class="queueStatus queued">QUEUED</span><button class="secondary ruQueueOffer" onclick="event.stopPropagation();makeOffer('${x.id}')">Offer</button>`}</div></div>`).join('')}</div></div>`}
 function queueSelect(cid,i){const pool=queuePool(cid),x=pool[i],pos=state.channelPos[cid];if(i===pos){closeModal();openAuction(x.id);return}openModal('queueItem',{cid,i,id:x.id})}
 function queueItemModal(d){const x=item(d.id),c=channel(d.cid);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">QUEUE POSITION ${d.i+1}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(x.current||x.price||1)}</div><p class="muted">Queued in ${esc(c.name)}. This item cannot receive a public bid until it reaches the active slot.</p><div class="actions"><button class="primary" onclick="makeOffer('${x.id}')">Make Offer</button><button class="secondary" onclick="closeModal();openQueue('${d.cid}')">Back to Queue</button></div></div></div></div>`}
-function elasticPreview(x){
-  if(!x||x.auctionType!=='ELASTIC')return {active:false};
+function elasticPreview(x) {
+  if (!x || x.auctionType !== 'ELASTIC') {
+    return { active: false, extension: 0, inorganic: false, used: false };
+  }
 
-  const remaining=secondsLeft(x);
-  const whole=Math.floor(remaining);
-  const a=x.auction||{};
-  const coef=Number(a.coef??.2);
-  const usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
-  const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+  const sec = secondsLeft(x);
+  const active = sec <= 30 && sec > 0;
+  const currentInt = Math.floor(sec);
+  const a = x.auction || (x.auction = {});
 
-  if(whole<0||whole>30){
-    return {
-      active:false,
-      remaining,
-      whole,
-      subsequent:Math.max(0,whole-1),
-      mirrored:whole>=0?30-whole:0,
-      coef,
-      nextCoef:coef,
-      extension:0,
-      used:false,
-      eligible:false,
-      cycleStart
-    };
+  a.usedIntegers = Array.isArray(a.usedIntegers) ? a.usedIntegers : [];
+  a.eligibleIntegers = Array.isArray(a.eligibleIntegers) ? a.eligibleIntegers : [];
+
+  /*
+   * A decay cycle belongs to the integer where its first extension
+   * occurred. It does NOT move upward when an extension reaches a
+   * higher integer. The cycle only resets after the organic countdown
+   * passes below that starting integer.
+   */
+  if (a.cycleStartInteger != null && currentInt < Number(a.cycleStartInteger)) {
+    a.cycleStartInteger = null;
+    a.usedIntegers = [];
+    a.eligibleIntegers = [];
+    a.coef = 0.20;
+    a.nextCoefficient = 0.20;
   }
 
   /*
-   * A cycle starts at an integer that the auction reaches organically.
-   * Once that cycle starts, ONLY that integer and lower integers can
-   * participate in the cycle. An extension may move the timer upward,
-   * but those higher integers are NOT new opportunities.
-   *
-   * Example:
-   *   cycle starts at 5
-   *   bid at 5 -> extension may move timer to 10
-   *   10, 9, 8, 7, 6 are inorganic and cannot trigger fresh decay
-   *   when the countdown organically reaches 4, a new cycle can begin
-   *   if a bid actually occurs at 4
-   *
-   * If the countdown passes an integer without a bid, that integer is
-   * not saved for later. A later lower integer simply becomes the new
-   * organic cycle boundary.
+   * Any extension-created integer that the organic countdown has now
+   * passed without a bid is no longer eligible for this cycle.
    */
-  if(cycleStart!==null&&whole>cycleStart){
-    return {
-      active:true,
-      remaining,
-      whole,
-      subsequent:Math.max(0,whole-1),
-      mirrored:30-whole,
-      coef,
-      nextCoef:coef,
-      extension:0,
-      used:false,
-      eligible:false,
-      inorganic:true,
-      cycleStart
-    };
+  if (active) {
+    a.eligibleIntegers = a.eligibleIntegers.filter(i => Number(i) <= currentInt);
   }
 
-  const startsNewCycle=cycleStart===null||whole<cycleStart;
-  const effectiveCoef=startsNewCycle?.2:coef;
-  const effectiveUsed=startsNewCycle?false:usedIntegers.includes(whole);
-  const mirrored=30-whole;
-  const extension=effectiveUsed?0:mirrored*effectiveCoef;
+  const coef = Number(a.coef ?? a.nextCoefficient ?? 0.20);
+  const eligible = a.eligibleIntegers.includes(currentInt);
+  const used = a.usedIntegers.includes(currentInt);
+  const firstExtension = a.cycleStartInteger == null;
+  const canTrigger = active && !used && (firstExtension || eligible);
+  const mirrored = 30 - currentInt;
+  const extension = canTrigger ? mirrored * coef : 0;
 
   return {
-    active:true,
-    remaining,
-    whole,
-    subsequent:Math.max(0,whole-1),
-    mirrored,
-    coef:effectiveCoef,
-    nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,
+    active,
     extension,
-    used:effectiveUsed,
-    eligible:true,
-    inorganic:false,
-    cycleStart:startsNewCycle?whole:cycleStart,
-    newCycle:startsNewCycle
+    inorganic: eligible,
+    used,
+    eligible,
+    whole: currentInt,
+    subsequent: currentInt - 1,
+    mirrored,
+    coef
   };
 }
+
+function applyElasticExtension(x) {
+  if (!x || x.auctionType !== 'ELASTIC') return 0;
+
+  const before = secondsLeft(x);
+  if (!(before > 0 && before <= 30)) return 0;
+
+  const a = x.auction || (x.auction = {});
+  a.usedIntegers = Array.isArray(a.usedIntegers) ? a.usedIntegers : [];
+  a.eligibleIntegers = Array.isArray(a.eligibleIntegers) ? a.eligibleIntegers : [];
+
+  const beforeInt = Math.floor(before);
+
+  /*
+   * If the organic countdown has moved below the prior cycle start,
+   * that cycle is exhausted and this integer starts a fresh cycle.
+   */
+  if (a.cycleStartInteger != null && beforeInt < Number(a.cycleStartInteger)) {
+    a.cycleStartInteger = null;
+    a.usedIntegers = [];
+    a.eligibleIntegers = [];
+    a.coef = 0.20;
+    a.nextCoefficient = 0.20;
+  }
+
+  const firstExtension = a.cycleStartInteger == null;
+  const eligible = a.eligibleIntegers.includes(beforeInt);
+  const used = a.usedIntegers.includes(beforeInt);
+
+  /*
+   * A bid is eligible only if it is the first bid of a cycle or the
+   * integer was mathematically reached by a prior extension.
+   * Merely counting through an integer organically never qualifies it.
+   */
+  if (used || (!firstExtension && !eligible)) {
+    a.lastTrigger = before;
+    a.lastInteger = beforeInt;
+    a.lastExtension = 0;
+    a.lastExtensionAt = Date.now();
+    a.lastMirrored = 30 - beforeInt;
+    a.lastAppliedCoefficient = Number(a.coef ?? 0.20);
+    a.nextCoefficient = Number(a.coef ?? 0.20);
+    x.auction = a;
+    return 0;
+  }
+
+  if (firstExtension) {
+    a.cycleStartInteger = beforeInt;
+    a.usedIntegers = [];
+    a.eligibleIntegers = [];
+    a.coef = 0.20;
+    a.nextCoefficient = 0.20;
+  }
+
+  const coef = Number(a.coef ?? a.nextCoefficient ?? 0.20);
+  const mirrored = 30 - beforeInt;
+  const extension = mirrored * coef;
+
+  if (!(extension > 0)) return 0;
+
+  const oldEndsAt = Number(x.endsAt) || Date.now();
+  x.endsAt = oldEndsAt + extension * 1000;
+
+  /* Consume only the integer actually bid at. */
+  if (!a.usedIntegers.includes(beforeInt)) {
+    a.usedIntegers.push(beforeInt);
+  }
+
+  /*
+   * The extension mathematically reaches every integer above the bid
+   * integer through the new endpoint. Those integers become eligible
+   * potential decay points. They are NOT consumed merely by being reached.
+   * If the countdown passes one without a bid, it is removed from eligibility.
+   */
+  const afterInt = Math.floor(secondsLeft(x));
+  for (let i = beforeInt + 1; i <= afterInt; i++) {
+    if (!a.eligibleIntegers.includes(i)) {
+      a.eligibleIntegers.push(i);
+    }
+  }
+  a.eligibleIntegers.sort((m, n) => m - n);
+
+  a.reups = (a.reups || 0) + 1;
+  a.decayActive = true;
+  a.lastReupAt = Date.now();
+  a.lastTrigger = before;
+  a.lastInteger = beforeInt;
+  a.lastExtension = extension;
+  a.lastExtensionAt = Date.now();
+  a.lastMirrored = mirrored;
+  a.lastAppliedCoefficient = coef;
+  a.coef = coef / 2;
+  a.nextCoefficient = a.coef;
+  x.auction = a;
+
+  state.activity = `Elastic re-up at ${beforeInt}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
+  return extension;
+}
+
 function auctionPage(){
   const x=item(state.activeItem);
   if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;
@@ -572,7 +682,7 @@ function submitBid(id,amount,opts={}){
   x.current=amount;
   x.bidCount=(Number(x.bidCount)||0)+1;
   state.bids.push(bid);
-  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticReup(x,before);
+  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticExtension(x);
   if(buyer!=='You')resolveProxyForIncomingBid(x);
   save();
   render();
@@ -618,67 +728,23 @@ function resolveProxyForIncomingBid(x){
   const before=secondsLeft(x);
   x.current=response;x.bidCount=(Number(x.bidCount)||0)+1;
   state.bids.push({id:'proxy'+Date.now()+Math.random(),item:x.id,amount:response,created:Date.now(),buyer:'You',proxy:true});
-  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticReup(x,before);
+  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticExtension(x);
   if(response>=p.max)p.active=false;
 }
 
-function applyElasticReup(x,before){
-  const a=x.auction||{
-    coef:.2,
-    cycleFloor:5,
-    lastReupAt:null,
-    lastTrigger:null,
-    reups:0,
-    decayActive:false,
-    lastInteger:null,
-    cycleStartInteger:null,
-    usedIntegers:[],
-    lastExtension:null,
-    lastExtensionAt:null,
-    lastMirrored:null,
-    lastAppliedCoefficient:null,
-    nextCoefficient:.2
-  };
-
+function applyElasticExtension(x){
+  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};
   a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
 
   const whole=Math.max(0,Math.min(30,Math.floor(before)));
-  const now=Date.now();
+
+  // A decay cycle belongs to the lower integer at which it was started.
+  // The cycle's consumed-integer set is local: a later cycle does not inherit
+  // integers consumed by an earlier cycle. When the countdown passes below
+  // the prior cycle's starting integer, that subsequent integer starts fresh
+  // at the base coefficient.
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-
-  /*
-   * IMPORTANT ELASTIC RULE:
-   *
-   * A decay cycle belongs to the integer where the countdown reached
-   * that boundary organically. The cycle can consume that integer and
-   * then, as the timer naturally counts DOWN, lower integers.
-   *
-   * An extension is allowed to move the timer UP, but those higher
-   * integers are inorganic. They must never become fresh decay
-   * opportunities. This is what prevents the auction from being
-   * gamed indefinitely by repeatedly bidding on extension-created
-   * higher integers.
-   */
-  if(cycleStart!==null&&whole>cycleStart){
-    a.lastTrigger=before;
-    a.lastInteger=whole;
-    a.lastExtension=0;
-    a.lastExtensionAt=now;
-    a.lastMirrored=30-whole;
-    a.lastAppliedCoefficient=Number(a.coef??.2);
-    a.nextCoefficient=Number(a.coef??.2);
-    x.auction=a;
-    state.activity=`Elastic bid at ${whole}s: inorganic higher integer · +0.00s · cycle remains anchored at ${cycleStart}s`;
-    return 0;
-  }
-
-  /*
-   * If the timer has organically crossed below the previous cycle's
-   * boundary, THIS lower integer becomes the new cycle boundary.
-   * Integers passed over without a bid are not retained as future
-   * opportunities.
-   */
-  if(cycleStart===null||whole<cycleStart){
+  if(cycleStart==null||whole<cycleStart){
     a.cycleStartInteger=whole;
     a.usedIntegers=[];
     a.coef=.2;
@@ -688,17 +754,16 @@ function applyElasticReup(x,before){
 
   const coef=Number(a.coef??.2);
 
-  /*
-   * Only one qualifying bid is allowed at each integer in a cycle.
-   * Re-visiting a consumed integer produces no extension and no decay.
-   */
+  // Only one bid at each integer qualifies within the active decay cycle.
+  // Re-visiting a consumed integer has no extension and does not cause another
+  // coefficient decay.
   if(a.usedIntegers.includes(whole)){
     a.lastTrigger=before;
     a.lastInteger=whole;
     a.reups=(a.reups||0)+1;
     a.decayActive=true;
     a.lastExtension=0;
-    a.lastExtensionAt=now;
+    a.lastExtensionAt=Date.now();
     a.lastMirrored=30-whole;
     a.lastAppliedCoefficient=coef;
     a.nextCoefficient=coef;
@@ -709,22 +774,20 @@ function applyElasticReup(x,before){
 
   const mirrored=30-whole;
   const extension=mirrored*coef;
-
   x.endsAt+=extension*1000;
-  a.lastReupAt=now;
+  a.lastReupAt=Date.now();
   a.lastTrigger=before;
   a.lastInteger=whole;
   a.reups=(a.reups||0)+1;
   a.decayActive=true;
   a.usedIntegers.push(whole);
   a.lastExtension=extension;
-  a.lastExtensionAt=now;
+  a.lastExtensionAt=Date.now();
   a.lastMirrored=mirrored;
   a.lastAppliedCoefficient=coef;
   a.coef=coef/2;
   a.nextCoefficient=a.coef;
   x.auction=a;
-
   state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
   return extension;
 }
@@ -827,7 +890,7 @@ function buyerBids(){const latest={};state.bids.forEach(b=>{if(!latest[b.item]||
 function wonItems(){return `<div class="sectionhead"><div><h2>Won Items</h2><div class="tiny muted">Completed transactions remain here for order follow-through.</div></div></div><div class="list">${state.won.length?state.won.map((w,i)=>{const x=item(w.item);return `<div class="listrow"><div style="display:flex;gap:11px;align-items:center"><div class="mini">${img(x)}</div><div><b>${esc(x.name)}</b><div>${money(w.price)} · ${esc(w.source)}</div><div class="tiny muted">Transaction completed</div></div></div><button class="primary" onclick="openModal('order',${i})">Proceed to order</button></div>`}).join(''):'<div class="empty">No won items yet. Complete a Buy Now purchase or win an auction.</div>'}</div>`}
 function concierge(){return `<div class="card"><div class="eyebrow">SYSTEM-DRIVEN</div><h2 style="margin:7px 0">The Concierge informs. It never bids.</h2><p class="muted">Declare what matters to you and RapidUp watches inventory, selling-method changes and meaningful auction developments.</p></div><div class="sectionhead"><h2>Watching</h2></div><div class="card">${state.interests.map(i=>`<span class="tag">${esc(i)}</span>`).join('')}<button class="secondary" style="display:block;margin-top:10px" onclick="openModal('interests')">Edit interests</button></div><div class="sectionhead"><h2>Recent Concierge activity</h2></div><div class="card">${state.notifications.filter(n=>n.target==='item'||n.target==='auction').map(notification).join('')||'<div class="empty">No current matches.</div>'}</div>`}
 function sellerHub(){state.userMode='seller';const active=state.offers.filter(o=>o.status==='active');return `<main><div style="display:flex;justify-content:space-between;align-items:end"><div><div class="eyebrow">SELLER HUB</div><h1 style="margin:5px 0;font-size:clamp(38px,6vw,64px);letter-spacing:-.065em">Control the selling path.</h1></div><span class="pill">SELLER MODE</span></div><div class="segmented" style="margin:20px 0"><button class="${state.sellerTab==='overview'?'primary':'secondary'}" onclick="state.sellerTab='overview';render()">Overview</button><button class="${state.sellerTab==='offers'?'primary':'secondary'}" onclick="state.sellerTab='offers';render()">Offers (${active.length})</button><button class="${state.sellerTab==='analytics'?'primary':'secondary'}" onclick="state.sellerTab='analytics';render()">Seller Analytics</button><button class="${state.sellerTab==='inventory'?'primary':'secondary'}" onclick="state.sellerTab='inventory';render()">Inventory</button><button class="${state.sellerTab==='private'?'primary':'secondary'}" onclick="state.sellerTab='private';render()">Private Auctions</button><button class="secondary" onclick="openModal('consign')">Consign</button></div>${state.sellerTab==='overview'?sellerOverview():state.sellerTab==='offers'?sellerOffers():state.sellerTab==='analytics'?sellerAnalytics():state.sellerTab==='inventory'?sellerInventory():sellerPrivateAuctions()}</main>`}
-function sellerOverview(){const active=items.filter(x=>!x.sold);return `<div class="metricStrip"><div class="metric">Active inventory<b>${active.length}</b></div><div class="metric">Active offers<b>${state.offers.filter(o=>o.status==='active').length}</b></div><div class="metric">Auction positions<b>${items.filter(x=>x.method==='auction'&&!x.sold).length}</b></div><div class="metric">Private auctions<b>${Object.values(state.privateAuctions).filter(p=>p.active).length}</b></div></div><div class="sectionhead"><h2>Seller intelligence</h2><button class="secondary" onclick="state.sellerTab='analytics';render()">Open analytics</button></div><div class="card"><p class="muted">This is the seller-only market surface. It aggregates committed demand without exposing buyer identities or intelligence to buyers.</p><div class="offerGrid"><div class="offerStat"><span class="tiny muted">Active offers</span><b>${state.offers.filter(o=>o.status==='active').length}</b></div><div class="offerStat"><span class="tiny muted">Highest</span><b>${money(maxOffer())}</b></div><div class="offerStat"><span class="tiny muted">Average</span><b>${money(avgOffers())}</b></div><div class="offerStat"><span class="tiny muted">Private</span><b>${Object.values(state.privateAuctions).some(p=>p.active)?'Active':'Available'}</b></div></div></div>`}
+function sellerOverview(){const active=items.filter(x=>!x.sold);return `<div class="metricStrip"><div class="metric">Active inventory<b>${active.length}</b></div><div class="metric">Active offers<b>${state.offers.filter(o=>o.status==='active').length}</b></div><div class="metric">Auction positions<b>200</b></div><div class="metric">Private auctions<b>${Object.values(state.privateAuctions).filter(p=>p.active).length}</b></div></div><div class="sectionhead"><h2>Seller intelligence</h2><button class="secondary" onclick="state.sellerTab='analytics';render()">Open analytics</button></div><div class="card"><p class="muted">This is the seller-only market surface. It aggregates committed demand without exposing buyer identities or intelligence to buyers.</p><div class="offerGrid"><div class="offerStat"><span class="tiny muted">Active offers</span><b>${state.offers.filter(o=>o.status==='active').length}</b></div><div class="offerStat"><span class="tiny muted">Highest</span><b>${money(maxOffer())}</b></div><div class="offerStat"><span class="tiny muted">Average</span><b>${money(avgOffers())}</b></div><div class="offerStat"><span class="tiny muted">Private</span><b>${Object.values(state.privateAuctions).some(p=>p.active)?'Active':'Available'}</b></div></div></div>`}
 function maxOffer(){return Math.max(0,...state.offers.filter(o=>o.status==='active').map(o=>o.amount))} function avgOffers(){const os=state.offers.filter(o=>o.status==='active');return os.length?os.reduce((a,o)=>a+o.amount,0)/os.length:0}
 function sellerOffers(){const ids=[...new Set(state.offers.filter(o=>o.status==='active').map(o=>o.item))];return `<div class="sectionhead"><div><h2>Offer management</h2><div class="tiny muted">Aggregate demand is visible here; buyer identities remain abstract.</div></div></div>${ids.length?ids.map(sellerOfferGroup).join(''):'<div class="empty">No active committed offers.</div>'}`}
 function sellerOfferGroup(id){const x=item(id),os=activeOffers(id);if(!x||!os.length)return '';const hi=Math.max(...os.map(o=>o.amount)),lo=Math.min(...os.map(o=>o.amount));return `<div class="offerCard" style="margin-bottom:13px"><div class="row"><div><div class="eyebrow">${x.method==='buy'?'BUY NOW':'AUCTION'}</div><h3 style="margin:5px 0">${esc(x.name)}</h3></div><span class="pill">${os.length} active offers</span></div><div class="offerGrid"><div class="offerStat"><span class="tiny muted">Highest</span><b>${money(hi)}</b></div><div class="offerStat"><span class="tiny muted">Average</span><b>${money(os.reduce((a,o)=>a+o.amount,0)/os.length)}</b></div><div class="offerStat"><span class="tiny muted">Range</span><b>${money(lo)}–${money(hi)}</b></div><div class="offerStat"><span class="tiny muted">Expires</span><b>${Math.max(0,Math.ceil((Math.min(...os.map(o=>o.expires))-Date.now())/3600000))}h</b></div></div><div class="offerList">${os.map((o,i)=>`<div class="offerRow"><div><b>${money(o.amount)}</b><div class="tiny muted">Offer ${i+1} · age ${Math.max(0,Math.floor((Date.now()-o.created)/3600000))}h · expires ${new Date(o.expires).toLocaleString()}</div></div><div class="actions"><button class="primary" onclick="acceptOffer('${o.id}')">Accept</button><button class="secondary" onclick="ignoreOffer('${o.id}')">Ignore</button></div></div>`).join('')}</div><div class="actions" style="margin-top:13px"><button class="primary" onclick="counterAll('${x.id}')">Counter All</button><button class="secondary" onclick="openModal('method','${x.id}')">Change selling method</button></div></div>`}
@@ -866,19 +929,16 @@ function sellerWave(id){const p=state.privateAuctions[id];if(!p?.active)return;c
 function endPrivate(id){const p=state.privateAuctions[id],x=item(id);if(p)p.active=false;if(x)x.privateAuction={active:false};save();closeModal();activity('Private auction ended by seller. Inventory remains under seller control.')}
 function sellerPrivateAuctions(){const ps=Object.entries(state.privateAuctions).filter(([id,p])=>p.active);return `<div class="sectionhead"><div><h2>Demand-based Private Auctions</h2><div class="tiny muted">Private negotiations exist only where demonstrated demand is active.</div></div></div>${ps.length?ps.map(([id,p])=>{const x=item(id),rs=p.responses.filter(r=>r.engaged);return `<div class="offerCard" style="margin-bottom:12px"><div class="row"><div><div class="eyebrow">WAVE ${p.wave}</div><h3>${esc(x.name)}</h3></div><span class="pill">${rs.length} participants</span></div><div class="privatePrice">${money(p.current)}</div><div class="tiny muted">Current participation price · deadline ${new Date(p.deadline).toLocaleTimeString()}</div><button class="primary" style="margin-top:12px" onclick="openModal('privateSeller','${id}')">Open private auction</button></div>`}).join(''):'<div class="empty">No active Private Auctions. Counter a group of active offers to begin one.</div>'}`}
 function sellerAnalytics(){const os=state.offers.filter(o=>o.status==='active');return `<div class="metricStrip"><div class="metric">Offer range<b>${os.length?money(Math.min(...os.map(o=>o.amount)))+'–'+money(Math.max(...os.map(o=>o.amount))):'—'}</b></div><div class="metric">Method changes<b>24</b></div><div class="metric">Auction conversion<b>31%</b></div><div class="metric">Liquidity signal<b>High</b></div></div><div class="sectionhead"><h2>Demand over time</h2></div><div class="card"><div class="chart">${[25,39,30,55,47,72,65,91,78,100].map(v=>`<i style="height:${v}%"></i>`).join('')}</div><p class="tiny muted">Aggregated committed demand, offer outcomes and selling-method performance. Buyer-facing surfaces never receive this data.</p></div><div class="sectionhead"><h2>Positioning choices</h2></div><div class="methodGrid"><div class="methodBox current"><div class="eyebrow">BUY NOW</div><h3>Fastest liquidity</h3><p class="muted">Immediate execution remains available while offers are active.</p></div><div class="methodBox"><div class="eyebrow">PUBLIC AUCTION</div><h3>Broad competition</h3><p class="muted">Use a specialized channel when public price discovery is useful.</p></div><div class="methodBox"><div class="eyebrow">PRIVATE AUCTION</div><h3>Demand response</h3><p class="muted">Use uniform counteroffer waves when demonstrated demand warrants a private negotiation.</p></div></div>`}
-function sellerInventory(){
- const list=items.filter(x=>!x.sold);
- return `${list.length?`<div class="list">${list.map(x=>`<div class="listrow"><div style="display:flex;gap:11px;align-items:center"><div class="mini">${img(x)}</div><div><b>${esc(x.name)}</b><div class="tiny muted">${esc(x.set||'')} · ${x.method==='buy'?'BUY NOW':x.privateAuction?.active?'PRIVATE AUCTION':x.auctionType||'PUBLIC AUCTION'} · ${esc(x.internal?.presentation||x.presentation||'Standard')}</div><div class="tiny muted">${x.status||'Staged'}${x.method==='buy'&&x.price?` · ${money(x.price)}`:x.method==='auction'&&x.startingPrice!=null?` · starts ${money(x.startingPrice)}`:''}</div></div></div><div class="actions"><button class="secondary" onclick="openModal('stageEdit','${x.id}')">Seller settings</button>${activeOffers(x.id).length?`<button class="primary" onclick="state.sellerTab='offers';render()">View demand</button>`:''}</div></div>`).join('')}</div>`:`<div class="empty"><b>No inventory staged.</b><div class="tiny" style="margin-top:7px">Identify a valid Pokémon TCG card, then configure the seller-controlled selling state before staging.</div><div class="emptyAction"><button class="primary" onclick="openModal('consign')">Stage Inventory</button></div></div>`}`;
-}
+function sellerInventory(){return `<div class="list">${items.filter(x=>!x.sold).slice(0,80).map(x=>`<div class="listrow"><div style="display:flex;gap:11px;align-items:center"><div class="mini">${img(x)}</div><div><b>${esc(x.name)}</b><div class="tiny muted">${esc(x.set)} · current method: ${x.method==='buy'?'BUY NOW':x.privateAuction?.active?'PRIVATE AUCTION':x.auctionType}</div></div></div><div class="actions"><button class="secondary" onclick="openModal('method','${x.id}')">Change method</button>${activeOffers(x.id).length?`<button class="primary" onclick="state.sellerTab='offers';render()">View demand</button>`:''}</div></div>`).join('')}</div>`}
 function notification(n){return `<div class="notification ${n.read?'':'unread'}"><span class="dot" style="${n.read?'visibility:hidden':''}"></span><div style="flex:1"><div class="tiny muted">${esc(n.type)} · ${new Date(n.created).toLocaleString()}</div><b>${esc(n.text)}</b><div style="margin-top:7px"><button class="secondary tiny" onclick="notificationTarget('${n.id}')">Open</button></div></div></div>`}
 function notificationTarget(id){const n=state.notifications.find(x=>x.id===id);if(!n)return;n.read=true;save();if(n.target==='auction')openAuction(n.item);else if(n.target==='private')openModal('privateBuyer',n.item);else if(n.target==='won'){route('buyer');state.buyerTab='won';render()}else if(n.target==='offer'){route('buyer');state.buyerTab='offers';render()}else if(n.target==='item')openItem(n.item);else route('buyer')}
 function notificationsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">SYSTEM NOTIFICATIONS</div><h2>Concierge & marketplace activity</h2></div><button class="close" onclick="closeModal()">×</button></div>${state.notifications.map(notification).join('')||'<div class="empty">Nothing new.</div>'}<div class="actions" style="margin-top:13px"><button class="secondary" onclick="markAllRead()">Mark all read</button></div></div>`}
 function markAllRead(){state.notifications.forEach(n=>n.read=true);save();render()}
-function channelInfoModal(cid){const c=channel(cid),q=queueCriteria(c);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">CHANNEL CRITERIA</div><h2>${esc(c.name)}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="step"><b>Auction type</b>${esc(q.auctionType||'Any')}</div><div class="step"><b>Starting price</b>${q.startingMin!=null?money(q.startingMin)+'–'+money(q.startingMax):'Any'}</div><div class="step"><b>Year range / era</b>${q.yearMin!=null?`${q.yearMin}–${q.yearMax}`:'Any'} · ${esc(q.eras?.join('/')||'All eras')}</div><div class="step"><b>Condition</b>${esc(q.conditions?.join('/')||'All conditions')}</div><div class="step"><b>Language</b>${esc(q.languages?.join('/')||'All languages')}</div><div class="step"><b>Variant</b>${esc(q.variants?.length?q.variants.join('/'):'All variants')}</div><div class="step"><b>Presentation</b>${esc(q.presentations?.join('/')||'All presentations')}</div><div class="notice"><b>Channel logic:</b> only inventory whose seller-controlled attributes satisfy all applicable criteria is admitted to this channel. Each channel has one live auction and no public backlog.</div></div>`}
+function channelInfoModal(cid){const c=channel(cid),q=queueCriteria(c);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">CHANNEL CRITERIA</div><h2>${esc(c.name)}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="step"><b>Auction type</b>${esc(q.auctionType||'Any')}</div><div class="step"><b>Starting price</b>${q.startingMin!=null?money(q.startingMin)+'–'+money(q.startingMax):'Any'}</div><div class="step"><b>Year range / era</b>${q.yearMin!=null?`${q.yearMin}–${q.yearMax}`:'Any'} · ${esc(q.eras?.join('/')||'All eras')}</div><div class="step"><b>Condition</b>${esc(q.conditions?.join('/')||'All conditions')}</div><div class="step"><b>Language</b>${esc(q.languages?.join('/')||'All languages')}</div><div class="step"><b>Variant</b>${esc(q.variants?.length?q.variants.join('/'):'All variants')}</div><div class="step"><b>Presentation</b>${esc(q.presentations?.join('/')||'All presentations')}</div><div class="notice"><b>Queue logic:</b> only inventory whose internal intake designators satisfy all applicable criteria is admitted to this channel's public queue.</div></div>`}
 function auctionInfoModal(id){const x=item(id);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">BUYER AUCTION VIEW</div><h2>${esc(x.auctionType)} auction</h2></div><button class="close" onclick="closeModal()">×</button></div><p><b>Competitive surface only.</b></p><p>You see the item, current bid, bid count, live timer, auction type and your own bid.</p><div class="privacyNote">You do not see other buyers' offers, competing offer amounts, demand ranges, identities or seller analytics.</div></div>`}
 function interestsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">CONCIERGE</div><h2>Saved interests</h2></div><button class="close" onclick="closeModal()">×</button></div><p class="muted">Interests can include cards, sets, variants, language, grading company, grade ranges, target prices and preferred selling methods.</p><div class="list">${state.interests.map((i,k)=>`<div class="listrow"><span>${esc(i)}</span><button class="secondary" onclick="state.interests.splice(${k},1);save();openModal('interests')">Remove</button></div>`).join('')}</div><input id="interestInput" class="input" placeholder="Add an interest" style="margin-top:12px"><button class="primary" style="margin-top:9px" onclick="addInterest()">Add interest</button></div>`}
 function addInterest(){const v=document.getElementById('interestInput')?.value.trim();if(!v)return;state.interests.push(v);save();openModal('interests');notify(`Concierge is now watching ${v}.`,'buyer',null,'CONCIERGE')}
-function consignModal(){return `<div class="modal consignmentModal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB</div><h2>Consignment Inventory Generator</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice">Identify the collectible first. Once a valid API card is selected, configure the complete seller-controlled selling state before staging it.</div><div class="consignGrid" style="margin-top:18px"><label class="consignField"><span class="eyebrow">Pokémon / Character</span><input id="consignPokemon" class="input" placeholder="Type or select Pokémon…" autocomplete="off" onfocus="openConsignmentSuggestions('pokemon')" oninput="consignmentPokemonChanged(this.value)"><div id="consignPokemonSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Set</span><input id="consignSet" class="input" placeholder="Type or select set…" autocomplete="off" onfocus="openConsignmentSuggestions('set')" oninput="consignmentSetChanged(this.value)"><div id="consignSetSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Card / Number</span><input id="consignCard" class="input" placeholder="Type card name or number…" autocomplete="off" onfocus="openConsignmentSuggestions('card')" oninput="consignmentCardChanged(this.value)"><div id="consignCardSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Variant</span><input id="consignVariant" class="input" placeholder="Type or select variant…" autocomplete="off" onfocus="openConsignmentSuggestions('variant')" oninput="consignmentVariantChanged(this.value)"><div id="consignVariantSuggestions" class="consignSuggestions" hidden></div></label></div><div id="consignStatus" class="tiny muted" style="margin-top:12px">Start typing in any field to search the Pokémon TCG database.</div><div id="consignPreview" class="consignPreview"><div class="eyebrow">STANDARDIZED TITLE PREVIEW</div><div id="consignTitlePreview" class="big" style="font-size:25px;margin-top:7px">Select a card and variant.</div></div><div id="sellerConfig" class="sellerConfig" style="margin-top:16px;opacity:.48;pointer-events:none"><div class="sectionhead" style="margin:0 0 12px"><div><div class="eyebrow">SELLER-CONTROLLED ATTRIBUTES</div><h3 style="margin:5px 0 0">Configure listing</h3></div><span class="pill">Required before staging</span></div><div class="sellerConfigGrid"><label><span class="eyebrow">Selling method</span><select id="consignMethod" class="input" onchange="updateSellerConfigUI()"><option value="buy">BUY NOW</option><option value="auction">PUBLIC AUCTION</option></select></label><label><span class="eyebrow">Presentation</span><select id="consignPresentation" class="input" onchange="updateSellerConfigUI()"><option value="Standard">Standard</option><option value="Premium">Premium</option></select></label><label><span class="eyebrow">Condition</span><select id="consignCondition" class="input" onchange="updateSellerConfigUI()"><option value="Raw">Raw</option><option value="Graded">Graded</option></select></label><label><span class="eyebrow">Language</span><select id="consignLanguage" class="input" onchange="updateSellerConfigUI()"><option value="English">English</option><option value="Japanese">Japanese</option><option value="Korean">Korean</option><option value="Chinese">Chinese</option></select></label><label id="consignGradeWrap" style="display:none"><span class="eyebrow">Grade</span><select id="consignGrade" class="input" onchange="updateSellerConfigUI()"><option value="PSA 10">PSA 10</option><option value="PSA 9">PSA 9</option><option value="CGC 9.5">CGC 9.5</option><option value="BGS 9.5">BGS 9.5</option></select></label><label id="consignAuctionTypeWrap" style="display:none"><span class="eyebrow">Auction type</span><select id="consignAuctionType" class="input" onchange="updateSellerConfigUI()"><option value="ELASTIC">ELASTIC</option><option value="SUDDEN DEATH">SUDDEN DEATH</option></select></label><label id="consignAuctionStartWrap" style="display:none"><span class="eyebrow">Auction starting price</span><select id="consignAuctionStart" class="input" onchange="updateSellerConfigUI()"><option value="1">$1</option><option value="5">$5</option><option value="10">$10</option><option value="25">$25</option><option value="50">$50</option><option value="100">$100</option></select></label><label id="consignBuyPriceWrap"><span class="eyebrow">Buy Now price</span><input id="consignBuyPrice" class="input" type="number" min="1" step="1" value="1" placeholder="Listed price" oninput="updateSellerConfigUI()"></label></div><div id="sellerConfigStatus" class="tiny muted" style="margin-top:10px">Select a card and variant to unlock seller settings.</div></div><div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" id="consignSubmit" onclick="submitConsignment()" disabled>Stage Inventory</button></div></div>`}
+function consignModal(){return `<div class="modal consignmentModal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB</div><h2>Consignment Inventory Generator</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice">Identify the collectible using any information you know. Start typing in any field. Results update automatically and each field can narrow the others. RapidUp seller-controlled marketplace attributes remain separate.</div><div class="consignGrid" style="margin-top:18px"><label class="consignField"><span class="eyebrow">Pokémon / Character</span><input id="consignPokemon" class="input" placeholder="Type or select Pokémon…" autocomplete="off" onfocus="openConsignmentSuggestions('pokemon')" oninput="consignmentPokemonChanged(this.value)"><div id="consignPokemonSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Set</span><input id="consignSet" class="input" placeholder="Type or select set…" autocomplete="off" onfocus="openConsignmentSuggestions('set')" oninput="consignmentSetChanged(this.value)"><div id="consignSetSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Card / Number</span><input id="consignCard" class="input" placeholder="Type card name or number…" autocomplete="off" onfocus="openConsignmentSuggestions('card')" oninput="consignmentCardChanged(this.value)"><div id="consignCardSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Variant</span><input id="consignVariant" class="input" placeholder="Type or select variant…" autocomplete="off" onfocus="openConsignmentSuggestions('variant')" oninput="consignmentVariantChanged(this.value)"><div id="consignVariantSuggestions" class="consignSuggestions" hidden></div></label></div><div id="consignStatus" class="tiny muted" style="margin-top:12px">Start typing in any field to search the Pokémon TCG database.</div><div id="consignPreview" class="consignPreview"><div class="eyebrow">STANDARDIZED TITLE PREVIEW</div><div id="consignTitlePreview" class="big" style="font-size:25px;margin-top:7px">Select a card and variant.</div></div><div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" id="consignSubmit" onclick="submitConsignment()" disabled>Stage Inventory</button></div></div>`}
 
 let consignmentCache={
   cards:[],
@@ -1492,7 +1552,6 @@ function updateConsignmentPreview(){
 
   if(submit)
     submit.disabled=!(card&&variant);
-  updateSellerConfigUI();
 }
 
 document.addEventListener('click',e=>{
@@ -1532,75 +1591,101 @@ async function initConsignmentGenerator(){
   );
 }
 
-async function updateSellerConfigUI(){
- const method=document.getElementById('consignMethod')?.value||'buy',condition=document.getElementById('consignCondition')?.value||'Raw',auction=method==='auction';
- const gradeWrap=document.getElementById('consignGradeWrap'),typeWrap=document.getElementById('consignAuctionTypeWrap'),startWrap=document.getElementById('consignAuctionStartWrap'),buyWrap=document.getElementById('consignBuyPriceWrap');
- if(gradeWrap)gradeWrap.style.display=condition==='Graded'?'':'none';if(typeWrap)typeWrap.style.display=auction?'':'none';if(startWrap)startWrap.style.display=auction?'':'none';if(buyWrap)buyWrap.style.display=auction?'none':'';
- const card=selectedConsignmentCard(),variant=consignmentCache.selectedVariant,start=Number(document.getElementById('consignAuctionStart')?.value),buy=Number(document.getElementById('consignBuyPrice')?.value);const valid=!!(card&&variant)&&(auction?Number.isFinite(start)&&start>=1:Number.isFinite(buy)&&buy>=1);
- const submit=document.getElementById('consignSubmit');if(submit)submit.disabled=!valid;
- const box=document.getElementById('sellerConfig');if(box){box.style.opacity=card&&variant?'1':'.48';box.style.pointerEvents=card&&variant?'auto':'none';}
- const status=document.getElementById('sellerConfigStatus');if(status)status.textContent=card&&variant?(auction?`Auction starts at ${money(start||0)} · ${document.getElementById('consignAuctionType')?.value||'ELASTIC'} · ${document.getElementById('consignPresentation')?.value||'Standard'} presentation.`:`Buy Now at ${money(buy||0)} · ${document.getElementById('consignPresentation')?.value||'Standard'} presentation.`):'Select a card and variant to unlock seller settings.';
-}
-function submitConsignment(){
- const card=selectedConsignmentCard(),variant=consignmentCache.selectedVariant;if(!card||!variant){setConsignmentStatus('Select a valid card and variant before staging.',true);return;}
- const method=document.getElementById('consignMethod')?.value||'buy',presentation=document.getElementById('consignPresentation')?.value||'Standard',condition=document.getElementById('consignCondition')?.value||'Raw',language=document.getElementById('consignLanguage')?.value||'English',grade=condition==='Graded'?(document.getElementById('consignGrade')?.value||'PSA 10'):'Raw',auctionType=method==='auction'?(document.getElementById('consignAuctionType')?.value||'ELASTIC'):null,startingPrice=method==='auction'?Math.max(1,Number(document.getElementById('consignAuctionStart')?.value)||1):null,buyNowPrice=method==='buy'?Math.max(1,Number(document.getElementById('consignBuyPrice')?.value)||1):null;
- const submit=document.getElementById('consignSubmit');if(submit){submit.disabled=true;submit.textContent='Staging…';}
- try{
-  const title=`${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`,itemId=`consign-${Date.now()}`,year=card.releaseYear||new Date().getFullYear();
-  const staged={id:itemId,name:card.cardName,set:`${card.setName} #${card.cardNumber}`,fullName:title,year,era:getCardEra(year),category:'Pokemon',method,type:method==='auction'?'Auction':'Buy Now',channel:null,channelId:null,auctionType,startingPrice:startingPrice||0,current:method==='auction'?startingPrice:buyNowPrice,price:buyNowPrice||0,market:0,grade,lang:language,variant,presentation,sold:false,staged:true,status:'Staged',endsAt:0,bidCount:0,img:card.images?.large||card.images?.small||IMG.cards,internal:{category:'Pokemon',year,era:getCardEra(year),condition,language,variant,presentation,auctionType,startingPrice:startingPrice||0},auction:{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2},consignment:{setId:card.setId,setName:card.setName,releaseYear:card.releaseYear,pokemon:card.pokemon,cardId:card.id,apiCardId:card.id,cardNumber:card.cardNumber,cardName:card.cardName,selectedVariant:variant,externalSource:'Pokemon TCG API'}};
-  items.push(staged);
-  if(method==='auction'){const target=evaluateAndEnqueue(staged);if(target){staged.status='Live';normalizeAuctions(state);}else if(staged.status!=='Staged · Channel occupied'){staged.status='Unassigned';}}else staged.status='Available now';
-  save();closeModal();state.sellerTab='inventory';state.toast=`Staged: ${title} · ${method==='auction'?`Auction ${money(startingPrice)}`:`Buy Now ${money(buyNowPrice)}`}`;render();setTimeout(()=>{state.toast='';render()},2600);
- }catch(e){setConsignmentStatus(`Unable to stage inventory: ${e.message}`,true);if(submit){submit.disabled=false;submit.textContent='Stage Inventory';}}
-}
+async function submitConsignment(){
+  const card=selectedConsignmentCard();
+  const variant=consignmentCache.selectedVariant;
 
-function stageEditModal(id){
- const x=item(id);if(!x)return '';const d=x.internal||{},method=x.method==='auction'?'auction':'buy';
- return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB · INVENTORY</div><h2>Seller settings</h2><div class="tiny muted">${esc(fullItemTitle(x))}</div></div><button class="close" onclick="closeModal()">×</button></div><div class="sellerConfigGrid"><label><span class="eyebrow">Selling method</span><select id="editMethod" class="input"><option value="buy" ${method==='buy'?'selected':''}>BUY NOW</option><option value="auction" ${method==='auction'?'selected':''}>PUBLIC AUCTION</option></select></label><label><span class="eyebrow">Presentation</span><select id="editPresentation" class="input"><option value="Standard" ${(d.presentation||x.presentation)==='Standard'?'selected':''}>Standard</option><option value="Premium" ${(d.presentation||x.presentation)==='Premium'?'selected':''}>Premium</option></select></label><label><span class="eyebrow">Condition</span><select id="editCondition" class="input"><option value="Raw" ${(d.condition||'Raw')==='Raw'?'selected':''}>Raw</option><option value="Graded" ${(d.condition||'Raw')==='Graded'?'selected':''}>Graded</option></select></label><label><span class="eyebrow">Language</span><select id="editLanguage" class="input"><option value="English" ${(d.language||x.lang)==='English'?'selected':''}>English</option><option value="Japanese" ${(d.language||x.lang)==='Japanese'?'selected':''}>Japanese</option><option value="Korean" ${(d.language||x.lang)==='Korean'?'selected':''}>Korean</option><option value="Chinese" ${(d.language||x.lang)==='Chinese'?'selected':''}>Chinese</option></select></label><label><span class="eyebrow">Auction type</span><select id="editAuctionType" class="input"><option value="ELASTIC" ${(d.auctionType||x.auctionType)==='ELASTIC'?'selected':''}>ELASTIC</option><option value="SUDDEN DEATH" ${(d.auctionType||x.auctionType)==='SUDDEN DEATH'?'selected':''}>SUDDEN DEATH</option></select></label><label><span class="eyebrow">Auction starting price</span><select id="editAuctionStart" class="input"><option value="1" ${Number(x.startingPrice||d.startingPrice||1)===1?'selected':''}>$1</option><option value="5" ${Number(x.startingPrice||d.startingPrice||1)===5?'selected':''}>$5</option><option value="10" ${Number(x.startingPrice||d.startingPrice||1)===10?'selected':''}>$10</option><option value="25" ${Number(x.startingPrice||d.startingPrice||1)===25?'selected':''}>$25</option><option value="50" ${Number(x.startingPrice||d.startingPrice||1)===50?'selected':''}>$50</option><option value="100" ${Number(x.startingPrice||d.startingPrice||1)===100?'selected':''}>$100</option></select></label><label><span class="eyebrow">Buy Now price</span><input id="editBuyPrice" class="input" type="number" min="1" value="${esc(x.price||1)}"></label></div><div class="notice" style="margin-top:14px">Changing seller settings immediately updates routing. Public auctions use the selected auction type and starting price; Buy Now uses the listed price.</div><div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" onclick="saveStageEdit('${id}')">Save Seller Settings</button></div></div>`;
-}
-function saveStageEdit(id){
- const x=item(id);if(!x||x.sold)return;const method=document.getElementById('editMethod')?.value||'buy',condition=document.getElementById('editCondition')?.value||'Raw',language=document.getElementById('editLanguage')?.value||'English',presentation=document.getElementById('editPresentation')?.value||'Standard',auctionType=document.getElementById('editAuctionType')?.value||'ELASTIC',startingPrice=Math.max(1,Number(document.getElementById('editAuctionStart')?.value)||1),buyPrice=Math.max(1,Number(document.getElementById('editBuyPrice')?.value)||1);
- x.method=method;x.type=method==='auction'?'Auction':'Buy Now';x.price=method==='buy'?buyPrice:x.price||0;x.startingPrice=method==='auction'?startingPrice:x.startingPrice||0;x.current=method==='auction'?startingPrice:buyPrice;x.auctionType=method==='auction'?auctionType:null;x.presentation=presentation;x.lang=language;x.grade=condition==='Graded'?'PSA 10':'Raw';x.internal=x.internal||{};Object.assign(x.internal,{condition,language,presentation,auctionType:x.auctionType,startingPrice:x.startingPrice});x.endsAt=0;x.bidCount=0;ensureQueueState(state);channels.forEach(c=>state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(qid=>qid!==x.id));x.channel=null;x.channelId=null;
- if(method==='auction'){const target=evaluateAndEnqueue(x);x.status=target?'Live':(x.status==='Staged · Channel occupied'?x.status:'Unassigned');if(target)normalizeAuctions(state);}else{x.status='Available now';x.privateAuction=null;}
- save();closeModal();activity(`${x.name} seller settings updated.`);
-}
+  if(!card||!variant){
+    setConsignmentStatus(
+      'Select a card and variant before staging.',
+      true
+    );
+    return;
+  }
 
-function settingsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Account & Settings</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="list"><div class="listrow"><span>Operating mode</span><b>${state.userMode.toUpperCase()}</b></div><div class="listrow"><span>Concierge notifications</span><b>On</b></div><div class="listrow"><span>Offer expiration</span><b>24 hours</b></div><div class="listrow"><span>Public auction start</span><b>0:45</b></div><div class="listrow"><span>Buyer demand privacy</span><b>Protected</b></div></div></div>`}
+  const submit=document.getElementById(
+    'consignSubmit'
+  );
+
+  if(submit){
+    submit.disabled=true;
+    submit.textContent='Staging…';
+  }
+
+  try{
+    const title=
+      `${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`;
+
+    const itemId=`consign-${Date.now()}`;
+    const year=
+      card.releaseYear||new Date().getFullYear();
+
+    items.push({
+      id:itemId,
+      name:card.cardName,
+      set:`${card.setName} #${card.cardNumber}`,
+      fullName:title,
+      year,
+      era:getCardEra(year),
+      category:'Pokemon',
+      method:'buy',
+      type:'Buy Now',
+      price:0,
+      market:0,
+      grade:'Raw',
+      lang:'English',
+      variant,
+      img:card.images?.large||
+          card.images?.small||
+          IMG.cards,
+      sold:false,
+      staged:true,
+      status:'Staged',
+      consignment:{
+        setId:card.setId,
+        setName:card.setName,
+        releaseYear:card.releaseYear,
+        pokemon:card.pokemon,
+        cardId:card.id,
+        apiCardId:card.id,
+        cardNumber:card.cardNumber,
+        cardName:card.cardName,
+        selectedVariant:variant,
+        externalSource:'Pokemon TCG API'
+      }
+    });
+
+    save();
+    closeModal();
+
+    state.sellerTab='inventory';
+    state.toast=`Staged: ${title}`;
+
+    render();
+
+    setTimeout(()=>{
+      state.toast='';
+      render();
+    },2600);
+
+  }catch(e){
+    setConsignmentStatus(
+      `Unable to stage inventory: ${e.message}`,
+      true
+    );
+
+    if(submit){
+      submit.disabled=false;
+      submit.textContent='Stage Inventory';
+    }
+  }
+}
+function settingsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Account & Settings</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="list"><div class="listrow"><span>Operating mode</span><b>${state.userMode.toUpperCase()}</b></div><div class="listrow"><span>Concierge notifications</span><b>On</b></div><div class="listrow"><span>Offer expiration</span><b>24 hours</b></div><div class="listrow"><span>Public auction start</span><b>3:00</b></div><div class="listrow"><span>Buyer demand privacy</span><b>Protected</b></div></div></div>`}
 function orderModal(index){const w=state.won[index];if(!w)return `<div class="modal"><div class="modalHead"><h2>Order</h2><button class="close" onclick="closeModal()">×</button></div><div class="empty">Transaction not found.</div></div>`;const x=item(w.item);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">WON ITEM</div><h2>Order</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="success"><b>Transaction secured.</b><br>${esc(x.name)} · ${money(w.price)}</div><div class="step"><b>Next</b>Confirm shipping and payment details in the eventual production checkout.</div><button class="primary" onclick="closeModal();activity('Order flow acknowledged for '+x.name+'.')">Continue</button></div>`}
-function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='itemSummary')content=itemSummaryModal(data);else if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='stageEdit')content=stageEditModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
+function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='itemSummary')content=itemSummaryModal(data);else if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
 function render(){let body;if(state.page==='explore')body=explore();else if(state.page==='auctions')body=auctions();else if(state.page==='buy')body=buy();else if(state.page==='auction')body=auctionPage();else if(state.page==='item')body=itemPage();else if(state.page==='buyer')body=buyerHub();else if(state.page==='seller')body=sellerHub();else body=explore();document.body.classList.toggle('auction-mode',state.page==='auction');document.getElementById('app').innerHTML=(state.page==='auction'?'':header())+body+modals()+renderCartDrawer()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');}
 function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.status==='active'&&o.expires<=now){o.status='expired';changed=true;}});return changed}
-function finishAuction(x){
- const bids=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount),winning=bids[0],wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current,c=channel(x.channelId),cid=c?.id;
- x.endsAt=0;ensureQueueState(state);
- if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);
- if(!winning){
-  x.sold=false;x.status='Auction ended · No sale';
- }else{
-  x.sold=true;x.status='Auction closed';
-  if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
- }
- /* Immediately promote the next public queue item into the live slot. */
- if(cid){
-  const nextPool=queuePool(cid,state);
-  const next=nextPool.find(z=>!z.sold&&z.id!==x.id);
-  if(next){
-   next.status='Live';
-   next.channelId=cid;next.channel=c.name;next.auctionType=c.auctionType;
-   next.internal=next.internal||{};next.internal.auctionType=c.auctionType;
-   next.endsAt=Date.now()+RAPIDUP_AUCTION_DURATION_MS;
-   next.current=Math.max(1,Number(next.startingPrice)||1);
-   next.auction=next.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
-   state.channelPos[cid]=0;
-   next.status='Live';
-  }
- }
- save();
- if(state.page==='auction'&&state.activeItem===x.id){
-  if(cid&&queuePool(cid,state).length){state.activeItem=queuePool(cid,state)[0].id;state.page='auction';activity(`${x.name} ended. The next item is now live in the channel.`);}
-  else{state.page='explore';state.activeItem=null;activity(`${x.name} ended and the channel is now available for another seller listing.`);}
- }else{render();}
-}
+function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId);const pool=queuePool(c?.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;ensureQueueState(state);state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(id=>id!==x.id);if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+180000;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
 function tick(){
  const now=Date.now();
  let changed=expireOffers(now);
@@ -1619,7 +1704,7 @@ function tick(){
  // All visible countdowns derive from the same authoritative endsAt value.
  const x=state.page==='auction'?item(state.activeItem):null;
  if(x){const cur=document.getElementById('auctionCurrent');if(cur)cur.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const fb=document.getElementById('fastBidButton');if(fb)fb.textContent=`BID ${money(minBid(x))}`;
-  if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.inorganic?'+0.00s':(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s')):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.inorganic?'inorganic higher integer · no extension':(ep.used?'integer already consumed':'predicted from current integer')):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
+  if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.used?'integer already consumed':'predicted from current integer'):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
  save();
  updatePreciseTimerDisplays();
 }
@@ -1633,9 +1718,8 @@ document.addEventListener('click',function(e){
  if(actionEl){e.preventDefault();const a=actionEl.getAttribute('data-ru-action');if(a==='notifications')openModal('notifications');else if(a==='profile')openProfile();}
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
-state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();if(window.__rapidUpTickTimer)clearInterval(window.__rapidUpTickTimer);if(window.__rapidUpDisplayTimer)clearInterval(window.__rapidUpDisplayTimer);window.__rapidUpTickTimer=setInterval(tick,250);window.__rapidUpDisplayTimer=setInterval(updatePreciseTimerDisplays,50);updatePreciseTimerDisplays();
+state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
 </script>
-<script>window.POKEMON_TCG_MIN_SEARCH_LENGTH=3;</script>
-<script src="poketcg.js?v=20260831-pokemon-search-v3"></script>
+<script src="poketcg.js?v=20260831-pokemon-search-v2"></script>
 </body>
 </html>
