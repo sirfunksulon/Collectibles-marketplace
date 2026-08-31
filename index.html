@@ -1144,43 +1144,61 @@ async function fetchConsignmentCardsByField(field,value){
 
   if(!q)return[];
 
-  let term='';
+  /*
+   * Keep the Pokémon API client in poketcg.js as the single
+   * source of truth for API access, caching, CORS fallback and
+   * the 3-character search threshold.
+   */
+  if(typeof searchPokemonCards!=='function'){
+    throw new Error('Pokémon TCG search client is not available.');
+  }
+
+  const minLength=
+    Number(window.POKEMON_TCG_MIN_SEARCH_LENGTH)||3;
+
+  /*
+   * Variants are presentation metadata derived from cards already
+   * loaded. Do not create an API request just because the user typed
+   * a variant value.
+   */
+  if(field==='variant'){
+    return [];
+  }
+
+  /*
+   * Respect the 3-character threshold in the UI layer as well as
+   * poketcg.js. This prevents a request from ever being scheduled
+   * for P / Pi while still allowing local cached matches to appear.
+   */
+  if(q.length<minLength){
+    if(field==='pokemon'){
+      return await searchPokemonCards(q);
+    }
+
+    if(field==='set'){
+      return await searchPokemonCards({set:q});
+    }
+
+    if(field==='card'){
+      return await searchPokemonCards({card:q});
+    }
+
+    return [];
+  }
 
   if(field==='pokemon'){
-    term=`name:"${q.replace(/"/g,'\\"')}"`;
+    return await searchPokemonCards(q);
   }
 
-  else if(field==='set'){
-    term=`set.name:"${q.replace(/"/g,'\\"')}"`;
+  if(field==='set'){
+    return await searchPokemonCards({set:q});
   }
 
-  else if(field==='card'){
-    const numberMatch=q.match(/^#?(\d+)(?:\/\d+)?$/);
-
-    if(numberMatch){
-      term=`number:${numberMatch[1]}`;
-    }else{
-      term=`name:"${q.replace(/"/g,'\\"')}"`;
-    }
+  if(field==='card'){
+    return await searchPokemonCards({card:q});
   }
 
-  else if(field==='variant'){
-    term=`name:"${q.replace(/"/g,'\\"')}"`;
-  }
-
-  const response=await fetch(
-    `${POKEMON_API_URL}?q=${encodeURIComponent(term)}&pageSize=250`
-  );
-
-  if(!response.ok){
-    throw new Error(
-      `Pokémon TCG API returned ${response.status}`
-    );
-  }
-
-  const data=await response.json();
-
-  return Array.isArray(data.data)?data.data:[];
+  return [];
 }
 
 let consignmentDebounce=null;
@@ -1206,6 +1224,22 @@ function scheduleConsignmentLookup(field,value){
       consignmentCache.selectedVariant='';
 
     applyConsignmentFilters(field);
+    return;
+  }
+
+  const minLength=
+    Number(window.POKEMON_TCG_MIN_SEARCH_LENGTH)||3;
+
+  /*
+   * Below the threshold, update only from local memory. No
+   * outbound API lookup is scheduled.
+   */
+  if(q.length<minLength){
+    applyConsignmentFilters(field);
+    renderConsignmentSuggestions(field);
+    setConsignmentStatus(
+      `Type ${minLength} characters to search the Pokémon TCG database.`
+    );
     return;
   }
 
@@ -1586,5 +1620,5 @@ document.addEventListener('click',function(e){
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
 state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
-</script><script src="poketcg.js"></script>
+</script><script src="poketcg.js?v=20260831-pokemon-search"></script>
 </body></html>
