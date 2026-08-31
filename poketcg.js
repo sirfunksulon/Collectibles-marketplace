@@ -3,6 +3,10 @@ const POKEMON_API_URL = 'https://api.pokemontcg.io/v2/cards';
 const pokemonCardSearchCache = new Map();
 const pokemonCardMemory = new Map();
 
+// Minimum characters required before triggering outbound API calls
+const MIN_SEARCH_LENGTH = 2;
+let activeAbortController = null;
+
 function escapePokemonQuery(value) {
   return String(value || '').trim().replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
@@ -19,8 +23,8 @@ function cardMatchesText(card, value) {
   return haystack.includes(q);
 }
 
-// Fetch helper with CORS Proxy fallback
-async function pokemonTcgRequest(query, page = 1) {
+// Fetch helper with AbortSignal & CORS Proxy fallback
+async function pokemonTcgRequest(query, page = 1, signal = null) {
   const normalizedQuery = String(query || '').trim();
   if (!normalizedQuery) return [];
   const key = `${normalizedQuery.toLowerCase()}|page:${page}`;
@@ -31,14 +35,16 @@ async function pokemonTcgRequest(query, page = 1) {
 
   try {
     // Attempt direct API request
-    response = await fetch(targetUrl);
-    if (!response.ok) throw new Error(`Direct fetch failed with status ${response.status}`);
+    response = await fetch(targetUrl, { signal });
+    if (!response.ok) throw new Error(`Direct fetch status: ${response.status}`);
   } catch (directErr) {
+    if (directErr.name === 'AbortError') throw directErr; // Pass intentional cancellations up
+    
     console.warn('Direct API call failed or CORS blocked. Routing via CORS proxy...', directErr);
     // Fallback: Route request through CORS Proxy to bypass browser/Vercel domain blocks
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-    response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error(`Proxy fetch failed with status ${response.status}`);
+    response = await fetch(proxyUrl, { signal });
+    if (!response.ok) throw new Error(`Proxy fetch status: ${response.status}`);
   }
 
   const result = await response.json();
@@ -70,36 +76,54 @@ function cardHasVariant(card, variant) {
 
 async function searchByPokemon(value) {
   const searchValue = String(value || '').trim().toLowerCase();
-  if (!searchValue) return [];
+  
+  // Return local memory matches without hitting the API if under character threshold
+  if (!searchValue || searchValue.length < MIN_SEARCH_LENGTH) {
+    return [...pokemonCardMemory.values()].filter(card => 
+      String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
+    );
+  }
+
+  // Abort any in-flight requests from earlier keypresses
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
 
   try {
-    const apiCards = await pokemonTcgRequest(`name:${searchValue}*`, 1);
+    const apiCards = await pokemonTcgRequest(`name:${searchValue}*`, 1, activeAbortController.signal);
     const allCards = uniqueCards([...pokemonCardMemory.values(), ...apiCards]);
     
     return allCards.filter(card => 
       String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
     );
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return [...pokemonCardMemory.values()].filter(card => 
+        String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
+      );
+    }
+
     console.error('Direct Pokémon lookup failed, using local cache fallback:', error);
     const localCards = [...pokemonCardMemory.values()];
-    const filtered = localCards.filter(card => 
+    return localCards.filter(card => 
       String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
     );
-    
-    if (filtered.length > 0) return filtered;
-    throw error;
   }
 }
 
 async function searchBySet(value) {
   const searchValue = String(value || '').trim().toLowerCase();
-  if (!searchValue) return [];
+  if (!searchValue || searchValue.length < MIN_SEARCH_LENGTH) {
+    return uniqueCards([...pokemonCardMemory.values()].filter(card => String(card?.set?.name || '').toLowerCase().includes(searchValue)));
+  }
 
   try {
     const apiCards = await pokemonTcgRequest(`set.name:"*${searchValue}*"`, 1);
     const allCards = uniqueCards([...pokemonCardMemory.values(), ...apiCards]);
     return allCards.filter(card => String(card?.set?.name || '').toLowerCase().includes(searchValue));
   } catch (error) {
+    if (error.name === 'AbortError') return [];
     console.error('Set lookup failed:', error);
     return uniqueCards([...pokemonCardMemory.values()].filter(card => String(card?.set?.name || '').toLowerCase().includes(searchValue)));
   }
@@ -117,6 +141,7 @@ async function searchByCard(value) {
       const apiResults = await pokemonTcgRequest(`number:${number}`, 1);
       return uniqueCards([...apiResults, ...pokemonCardMemory.values()]).filter(card => String(card?.number || '').split('/')[0] === number);
     } catch (error) {
+      if (error.name === 'AbortError') return [];
       console.error('Card number lookup failed:', error);
       return uniqueCards([...pokemonCardMemory.values()].filter(card => String(card?.number || '').split('/')[0] === number));
     }
@@ -124,6 +149,12 @@ async function searchByCard(value) {
 
   const embeddedNumber = clean.match(/#?(\d+)(?:\/\d+)?$/);
   let namePart = embeddedNumber ? clean.slice(0, embeddedNumber.index).trim() : clean;
+
+  if (namePart && namePart.length < MIN_SEARCH_LENGTH) {
+    return uniqueCards([...pokemonCardMemory.values()].filter(card => 
+      String(card?.name || '').toLowerCase().includes(namePart.toLowerCase())
+    ));
+  }
 
   try {
     const apiCards = namePart ? await pokemonTcgRequest(`name:"*${namePart}*"`, 1) : [];
@@ -136,6 +167,7 @@ async function searchByCard(value) {
     }
     return uniqueCards(results);
   } catch (error) {
+    if (error.name === 'AbortError') return [];
     console.error('Card lookup failed:', error);
     return [];
   }
@@ -148,31 +180,36 @@ async function searchByVariant(value) {
 }
 
 async function searchPokemonCards(search) {
-  if (typeof search === 'string') {
-    const value = search.trim();
-    return value ? searchByPokemon(value) : [];
-  }
+  try {
+    if (typeof search === 'string') {
+      const value = search.trim();
+      return value ? await searchByPokemon(value) : [];
+    }
 
-  const criteria = search || {};
-  const pokemon = String(criteria.pokemon || '').trim();
-  const set = String(criteria.set || '').trim();
-  const card = String(criteria.card || '').trim();
-  const variant = String(criteria.variant || '').trim();
+    const criteria = search || {};
+    const pokemon = String(criteria.pokemon || '').trim();
+    const set = String(criteria.set || '').trim();
+    const card = String(criteria.card || '').trim();
+    const variant = String(criteria.variant || '').trim();
 
-  let results = null;
-  if (pokemon) results = await searchByPokemon(pokemon);
-  if (set) {
-    const setResults = await searchBySet(set);
-    results = results === null ? setResults : results.filter(r => setResults.some(o => o.id === r.id));
-  }
-  if (card) {
-    const cardResults = await searchByCard(card);
-    results = results === null ? cardResults : results.filter(r => cardResults.some(o => o.id === r.id));
-  }
-  if (results === null) results = [...pokemonCardMemory.values()];
-  if (variant) results = results.filter(r => cardHasVariant(r, variant));
+    let results = null;
+    if (pokemon) results = await searchByPokemon(pokemon);
+    if (set) {
+      const setResults = await searchBySet(set);
+      results = results === null ? setResults : results.filter(r => setResults.some(o => o.id === r.id));
+    }
+    if (card) {
+      const cardResults = await searchByCard(card);
+      results = results === null ? cardResults : results.filter(r => cardResults.some(o => o.id === r.id));
+    }
+    if (results === null) results = [...pokemonCardMemory.values()];
+    if (variant) results = results.filter(r => cardHasVariant(r, variant));
 
-  return uniqueCards(results);
+    return uniqueCards(results);
+  } catch (err) {
+    if (err.name === 'AbortError') return [];
+    throw err;
+  }
 }
 
 async function fetchPokemonCard(cardName) {
@@ -242,3 +279,4 @@ window.getPokemonCardOptions = getPokemonCardOptions;
 window.getPokemonVariants = getPokemonVariants;
 window.filterPokemonCards = filterPokemonCards;
 window.clearPokemonTcgCache = clearPokemonTcgCache;
+                                                                                  
