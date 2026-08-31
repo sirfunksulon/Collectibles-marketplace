@@ -192,6 +192,7 @@ const CHANNEL_ERA_DEFS=[
 const CHANNEL_CONDITIONS=['Raw','Graded'];
 const CHANNEL_START_PRICES=[1,5,10,25,50,100];
 const CHANNEL_AUCTION_TYPES=['ELASTIC','SUDDEN DEATH'];
+const RAPIDUP_AUCTION_DURATION_MS=45000;
 function buildChannelDefinitions(){
  const out=[];let n=1;
  CHANNEL_START_PRICES.forEach(start=>CHANNEL_CONDITIONS.forEach(condition=>CHANNEL_ERA_DEFS.forEach(era=>CHANNEL_AUCTION_TYPES.forEach(auctionType=>{
@@ -333,7 +334,7 @@ function normalizeAuctions(s=state){
  channels.forEach(c=>{
   const pool=queuePool(c.id,s);if(!pool.length){s.channelPos[c.id]=0;return;}
   const x=pool[0];s.channelPos[c.id]=0;x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.era=getCardEra(x.internal.year??x.year);x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.startingPrice=x.internal.startingPrice;x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
-  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+180000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
+  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+RAPIDUP_AUCTION_DURATION_MS;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
   x.status='Live';
  });
 }
@@ -362,8 +363,8 @@ function fmt(sec){
   return `${m}:${String(s).padStart(2,'0')}:${String(Math.min(99,hundredths)).padStart(2,'0')}`;
 }
 function fmtPrecise(sec){return `${Math.max(0,Number(sec)||0).toFixed(2)}s`}
-function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return null}
+function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.inorganic?'+0.00s':(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s')):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+RAPIDUP_AUCTION_DURATION_MS;return live}return null}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
@@ -428,22 +429,85 @@ function queueSelect(cid,i){const pool=queuePool(cid),x=pool[i],pos=state.channe
 function queueItemModal(d){const x=item(d.id),c=channel(d.cid);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">QUEUE POSITION ${d.i+1}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(x.current||x.price||1)}</div><p class="muted">Queued in ${esc(c.name)}. This item cannot receive a public bid until it reaches the active slot.</p><div class="actions"><button class="primary" onclick="makeOffer('${x.id}')">Make Offer</button><button class="secondary" onclick="closeModal();openQueue('${d.cid}')">Back to Queue</button></div></div></div></div>`}
 function elasticPreview(x){
   if(!x||x.auctionType!=='ELASTIC')return {active:false};
+
   const remaining=secondsLeft(x);
   const whole=Math.floor(remaining);
   const a=x.auction||{};
   const coef=Number(a.coef??.2);
   const usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-  // Each decay cycle is local to the lower integer at which it began.
-  // When the countdown passes below that starting integer, the next integer
-  // begins a fresh cycle with a fresh coefficient and fresh consumed set.
-  if(whole<0||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
-  const startsNewCycle=cycleStart==null||whole<cycleStart;
+
+  if(whole<0||whole>30){
+    return {
+      active:false,
+      remaining,
+      whole,
+      subsequent:Math.max(0,whole-1),
+      mirrored:whole>=0?30-whole:0,
+      coef,
+      nextCoef:coef,
+      extension:0,
+      used:false,
+      eligible:false,
+      cycleStart
+    };
+  }
+
+  /*
+   * A cycle starts at an integer that the auction reaches organically.
+   * Once that cycle starts, ONLY that integer and lower integers can
+   * participate in the cycle. An extension may move the timer upward,
+   * but those higher integers are NOT new opportunities.
+   *
+   * Example:
+   *   cycle starts at 5
+   *   bid at 5 -> extension may move timer to 10
+   *   10, 9, 8, 7, 6 are inorganic and cannot trigger fresh decay
+   *   when the countdown organically reaches 4, a new cycle can begin
+   *   if a bid actually occurs at 4
+   *
+   * If the countdown passes an integer without a bid, that integer is
+   * not saved for later. A later lower integer simply becomes the new
+   * organic cycle boundary.
+   */
+  if(cycleStart!==null&&whole>cycleStart){
+    return {
+      active:true,
+      remaining,
+      whole,
+      subsequent:Math.max(0,whole-1),
+      mirrored:30-whole,
+      coef,
+      nextCoef:coef,
+      extension:0,
+      used:false,
+      eligible:false,
+      inorganic:true,
+      cycleStart
+    };
+  }
+
+  const startsNewCycle=cycleStart===null||whole<cycleStart;
   const effectiveCoef=startsNewCycle?.2:coef;
   const effectiveUsed=startsNewCycle?false:usedIntegers.includes(whole);
   const mirrored=30-whole;
   const extension=effectiveUsed?0:mirrored*effectiveCoef;
-  return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart:startsNewCycle?whole:cycleStart,newCycle:startsNewCycle};
+
+  return {
+    active:true,
+    remaining,
+    whole,
+    subsequent:Math.max(0,whole-1),
+    mirrored,
+    coef:effectiveCoef,
+    nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,
+    extension,
+    used:effectiveUsed,
+    eligible:true,
+    inorganic:false,
+    cycleStart:startsNewCycle?whole:cycleStart,
+    newCycle:startsNewCycle
+  };
 }
 function auctionPage(){
   const x=item(state.activeItem);
@@ -559,18 +623,62 @@ function resolveProxyForIncomingBid(x){
 }
 
 function applyElasticReup(x,before){
-  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};
+  const a=x.auction||{
+    coef:.2,
+    cycleFloor:5,
+    lastReupAt:null,
+    lastTrigger:null,
+    reups:0,
+    decayActive:false,
+    lastInteger:null,
+    cycleStartInteger:null,
+    usedIntegers:[],
+    lastExtension:null,
+    lastExtensionAt:null,
+    lastMirrored:null,
+    lastAppliedCoefficient:null,
+    nextCoefficient:.2
+  };
+
   a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
 
   const whole=Math.max(0,Math.min(30,Math.floor(before)));
-
-  // A decay cycle belongs to the lower integer at which it was started.
-  // The cycle's consumed-integer set is local: a later cycle does not inherit
-  // integers consumed by an earlier cycle. When the countdown passes below
-  // the prior cycle's starting integer, that subsequent integer starts fresh
-  // at the base coefficient.
+  const now=Date.now();
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-  if(cycleStart==null||whole<cycleStart){
+
+  /*
+   * IMPORTANT ELASTIC RULE:
+   *
+   * A decay cycle belongs to the integer where the countdown reached
+   * that boundary organically. The cycle can consume that integer and
+   * then, as the timer naturally counts DOWN, lower integers.
+   *
+   * An extension is allowed to move the timer UP, but those higher
+   * integers are inorganic. They must never become fresh decay
+   * opportunities. This is what prevents the auction from being
+   * gamed indefinitely by repeatedly bidding on extension-created
+   * higher integers.
+   */
+  if(cycleStart!==null&&whole>cycleStart){
+    a.lastTrigger=before;
+    a.lastInteger=whole;
+    a.lastExtension=0;
+    a.lastExtensionAt=now;
+    a.lastMirrored=30-whole;
+    a.lastAppliedCoefficient=Number(a.coef??.2);
+    a.nextCoefficient=Number(a.coef??.2);
+    x.auction=a;
+    state.activity=`Elastic bid at ${whole}s: inorganic higher integer · +0.00s · cycle remains anchored at ${cycleStart}s`;
+    return 0;
+  }
+
+  /*
+   * If the timer has organically crossed below the previous cycle's
+   * boundary, THIS lower integer becomes the new cycle boundary.
+   * Integers passed over without a bid are not retained as future
+   * opportunities.
+   */
+  if(cycleStart===null||whole<cycleStart){
     a.cycleStartInteger=whole;
     a.usedIntegers=[];
     a.coef=.2;
@@ -580,16 +688,17 @@ function applyElasticReup(x,before){
 
   const coef=Number(a.coef??.2);
 
-  // Only one bid at each integer qualifies within the active decay cycle.
-  // Re-visiting a consumed integer has no extension and does not cause another
-  // coefficient decay.
+  /*
+   * Only one qualifying bid is allowed at each integer in a cycle.
+   * Re-visiting a consumed integer produces no extension and no decay.
+   */
   if(a.usedIntegers.includes(whole)){
     a.lastTrigger=before;
     a.lastInteger=whole;
     a.reups=(a.reups||0)+1;
     a.decayActive=true;
     a.lastExtension=0;
-    a.lastExtensionAt=Date.now();
+    a.lastExtensionAt=now;
     a.lastMirrored=30-whole;
     a.lastAppliedCoefficient=coef;
     a.nextCoefficient=coef;
@@ -600,20 +709,22 @@ function applyElasticReup(x,before){
 
   const mirrored=30-whole;
   const extension=mirrored*coef;
+
   x.endsAt+=extension*1000;
-  a.lastReupAt=Date.now();
+  a.lastReupAt=now;
   a.lastTrigger=before;
   a.lastInteger=whole;
   a.reups=(a.reups||0)+1;
   a.decayActive=true;
   a.usedIntegers.push(whole);
   a.lastExtension=extension;
-  a.lastExtensionAt=Date.now();
+  a.lastExtensionAt=now;
   a.lastMirrored=mirrored;
   a.lastAppliedCoefficient=coef;
   a.coef=coef/2;
   a.nextCoefficient=a.coef;
   x.auction=a;
+
   state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
   return extension;
 }
@@ -1454,7 +1565,7 @@ function saveStageEdit(id){
  save();closeModal();activity(`${x.name} seller settings updated.`);
 }
 
-function settingsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Account & Settings</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="list"><div class="listrow"><span>Operating mode</span><b>${state.userMode.toUpperCase()}</b></div><div class="listrow"><span>Concierge notifications</span><b>On</b></div><div class="listrow"><span>Offer expiration</span><b>24 hours</b></div><div class="listrow"><span>Public auction start</span><b>3:00</b></div><div class="listrow"><span>Buyer demand privacy</span><b>Protected</b></div></div></div>`}
+function settingsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Account & Settings</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="list"><div class="listrow"><span>Operating mode</span><b>${state.userMode.toUpperCase()}</b></div><div class="listrow"><span>Concierge notifications</span><b>On</b></div><div class="listrow"><span>Offer expiration</span><b>24 hours</b></div><div class="listrow"><span>Public auction start</span><b>0:45</b></div><div class="listrow"><span>Buyer demand privacy</span><b>Protected</b></div></div></div>`}
 function orderModal(index){const w=state.won[index];if(!w)return `<div class="modal"><div class="modalHead"><h2>Order</h2><button class="close" onclick="closeModal()">×</button></div><div class="empty">Transaction not found.</div></div>`;const x=item(w.item);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">WON ITEM</div><h2>Order</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="success"><b>Transaction secured.</b><br>${esc(x.name)} · ${money(w.price)}</div><div class="step"><b>Next</b>Confirm shipping and payment details in the eventual production checkout.</div><button class="primary" onclick="closeModal();activity('Order flow acknowledged for '+x.name+'.')">Continue</button></div>`}
 function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='itemSummary')content=itemSummaryModal(data);else if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='stageEdit')content=stageEditModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
 function render(){let body;if(state.page==='explore')body=explore();else if(state.page==='auctions')body=auctions();else if(state.page==='buy')body=buy();else if(state.page==='auction')body=auctionPage();else if(state.page==='item')body=itemPage();else if(state.page==='buyer')body=buyerHub();else if(state.page==='seller')body=sellerHub();else body=explore();document.body.classList.toggle('auction-mode',state.page==='auction');document.getElementById('app').innerHTML=(state.page==='auction'?'':header())+body+modals()+renderCartDrawer()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');}
@@ -1477,7 +1588,7 @@ function finishAuction(x){
    next.status='Live';
    next.channelId=cid;next.channel=c.name;next.auctionType=c.auctionType;
    next.internal=next.internal||{};next.internal.auctionType=c.auctionType;
-   next.endsAt=Date.now()+180000;
+   next.endsAt=Date.now()+RAPIDUP_AUCTION_DURATION_MS;
    next.current=Math.max(1,Number(next.startingPrice)||1);
    next.auction=next.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
    state.channelPos[cid]=0;
@@ -1508,7 +1619,7 @@ function tick(){
  // All visible countdowns derive from the same authoritative endsAt value.
  const x=state.page==='auction'?item(state.activeItem):null;
  if(x){const cur=document.getElementById('auctionCurrent');if(cur)cur.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const fb=document.getElementById('fastBidButton');if(fb)fb.textContent=`BID ${money(minBid(x))}`;
-  if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.used?'integer already consumed':'predicted from current integer'):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
+  if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.inorganic?'+0.00s':(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s')):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.inorganic?'inorganic higher integer · no extension':(ep.used?'integer already consumed':'predicted from current integer')):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
  save();
  updatePreciseTimerDisplays();
 }
