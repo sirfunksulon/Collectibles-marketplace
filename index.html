@@ -170,7 +170,6 @@ button{transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
 </style>
 <script>
 /* RapidUp refinement build: this script extends the existing prototype into a stateful product simulation. */
-/* Timer correction v26: display refreshes must never mutate/reset an auction clock. */
 const STORAGE_KEY='rapidup_refinement_v25';
 const IMG={
   lugia:'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?auto=format&fit=crop&w=1200&q=86',
@@ -403,7 +402,7 @@ function fmt(sec){
 }
 function fmtPrecise(sec){return `${Math.max(0,Number(sec)||0).toFixed(2)}s`}
 function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;let pos=Number(state.channelPos[cid]??0);if(!Number.isFinite(pos)||pos<0)pos=0;if(pos>=pool.length)pos=0;state.channelPos[cid]=pos;const live=pool[pos];if(live&&!live.sold)return live;return pool.find(x=>x.status==='Live'&&!x.sold)||pool[0]}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;let pos=Number(state.channelPos[cid]??0);if(!Number.isFinite(pos)||pos<0)pos=0;if(pos>=pool.length)pos=0;state.channelPos[cid]=pos;const live=pool[pos];if(live&&!live.sold){if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return pool.find(x=>x.status==='Live'&&!x.sold)||pool[0]}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
@@ -423,7 +422,7 @@ function itemCard(x){
   if(auction&&x.status!=='Live')return '';
   const title=fullItemTitle(x);
   const method=auction?'AUCTION':'BUY NOW';
-  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?fmt(secondsLeft(x))+' remaining':'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="addToCart('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
+  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?`<span data-item-timer="${x.id}">${fmt(secondsLeft(x))}</span> remaining`:'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="addToCart('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
 }
 function fullItemTitle(x){return x.fullName||`${x.year||inferYear(x)} Pokemon ${x.set||''} ${x.variant||''} ${x.name||''}${isGraded(x)?` ${x.grader||graderFromGrade(x.grade)||''} ${x.grade||''}`:''}`.replace(/\s+/g,' ').trim();}
 function inferYear(x){const m=String(x.name||'').match(/\b(19|20)\d{2}\b/);return m?m[0]:'2025';}
@@ -474,15 +473,24 @@ function elasticPreview(x){
   const coef=Number(a.coef??.2);
   const usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-  // Each decay cycle is local to the lower integer at which it began.
-  // When the countdown passes below that starting integer, the next integer
-  // begins a fresh cycle with a fresh coefficient and fresh consumed set.
+
   if(whole<0||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
-  const startsNewCycle=cycleStart==null||whole<cycleStart;
+
+  /*
+   * A coefficient-decay cycle is local to the integer where that cycle
+   * began. If the timer reaches a different integer, that integer is a
+   * fresh boundary. This applies in both directions: normal countdown
+   * moves downward, while an extension can create a higher integer.
+   *
+   * Crucially, a future integer does not inherit the already-decayed
+   * coefficient merely because the clock was extended into it.
+   */
+  const startsNewCycle=cycleStart==null||whole!==cycleStart;
   const effectiveCoef=startsNewCycle?.2:coef;
   const effectiveUsed=startsNewCycle?false:usedIntegers.includes(whole);
   const mirrored=30-whole;
   const extension=effectiveUsed?0:mirrored*effectiveCoef;
+
   return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart:startsNewCycle?whole:cycleStart,newCycle:startsNewCycle};
 }
 function auctionPage(){
@@ -603,14 +611,16 @@ function applyElasticReup(x,before){
   a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
 
   const whole=Math.max(0,Math.min(30,Math.floor(before)));
-
-  // A decay cycle belongs to the lower integer at which it was started.
-  // The cycle's consumed-integer set is local: a later cycle does not inherit
-  // integers consumed by an earlier cycle. When the countdown passes below
-  // the prior cycle's starting integer, that subsequent integer starts fresh
-  // at the base coefficient.
+  const now=Date.now();
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-  if(cycleStart==null||whole<cycleStart){
+
+  /*
+   * Every newly reached integer begins a fresh decay cycle. The timer
+   * normally reaches lower integers as it counts down, but an extension
+   * can create a higher integer opportunity. That higher integer is also
+   * a fresh boundary and must not inherit the previous cycle's coefficient.
+   */
+  if(cycleStart==null||whole!==cycleStart){
     a.cycleStartInteger=whole;
     a.usedIntegers=[];
     a.coef=.2;
@@ -620,16 +630,18 @@ function applyElasticReup(x,before){
 
   const coef=Number(a.coef??.2);
 
-  // Only one bid at each integer qualifies within the active decay cycle.
-  // Re-visiting a consumed integer has no extension and does not cause another
-  // coefficient decay.
+  /*
+   * Only one extension is allowed for a given integer within its decay
+   * cycle. Repeated bids while the timer remains on that same integer do
+   * not create another extension and do not decay the coefficient again.
+   */
   if(a.usedIntegers.includes(whole)){
     a.lastTrigger=before;
     a.lastInteger=whole;
     a.reups=(a.reups||0)+1;
     a.decayActive=true;
     a.lastExtension=0;
-    a.lastExtensionAt=Date.now();
+    a.lastExtensionAt=now;
     a.lastMirrored=30-whole;
     a.lastAppliedCoefficient=coef;
     a.nextCoefficient=coef;
@@ -641,14 +653,14 @@ function applyElasticReup(x,before){
   const mirrored=30-whole;
   const extension=mirrored*coef;
   x.endsAt+=extension*1000;
-  a.lastReupAt=Date.now();
+  a.lastReupAt=now;
   a.lastTrigger=before;
   a.lastInteger=whole;
   a.reups=(a.reups||0)+1;
   a.decayActive=true;
   a.usedIntegers.push(whole);
   a.lastExtension=extension;
-  a.lastExtensionAt=Date.now();
+  a.lastExtensionAt=now;
   a.lastMirrored=mirrored;
   a.lastAppliedCoefficient=coef;
   a.coef=coef/2;
@@ -657,7 +669,6 @@ function applyElasticReup(x,before){
   state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
   return extension;
 }
-
 function renderBuyNowPage(){const list=items.filter(x=>x.method==='buy'&&!x.sold);return `<main><section class="hero"><div class="eyebrow">BUY NOW</div><h1>Immediate means immediate.</h1><p>Buy Now remains executable at the listed price until the seller intentionally changes the selling state. Offers never reserve inventory.</p></section><div class="grid">${list.map(itemCard).join('')}</div></main>`}
 function buy(){return renderBuyNowPage()}
 function itemPage(){const x=item(state.activeItem);if(!x||x.sold)return `<main><div class="empty">This item is no longer available.</div></main>`;const mine=myOffer(x.id),pa=state.privateAuctions[x.id];return `<main><section class="section"><button class="ghost" onclick="route('buy')">← Buy Now</button></section><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="eyebrow">BUY NOW · ${esc(x.grade)}</div><h1 style="font-size:clamp(38px,6vw,62px);letter-spacing:-.06em;margin:7px 0">${esc(x.name)}</h1><div class="muted">${esc(x.set)}</div><div style="margin-top:6px">${tags(x)}</div><div class="price">${money(x.price)}</div><div class="notice"><b>Available for immediate purchase.</b> Active offers do not reserve this item. Another buyer may purchase it at ${money(x.price)} at any time.</div>${mine?`<div class="success" style="margin-top:12px">Your offer: <b>${money(mine.amount)}</b> · expires ${new Date(mine.expires).toLocaleString()}</div>`:''}${pa?.active?`<div class="warning" style="margin-top:12px"><b>Demand-based Private Auction active.</b><br>There is a current seller response waiting for participating buyers.</div>`:''}<div class="actions" style="margin-top:14px"><button class="primary" onclick="addToCart('${x.id}')">Buy Now · ${money(x.price)}</button><button class="secondary" onclick="makeOffer('${x.id}')">${mine?'Replace offer':'Make Offer'}</button>${pa?.active?`<button class="secondary" onclick="openModal('privateBuyer','${x.id}')">Open private auction</button>`:''}</div><div class="sectionhead"><h2>Item details</h2></div><div class="list"><div class="listrow"><span>Market reference</span><b>${money(x.market)}</b></div><div class="listrow"><span>Condition / grade</span><b>${esc(x.grade)}</b></div><div class="listrow"><span>Language</span><b>${esc(x.lang)}</b></div><div class="listrow"><span>Variant</span><b>${esc(x.variant)}</b></div></div></div></div></main>`}
@@ -1142,30 +1153,66 @@ function applyConsignmentFilters(changedField){
 
 async function fetchConsignmentCardsByField(field,value){
   const q=String(value||'').trim();
+
   if(!q)return[];
 
-  if(typeof window.searchPokemonCards!=='function'){
+  /*
+   * Keep the Pokémon API client in poketcg.js as the single
+   * source of truth for API access, caching, CORS fallback and
+   * the 3-character search threshold.
+   */
+  if(typeof searchPokemonCards!=='function'){
     throw new Error('Pokémon TCG search client is not available.');
   }
 
-  const minLength=Number(window.POKEMON_TCG_MIN_SEARCH_LENGTH)||3;
+  const minLength=
+    Number(window.POKEMON_TCG_MIN_SEARCH_LENGTH)||3;
 
-  if(field==='variant')return[];
-
-  // Under the threshold we deliberately avoid network traffic.
-  // The API client may still return anything already cached in memory.
-  if(q.length<minLength){
-    if(field==='pokemon')return await window.searchPokemonCards(q);
-    if(field==='set')return await window.searchPokemonCards({set:q});
-    if(field==='card')return await window.searchPokemonCards({card:q});
-    return[];
+  /*
+   * Variants are presentation metadata derived from cards already
+   * loaded. Do not create an API request just because the user typed
+   * a variant value.
+   */
+  if(field==='variant'){
+    return [];
   }
 
-  if(field==='pokemon')return await window.searchPokemonCards(q);
-  if(field==='set')return await window.searchPokemonCards({set:q});
-  if(field==='card')return await window.searchPokemonCards({card:q});
-  return[];
+  /*
+   * Respect the 3-character threshold in the UI layer as well as
+   * poketcg.js. This prevents a request from ever being scheduled
+   * for P / Pi while still allowing local cached matches to appear.
+   */
+  if(q.length<minLength){
+    if(field==='pokemon'){
+      return await searchPokemonCards(q);
+    }
+
+    if(field==='set'){
+      return await searchPokemonCards({set:q});
+    }
+
+    if(field==='card'){
+      return await searchPokemonCards({card:q});
+    }
+
+    return [];
+  }
+
+  if(field==='pokemon'){
+    return await searchPokemonCards(q);
+  }
+
+  if(field==='set'){
+    return await searchPokemonCards({set:q});
+  }
+
+  if(field==='card'){
+    return await searchPokemonCards({card:q});
+  }
+
+  return [];
 }
+
 let consignmentDebounce=null;
 
 function scheduleConsignmentLookup(field,value){
@@ -1570,7 +1617,7 @@ function tick(){
  // All visible countdowns derive from the same authoritative endsAt value.
  const x=state.page==='auction'?item(state.activeItem):null;
  if(x){const cur=document.getElementById('auctionCurrent');if(cur)cur.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const fb=document.getElementById('fastBidButton');if(fb)fb.textContent=`BID ${money(minBid(x))}`;
-  if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.used?'integer already consumed':'predicted from current integer'):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
+  if(x.auctionType==='ELASTIC'){const ep=elasticPreview(x);const reads=document.querySelectorAll('.elasticReadout');if(reads.length>=3){const last=x.auction?.lastExtension;reads[0].querySelector('b').textContent=last==null?'—':'+'+Number(last).toFixed(2)+'s';reads[1].querySelector('b').textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';reads[1].querySelector('.sub').textContent=ep.active?(ep.used?'integer already consumed':'predicted from current integer'):'outside extension zone';reads[2].querySelector('b').textContent=ep.active?`${ep.whole}s → ${ep.subsequent}s · ${ep.coef.toFixed(2)}`:'inactive';reads[2].querySelector('.sub').textContent=ep.active?(ep.newCycle?`fresh integer boundary · coefficient ${ep.coef.toFixed(2)}`:ep.used?`integer consumed · coefficient remains ${ep.coef.toFixed(2)}`:`mirrored ${ep.mirrored} · next coefficient ${(ep.coef/2).toFixed(2)}`):'public timer';}}}
  save();
  updatePreciseTimerDisplays();
 }
@@ -1585,7 +1632,5 @@ document.addEventListener('click',function(e){
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
 state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
-</script>
-<script src="poketcg.js?v=20260831-pokemon-search-v2"></script>
-</body>
+<script src="poketcg.js?v=20260831-pokemon-search"></script></body>
 </html>
