@@ -170,6 +170,7 @@ button{transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
 </style>
 <script>
 /* RapidUp refinement build: this script extends the existing prototype into a stateful product simulation. */
+/* Timer correction v26: display refreshes must never mutate/reset an auction clock. */
 const STORAGE_KEY='rapidup_refinement_v25';
 const IMG={
   lugia:'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?auto=format&fit=crop&w=1200&q=86',
@@ -402,7 +403,7 @@ function fmt(sec){
 }
 function fmtPrecise(sec){return `${Math.max(0,Number(sec)||0).toFixed(2)}s`}
 function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;let pos=Number(state.channelPos[cid]??0);if(!Number.isFinite(pos)||pos<0)pos=0;if(pos>=pool.length)pos=0;state.channelPos[cid]=pos;const live=pool[pos];if(live&&!live.sold){if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return pool.find(x=>x.status==='Live'&&!x.sold)||pool[0]}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;let pos=Number(state.channelPos[cid]??0);if(!Number.isFinite(pos)||pos<0)pos=0;if(pos>=pool.length)pos=0;state.channelPos[cid]=pos;const live=pool[pos];if(live&&!live.sold)return live;return pool.find(x=>x.status==='Live'&&!x.sold)||pool[0]}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
