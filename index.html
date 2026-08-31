@@ -473,25 +473,14 @@ function elasticPreview(x){
   const coef=Number(a.coef??.2);
   const usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-
   if(whole<0||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
-
-  /*
-   * A coefficient-decay cycle is local to the integer where that cycle
-   * began. If the timer reaches a different integer, that integer is a
-   * fresh boundary. This applies in both directions: normal countdown
-   * moves downward, while an extension can create a higher integer.
-   *
-   * Crucially, a future integer does not inherit the already-decayed
-   * coefficient merely because the clock was extended into it.
-   */
-  const startsNewCycle=cycleStart==null||whole!==cycleStart;
-  const effectiveCoef=startsNewCycle?.2:coef;
-  const effectiveUsed=startsNewCycle?false:usedIntegers.includes(whole);
+  /* Preview uses the same cycle boundary as live re-ups. Higher integers
+     created by extensions remain in the current cycle. */
+  const effectiveCoef=cycleStart==null?.2:coef;
+  const effectiveUsed=usedIntegers.includes(whole);
   const mirrored=30-whole;
   const extension=effectiveUsed?0:mirrored*effectiveCoef;
-
-  return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart:startsNewCycle?whole:cycleStart,newCycle:startsNewCycle};
+  return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart,newCycle:false};
 }
 function auctionPage(){
   const x=item(state.activeItem);
@@ -607,20 +596,19 @@ function resolveProxyForIncomingBid(x){
 }
 
 function applyElasticReup(x,before){
-  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};
+  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2,lastObservedInteger:null};
   a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
-
   const whole=Math.max(0,Math.min(30,Math.floor(before)));
   const now=Date.now();
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
 
   /*
-   * Every newly reached integer begins a fresh decay cycle. The timer
-   * normally reaches lower integers as it counts down, but an extension
-   * can create a higher integer opportunity. That higher integer is also
-   * a fresh boundary and must not inherit the previous cycle's coefficient.
+   * A decay cycle is bounded by ORGANIC countdown, not by the integer
+   * currently displayed after a re-up. If a cycle starts at 5, higher
+   * integers reached because of extensions remain in that same cycle.
+   * The next cycle begins only when the real countdown crosses below 5.
    */
-  if(cycleStart==null||whole!==cycleStart){
+  if(cycleStart==null){
     a.cycleStartInteger=whole;
     a.usedIntegers=[];
     a.coef=.2;
@@ -630,11 +618,7 @@ function applyElasticReup(x,before){
 
   const coef=Number(a.coef??.2);
 
-  /*
-   * Only one extension is allowed for a given integer within its decay
-   * cycle. Repeated bids while the timer remains on that same integer do
-   * not create another extension and do not decay the coefficient again.
-   */
+  /* One qualifying extension per integer within the active cycle. */
   if(a.usedIntegers.includes(whole)){
     a.lastTrigger=before;
     a.lastInteger=whole;
@@ -645,6 +629,7 @@ function applyElasticReup(x,before){
     a.lastMirrored=30-whole;
     a.lastAppliedCoefficient=coef;
     a.nextCoefficient=coef;
+    a.lastObservedInteger=Math.max(Number.isFinite(Number(a.lastObservedInteger))?Number(a.lastObservedInteger):whole,whole);
     x.auction=a;
     state.activity=`Elastic re-up at ${whole}s: integer already consumed in this decay cycle · +0.00s · coefficient remains ${coef.toFixed(4)}`;
     return 0;
@@ -665,6 +650,8 @@ function applyElasticReup(x,before){
   a.lastAppliedCoefficient=coef;
   a.coef=coef/2;
   a.nextCoefficient=a.coef;
+  /* Extension moves upward; it does not create a fresh cycle. */
+  a.lastObservedInteger=Math.max(Number.isFinite(Number(a.lastObservedInteger))?Number(a.lastObservedInteger):whole,whole);
   x.auction=a;
   state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
   return extension;
@@ -1598,15 +1585,37 @@ function orderModal(index){const w=state.won[index];if(!w)return `<div class="mo
 function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='itemSummary')content=itemSummaryModal(data);else if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
 function render(){let body;if(state.page==='explore')body=explore();else if(state.page==='auctions')body=auctions();else if(state.page==='buy')body=buy();else if(state.page==='auction')body=auctionPage();else if(state.page==='item')body=itemPage();else if(state.page==='buyer')body=buyerHub();else if(state.page==='seller')body=sellerHub();else body=explore();document.body.classList.toggle('auction-mode',state.page==='auction');document.getElementById('app').innerHTML=(state.page==='auction'?'':header())+body+modals()+renderCartDrawer()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');}
 function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.status==='active'&&o.expires<=now){o.status='expired';changed=true;}});return changed}
-function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId);const pool=queuePool(c?.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;ensureQueueState(state);state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(id=>id!==x.id);if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+180000;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
+function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId);const pool=queuePool(c?.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;ensureQueueState(state);state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(id=>id!==x.id);if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+180000;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2,lastObservedInteger:null};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
 function tick(){
  const now=Date.now();
  let changed=expireOffers(now);
  items.filter(x=>x.method==='auction'&&!x.sold&&x.status==='Live').forEach(x=>{
-  // Elastic decay and consumed-integer state persist for the lifetime of the
-  // active auction. Crossing N → N-1 must never reset the coefficient or make
-  // a previously consumed integer available again. A fresh auction receives
-  // a fresh Elastic state in finishAuction().
+  /*
+   * Track ORGANIC countdown crossings separately from Elastic extensions.
+   * An extension may move the timer upward without starting a new cycle.
+   * Only crossing downward below cycleStartInteger creates the next cycle.
+   */
+  if(x.auctionType==='ELASTIC'&&remainingMs(x)>0){
+   x.auction=x.auction||{};
+   const whole=Math.floor(secondsLeft(x));
+   const observed=Number(x.auction.lastObservedInteger);
+   const cycleStart=Number.isFinite(Number(x.auction.cycleStartInteger))?Number(x.auction.cycleStartInteger):null;
+   if(!Number.isFinite(observed)){
+    x.auction.lastObservedInteger=whole;
+   }else if(whole<observed){
+    x.auction.lastObservedInteger=whole;
+    if(cycleStart!==null&&whole<cycleStart){
+     x.auction.cycleStartInteger=whole;
+     x.auction.usedIntegers=[];
+     x.auction.coef=.2;
+     x.auction.nextCoefficient=.2;
+     x.auction.decayActive=false;
+    }
+   }else if(whole>observed){
+    /* Upward movement is an extension, not an organic boundary. */
+    x.auction.lastObservedInteger=whole;
+   }
+  }
   if(remainingMs(x)<=0){finishAuction(x);changed=true}
  });
  if(state.modal?.type==='privateBuyer'||state.modal?.type==='privateSeller'){
@@ -1631,7 +1640,7 @@ document.addEventListener('click',function(e){
  if(actionEl){e.preventDefault();const a=actionEl.getAttribute('data-ru-action');if(a==='notifications')openModal('notifications');else if(a==='profile')openProfile();}
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
-state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
+state.exploreFilters=state.exploreFilters||{};items.forEach(x=>{if(x.auction){x.auction.lastObservedInteger=Number.isFinite(Number(x.auction.lastObservedInteger))?Number(x.auction.lastObservedInteger):null;}});normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
 </script>
 <script src="poketcg.js?v=20260831-pokemon-search"></script>
 </body>
