@@ -219,15 +219,9 @@ async function pokemonTcgRequestAll(
  * LOAD POKÉMON INDEX
  * ------------------------------------------------------------
  *
- * This is the key change.
- *
- * We cannot reliably ask the API:
- *
- *     name:*p*
- *
- * Instead we obtain the Pokémon card records through
- * a valid broad query and perform substring matching
- * locally.
+ * We obtain the Pokémon card records through
+ * a valid broad query and perform the actual
+ * Pokémon-name matching locally.
  *
  * Once loaded, subsequent searches are instant.
  * ------------------------------------------------------------
@@ -421,18 +415,19 @@ function cardHasVariant(
  * POKÉMON / CHARACTER SEARCH
  * ------------------------------------------------------------
  *
- * TRUE SUBSTRING SEARCH.
+ * PREFIX SEARCH ONLY.
+ *
+ * The Pokémon search is intentionally based on the
+ * BEGINNING of the card name.
  *
  * Examples:
  *
  * P
  *   Pikachu
  *   Pidgey
+ *   Pichu
  *   Piplup
  *   Popplio
- *   Espurr
- *   Unown [P]
- *   etc.
  *
  * PI
  *   Pikachu
@@ -440,8 +435,9 @@ function cardHasVariant(
  *   Pidgey
  *   Piloswine
  *   Piplup
- *   Rapidash
- *   etc.
+ *
+ * PIKA
+ *   Pikachu
  *
  * UNOWN
  *   Unown [A]
@@ -449,10 +445,16 @@ function cardHasVariant(
  *   Unown [P]
  *   etc.
  *
- * The API is NOT asked to perform the substring search.
+ * IMPORTANT:
  *
+ * P does NOT match Unown [P].
+ *
+ * The API is NOT asked to perform the prefix search.
  * JavaScript performs the actual search against the
  * locally cached Pokémon index.
+ *
+ * Fuzzy / typo matching is intentionally NOT implemented
+ * at this stage.
  * ------------------------------------------------------------
  */
 
@@ -526,7 +528,21 @@ async function searchByPokemon(
 
   /*
    * ----------------------------------------------------------
-   * TRUE CONTAINS MATCH
+   * PREFIX MATCH
+   * ----------------------------------------------------------
+   *
+   * Match ONLY from the beginning of the Pokémon/card name.
+   *
+   * This deliberately uses startsWith() rather than includes().
+   *
+   * Example:
+   *
+   * "P"  -> "Pikachu"       YES
+   * "P"  -> "Unown [P]"     NO
+   *
+   * "PI" -> "Pikachu"       YES
+   * "PI" -> "Pichu"         YES
+   * "PI" -> "Rapidash"      NO
    * ----------------------------------------------------------
    */
 
@@ -535,8 +551,9 @@ async function searchByPokemon(
       String(
         card?.name || ''
       )
+        .trim()
         .toLowerCase()
-        .includes(
+        .startsWith(
           searchValue
         )
     )
@@ -1258,7 +1275,7 @@ function getPokemonVariants(
 
       getPokemonCardVariants(
         card
-      ).forEach(
+    ).forEach(
         variant =>
           variants.add(
             variant
@@ -1283,7 +1300,8 @@ function getPokemonVariants(
  *
  * This remains a pure local filter.
  *
- * Pokémon / character matching is substring based.
+ * Pokémon / character matching is PREFIX based.
+ * Set and card matching remain substring based.
  * ------------------------------------------------------------
  */
 
@@ -1329,19 +1347,27 @@ function filterPokemonCards(
       /*
        * Pokémon / character:
        *
-       * TRUE SUBSTRING MATCH.
+       * PREFIX MATCH ONLY.
+       *
+       * The search must begin at the beginning
+       * of the card's Pokémon name.
        *
        * P:
-       *   Pikachu
-       *   Pidgey
-       *   Unown [P]
+       *   Pikachu       YES
+       *   Pidgey        YES
+       *   Pichu         YES
+       *   Unown [P]     NO
        *
        * PI:
-       *   Pikachu
-       *   Pichu
-       *   Pidgey
-       *   Piplup
-       *   etc.
+       *   Pikachu       YES
+       *   Pichu         YES
+       *   Pidgey        YES
+       *   Piloswine     YES
+       *   Piplup        YES
+       *   Rapidash      NO
+       *
+       * Fuzzy / typo matching is intentionally
+       * not implemented yet.
        */
 
       if (
@@ -1349,8 +1375,9 @@ function filterPokemonCards(
         !String(
           record?.name || ''
         )
+          .trim()
           .toLowerCase()
-          .includes(
+          .startsWith(
             pokemon.toLowerCase()
           )
       ) {
