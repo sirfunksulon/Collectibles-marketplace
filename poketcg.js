@@ -19,15 +19,27 @@ function cardMatchesText(card, value) {
   return haystack.includes(q);
 }
 
+// Fetch helper with CORS Proxy fallback
 async function pokemonTcgRequest(query, page = 1) {
   const normalizedQuery = String(query || '').trim();
   if (!normalizedQuery) return [];
   const key = `${normalizedQuery.toLowerCase()}|page:${page}`;
   if (pokemonCardSearchCache.has(key)) return pokemonCardSearchCache.get(key);
 
-  const url = `${POKEMON_API_URL}?q=${encodeURIComponent(normalizedQuery)}&page=${page}&pageSize=250`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Pokémon TCG API returned ${response.status}`);
+  const targetUrl = `${POKEMON_API_URL}?q=${encodeURIComponent(normalizedQuery)}&page=${page}&pageSize=250`;
+  let response;
+
+  try {
+    // Attempt direct API request
+    response = await fetch(targetUrl);
+    if (!response.ok) throw new Error(`Direct fetch failed with status ${response.status}`);
+  } catch (directErr) {
+    console.warn('Direct API call failed or CORS blocked. Routing via CORS proxy...', directErr);
+    // Fallback: Route request through CORS Proxy to bypass browser/Vercel domain blocks
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+    response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error(`Proxy fetch failed with status ${response.status}`);
+  }
 
   const result = await response.json();
   const cards = Array.isArray(result.data) ? result.data : [];
@@ -56,7 +68,6 @@ function cardHasVariant(card, variant) {
   return getPokemonCardVariants(card).some(v => v.toLowerCase() === wanted);
 }
 
-// Streamlined Search: Direct API Query + Prefix Matching
 async function searchByPokemon(value) {
   const searchValue = String(value || '').trim().toLowerCase();
   if (!searchValue) return [];
@@ -69,7 +80,7 @@ async function searchByPokemon(value) {
       String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
     );
   } catch (error) {
-    console.error('Direct Pokémon lookup failed, attempting local cache fallback:', error);
+    console.error('Direct Pokémon lookup failed, using local cache fallback:', error);
     const localCards = [...pokemonCardMemory.values()];
     const filtered = localCards.filter(card => 
       String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
