@@ -169,6 +169,8 @@ button{transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
 @media(max-width:620px){.auctionImage{height:330px}.metricStrip{grid-template-columns:1fr 1fr}.offerGrid{grid-template-columns:1fr 1fr}.bidAction{grid-template-columns:1fr}.roleBanner{align-items:flex-start}.privatePrice{font-size:35px}}
 </style>
 <script>
+const RAPIDUP_AUCTION_DURATION_MS=45000;
+
 /* RapidUp refinement build: this script extends the existing prototype into a stateful product simulation. */
 const STORAGE_KEY='rapidup_refinement_v25';
 const IMG={
@@ -402,7 +404,7 @@ function fmt(sec){
 }
 function fmtPrecise(sec){return `${Math.max(0,Number(sec)||0).toFixed(2)}s`}
 function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;let pos=Number(state.channelPos[cid]??0);if(!Number.isFinite(pos)||pos<0)pos=0;if(pos>=pool.length)pos=0;state.channelPos[cid]=pos;const live=pool[pos];if(live&&!live.sold){if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return pool.find(x=>x.status==='Live'&&!x.sold)||pool[0]}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+RAPIDUP_AUCTION_DURATION_MS;return live}return null}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
@@ -733,62 +735,91 @@ function resolveProxyForIncomingBid(x){
 }
 
 function applyElasticExtension(x){
-  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};
-  a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
+  if (!x || x.auctionType !== 'ELASTIC') return 0;
 
-  const whole=Math.max(0,Math.min(30,Math.floor(before)));
+  const before = secondsLeft(x);
+  if (!(before > 0 && before <= 30)) return 0;
 
-  // A decay cycle belongs to the lower integer at which it was started.
-  // The cycle's consumed-integer set is local: a later cycle does not inherit
-  // integers consumed by an earlier cycle. When the countdown passes below
-  // the prior cycle's starting integer, that subsequent integer starts fresh
-  // at the base coefficient.
-  const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-  if(cycleStart==null||whole<cycleStart){
-    a.cycleStartInteger=whole;
-    a.usedIntegers=[];
-    a.coef=.2;
-    a.nextCoefficient=.2;
-    a.decayActive=false;
+  const a = x.auction || (x.auction = {});
+  a.usedIntegers = Array.isArray(a.usedIntegers) ? a.usedIntegers : [];
+  a.eligibleIntegers = Array.isArray(a.eligibleIntegers) ? a.eligibleIntegers : [];
+
+  const beforeInt = Math.floor(before);
+
+  /*
+   * The decay cycle belongs to the integer at which its first extension
+   * occurred. Higher integers created by that extension may be eligible,
+   * but they do not become a new cycle boundary.
+   */
+  if (a.cycleStartInteger != null && beforeInt < Number(a.cycleStartInteger)) {
+    a.cycleStartInteger = null;
+    a.usedIntegers = [];
+    a.eligibleIntegers = [];
+    a.coef = 0.20;
+    a.nextCoefficient = 0.20;
   }
 
-  const coef=Number(a.coef??.2);
+  const firstExtension = a.cycleStartInteger == null;
+  const eligible = a.eligibleIntegers.includes(beforeInt);
+  const used = a.usedIntegers.includes(beforeInt);
 
-  // Only one bid at each integer qualifies within the active decay cycle.
-  // Re-visiting a consumed integer has no extension and does not cause another
-  // coefficient decay.
-  if(a.usedIntegers.includes(whole)){
-    a.lastTrigger=before;
-    a.lastInteger=whole;
-    a.reups=(a.reups||0)+1;
-    a.decayActive=true;
-    a.lastExtension=0;
-    a.lastExtensionAt=Date.now();
-    a.lastMirrored=30-whole;
-    a.lastAppliedCoefficient=coef;
-    a.nextCoefficient=coef;
-    x.auction=a;
-    state.activity=`Elastic re-up at ${whole}s: integer already consumed in this decay cycle · +0.00s · coefficient remains ${coef.toFixed(4)}`;
+  /*
+   * First organic integer starts a cycle. Thereafter, an integer only
+   * qualifies if the math of a prior extension actually reached it.
+   * Merely counting through an integer never makes it eligible.
+   */
+  if (used || (!firstExtension && !eligible)) {
+    a.lastTrigger = before;
+    a.lastInteger = beforeInt;
+    a.lastExtension = 0;
+    a.lastExtensionAt = Date.now();
+    a.lastMirrored = 30 - beforeInt;
+    a.lastAppliedCoefficient = Number(a.coef ?? 0.20);
+    a.nextCoefficient = Number(a.coef ?? 0.20);
+    x.auction = a;
     return 0;
   }
 
-  const mirrored=30-whole;
-  const extension=mirrored*coef;
-  x.endsAt+=extension*1000;
-  a.lastReupAt=Date.now();
-  a.lastTrigger=before;
-  a.lastInteger=whole;
-  a.reups=(a.reups||0)+1;
-  a.decayActive=true;
-  a.usedIntegers.push(whole);
-  a.lastExtension=extension;
-  a.lastExtensionAt=Date.now();
-  a.lastMirrored=mirrored;
-  a.lastAppliedCoefficient=coef;
-  a.coef=coef/2;
-  a.nextCoefficient=a.coef;
-  x.auction=a;
-  state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
+  if (firstExtension) {
+    a.cycleStartInteger = beforeInt;
+    a.usedIntegers = [];
+    a.eligibleIntegers = [];
+    a.coef = 0.20;
+    a.nextCoefficient = 0.20;
+  }
+
+  const coef = Number(a.coef ?? a.nextCoefficient ?? 0.20);
+  const mirrored = 30 - beforeInt;
+  const extension = mirrored * coef;
+  if (!(extension > 0)) return 0;
+
+  const oldEndsAt = Number(x.endsAt) || Date.now();
+  x.endsAt = oldEndsAt + extension * 1000;
+
+  if (!a.usedIntegers.includes(beforeInt)) a.usedIntegers.push(beforeInt);
+
+  /* Only integers mathematically created above the bid integer are eligible.
+     They become ineligible once the organic countdown passes them without a bid. */
+  const afterInt = Math.floor(secondsLeft(x));
+  for (let i = beforeInt + 1; i <= afterInt; i++) {
+    if (!a.eligibleIntegers.includes(i)) a.eligibleIntegers.push(i);
+  }
+  a.eligibleIntegers.sort((m,n)=>m-n);
+
+  a.reups = (a.reups || 0) + 1;
+  a.decayActive = true;
+  a.lastReupAt = Date.now();
+  a.lastTrigger = before;
+  a.lastInteger = beforeInt;
+  a.lastExtension = extension;
+  a.lastExtensionAt = Date.now();
+  a.lastMirrored = mirrored;
+  a.lastAppliedCoefficient = coef;
+  a.coef = coef / 2;
+  a.nextCoefficient = a.coef;
+  x.auction = a;
+
+  state.activity = `Elastic re-up at ${beforeInt}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
   return extension;
 }
 
@@ -1685,7 +1716,7 @@ function orderModal(index){const w=state.won[index];if(!w)return `<div class="mo
 function modals(){if(state.profile)return profileModal();if(!state.modal)return '';const {type,data}=state.modal;let content='';if(type==='queue')return `<div class="overlay" onclick="if(event.target===this)closeModal()">${queueModal(data)}</div>`;if(type==='itemSummary')content=itemSummaryModal(data);else if(type==='exploreFilters')content=exploreFilterModal();else if(type==='queueItem')content=queueItemModal(data);else if(type==='notifications')content=notificationsModal();else if(type==='channelInfo')content=channelInfoModal(data);else if(type==='auctionInfo')content=auctionInfoModal(data);else if(type==='offerConfirmation')content=offerConfirmation(data);else if(type==='buyerOffers')content=`<div class="modal"><div class="modalHead"><h2>Your offers</h2><button class="close" onclick="closeModal()">×</button></div>${buyerOffers()}</div>`;else if(type==='won')content=`<div class="modal"><div class="modalHead"><h2>Won Items</h2><button class="close" onclick="closeModal()">×</button></div>${wonItems()}</div>`;else if(type==='interests')content=interestsModal();else if(type==='consign')content=consignModal();else if(type==='settings')content=settingsModal();else if(type==='order')content=orderModal(data);else if(type==='privateBuyer')content=privateBuyer(data);else if(type==='privateSeller')content=privateSeller(data);else if(type==='method')content=methodModal(data);else if(type==='customBid')content=customBidModal(data);return `<div class="overlay" onclick="if(event.target===this)closeModal()">${content}</div>`}
 function render(){let body;if(state.page==='explore')body=explore();else if(state.page==='auctions')body=auctions();else if(state.page==='buy')body=buy();else if(state.page==='auction')body=auctionPage();else if(state.page==='item')body=itemPage();else if(state.page==='buyer')body=buyerHub();else if(state.page==='seller')body=sellerHub();else body=explore();document.body.classList.toggle('auction-mode',state.page==='auction');document.getElementById('app').innerHTML=(state.page==='auction'?'':header())+body+modals()+renderCartDrawer()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');}
 function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.status==='active'&&o.expires<=now){o.status='expired';changed=true;}});return changed}
-function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId);const pool=queuePool(c?.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;ensureQueueState(state);state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(id=>id!==x.id);if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+180000;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
+function finishAuction(x){const winning=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount)[0];const wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current;const c=channel(x.channelId);const pool=queuePool(c?.id);const pos=state.channelPos[c.id]||0;const next=(pos+1)%pool.length;state.channelPos[c.id]=next;x.sold=true;x.status='Auction closed';x.endsAt=0;ensureQueueState(state);state.channelQueues[c.id]=(state.channelQueues[c.id]||[]).filter(id=>id!==x.id);if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON')}const nx=pool[next];nx.sold=false;nx.method='auction';nx.status='Live';nx.endsAt=Date.now()+RAPIDUP_AUCTION_DURATION_MS;nx.current=Math.max(1,Math.max(...activeOffers(nx.id).map(o=>o.amount),0));nx.bidCount=nx.bidCount||0;nx.auction={coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};notify(`${nx.name} is now live in ${c.name}.`,'auction',nx.id,'AUCTION LIVE');state.activeItem=state.activeItem===x.id?nx.id:state.activeItem;save()}
 function tick(){
  const now=Date.now();
  let changed=expireOffers(now);
@@ -1718,7 +1749,7 @@ document.addEventListener('click',function(e){
  if(actionEl){e.preventDefault();const a=actionEl.getAttribute('data-ru-action');if(a==='notifications')openModal('notifications');else if(a==='profile')openProfile();}
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
-state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();setInterval(tick,250);setInterval(updatePreciseTimerDisplays,50);
+state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();if(window.__rapidUpTickTimer)clearInterval(window.__rapidUpTickTimer);if(window.__rapidUpDisplayTimer)clearInterval(window.__rapidUpDisplayTimer);window.__rapidUpTickTimer=setInterval(tick,250);window.__rapidUpDisplayTimer=setInterval(updatePreciseTimerDisplays,50);updatePreciseTimerDisplays();
 </script>
 <script src="poketcg.js?v=20260831-pokemon-search-v2"></script>
 </body>
