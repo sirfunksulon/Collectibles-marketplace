@@ -465,22 +465,74 @@ function openQueue(cid){openModal('queue',cid)}
 function queueModal(cid){const c=channel(cid),pool=queuePool(cid),pos=state.channelPos[cid]||0;return `<div class="modal full queueShell"><div class="modalHead"><div><div class="eyebrow">QUEUE CRITERIA</div><h2>${esc(c.name)}</h2><div class="ruQueueCriteria">${esc(criteriaText(c))}</div></div><button class="close" onclick="closeModal()">×</button></div><div class="queueScroll">${pool.map((x,i)=>`<div class="queueItem ${i===pos?'activeRow':''}" onclick="queueSelect('${cid}',${i})"><div class="queueNum">${i+1}</div><img class="queueImg" src="${x.img}" alt="${esc(x.name)}"><div><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">${i===pos?'LIVE':'QUEUED'} · ${i===pos?fmt(secondsLeft(x)):'Upcoming'}</div></div><div style="text-align:right">${i===pos?`<span class="queueStatus live">LIVE</span><div class="tiny muted">${money(x.current)}</div>`:`<span class="queueStatus queued">QUEUED</span><button class="secondary ruQueueOffer" onclick="event.stopPropagation();makeOffer('${x.id}')">Offer</button>`}</div></div>`).join('')}</div></div>`}
 function queueSelect(cid,i){const pool=queuePool(cid),x=pool[i],pos=state.channelPos[cid];if(i===pos){closeModal();openAuction(x.id);return}openModal('queueItem',{cid,i,id:x.id})}
 function queueItemModal(d){const x=item(d.id),c=channel(d.cid);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">QUEUE POSITION ${d.i+1}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(x.current||x.price||1)}</div><p class="muted">Queued in ${esc(c.name)}. This item cannot receive a public bid until it reaches the active slot.</p><div class="actions"><button class="primary" onclick="makeOffer('${x.id}')">Make Offer</button><button class="secondary" onclick="closeModal();openQueue('${d.cid}')">Back to Queue</button></div></div></div></div>`}
-function elasticPreview(x){
-  if(!x||x.auctionType!=='ELASTIC')return {active:false};
-  const remaining=secondsLeft(x);
-  const whole=Math.floor(remaining);
-  const a=x.auction||{};
-  const coef=Number(a.coef??.2);
-  const usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
-  const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-  if(whole<0||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
-  /* Preview uses the same cycle boundary as live re-ups. Higher integers
-     created by extensions remain in the current cycle. */
-  const effectiveCoef=cycleStart==null?.2:coef;
-  const effectiveUsed=usedIntegers.includes(whole);
-  const mirrored=30-whole;
-  const extension=effectiveUsed?0:mirrored*effectiveCoef;
-  return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart,newCycle:false};
+function elasticPreview(item){
+  if (item.auctionType !== 'ELASTIC') {
+    return { active: false, extension: 0, used: false };
+  }
+
+  const sec = secondsLeft(item);
+  const currentInt = Math.floor(sec);
+
+  if (currentInt > 30 || currentInt < 0) {
+    return { active: false, extension: 0, used: false };
+  }
+
+  const state = item.auction = item.auction || {};
+  state.usedIntegers = Array.isArray(state.usedIntegers) ? state.usedIntegers : [];
+  state.nextCoefficient = Number(state.nextCoefficient ?? state.coef ?? 0.20);
+
+  /*
+   * A decay cycle begins at the first organically encountered integer.
+   * It ends when the organic countdown moves below that starting integer.
+   * Extensions may move the timer upward, but those higher integers do not
+   * create a new cycle.
+   */
+  if (state.cycleStartInteger === null || state.cycleStartInteger === undefined || currentInt < state.cycleStartInteger) {
+    state.cycleStartInteger = currentInt;
+    state.usedIntegers = [];
+    state.nextCoefficient = 0.20;
+  }
+
+  const isUsed = state.usedIntegers.includes(currentInt);
+  const mirroredPos = 30 - currentInt;
+  const extension = mirroredPos * (isUsed ? 0 : state.nextCoefficient);
+
+  return {
+    active: true,
+    extension,
+    used: isUsed,
+    currentInt,
+    whole: currentInt,
+    subsequent: Math.max(0, currentInt - 1),
+    mirrored: mirroredPos,
+    coef: state.nextCoefficient,
+    nextCoef: isUsed ? state.nextCoefficient : state.nextCoefficient * 0.5,
+    cycleStart: state.cycleStartInteger,
+    newCycle: false
+  };
+}
+
+function processElasticBid(item) {
+  const preview = elasticPreview(item);
+
+  if (preview.active && !preview.used && preview.extension > 0) {
+    item.endsAt += preview.extension * 1000;
+
+    item.auction.usedIntegers.push(preview.currentInt);
+    item.auction.nextCoefficient *= 0.5;
+    item.auction.coef = item.auction.nextCoefficient;
+
+    item.auction.lastExtension = preview.extension;
+    item.auction.lastExtensionAt = Date.now();
+    item.auction.lastMirrored = 30 - preview.currentInt;
+    item.auction.lastAppliedCoefficient = preview.coef;
+    item.auction.lastTrigger = secondsLeft(item);
+    item.auction.lastInteger = preview.currentInt;
+    item.auction.reups = (Number(item.auction.reups) || 0) + 1;
+    item.auction.decayActive = true;
+
+    state.activity = `Elastic re-up at ${preview.currentInt}s: +${preview.extension.toFixed(2)}s · mirrored ${preview.mirrored} × ${preview.coef.toFixed(4)} · next coefficient ${item.auction.nextCoefficient.toFixed(4)} · cycle starts at ${item.auction.cycleStartInteger}s`;
+  }
 }
 function auctionPage(){
   const x=item(state.activeItem);
@@ -545,7 +597,7 @@ function submitBid(id,amount,opts={}){
   x.current=amount;
   x.bidCount=(Number(x.bidCount)||0)+1;
   state.bids.push(bid);
-  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticReup(x,before);
+  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)processElasticBid(x);
   if(buyer!=='You')resolveProxyForIncomingBid(x);
   save();
   render();
@@ -591,7 +643,7 @@ function resolveProxyForIncomingBid(x){
   const before=secondsLeft(x);
   x.current=response;x.bidCount=(Number(x.bidCount)||0)+1;
   state.bids.push({id:'proxy'+Date.now()+Math.random(),item:x.id,amount:response,created:Date.now(),buyer:'You',proxy:true});
-  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticReup(x,before);
+  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)processElasticBid(x);
   if(response>=p.max)p.active=false;
 }
 
