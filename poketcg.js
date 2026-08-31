@@ -2,8 +2,6 @@
 const POKEMON_API_URL = 'https://api.pokemontcg.io/v2/cards';
 const pokemonCardSearchCache = new Map();
 const pokemonCardMemory = new Map();
-let pokemonCardIndexPromise = null;
-let pokemonCardIndexLoaded = false;
 
 function escapePokemonQuery(value) {
   return String(value || '').trim().replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -38,37 +36,6 @@ async function pokemonTcgRequest(query, page = 1) {
   return cards;
 }
 
-async function pokemonTcgRequestAll(query, maxPages = 100) {
-  const normalizedQuery = String(query || '').trim();
-  if (!normalizedQuery) return [];
-  const allCards = [];
-  for (let page = 1; page <= maxPages; page++) {
-    const cards = await pokemonTcgRequest(normalizedQuery, page);
-    if (!cards.length) break;
-    allCards.push(...cards);
-    if (cards.length < 250) break;
-  }
-  return uniqueCards(allCards);
-}
-
-async function ensurePokemonCardIndex() {
-  if (pokemonCardIndexLoaded) return [...pokemonCardMemory.values()];
-  if (pokemonCardIndexPromise) return pokemonCardIndexPromise;
-
-  pokemonCardIndexPromise = (async () => {
-    const cards = await pokemonTcgRequestAll('supertype:Pokémon', 100);
-    cards.forEach(card => { if (card?.id) pokemonCardMemory.set(card.id, card); });
-    pokemonCardIndexLoaded = true;
-    return [...pokemonCardMemory.values()];
-  })();
-
-  try {
-    return await pokemonCardIndexPromise;
-  } finally {
-    pokemonCardIndexPromise = null;
-  }
-}
-
 function getPokemonCardVariants(card) {
   const variants = new Set();
   const prices = card?.tcgplayer?.prices || {};
@@ -89,38 +56,42 @@ function cardHasVariant(card, variant) {
   return getPokemonCardVariants(card).some(v => v.toLowerCase() === wanted);
 }
 
+// Streamlined Search: Direct API Query + Prefix Matching
 async function searchByPokemon(value) {
   const searchValue = String(value || '').trim().toLowerCase();
   if (!searchValue) return [];
-  let cards = [...pokemonCardMemory.values()];
 
-  if (!pokemonCardIndexLoaded) {
-    try {
-      cards = await ensurePokemonCardIndex();
-    } catch (error) {
-      console.error('Pokémon card index lookup failed:', error);
-      cards = [...pokemonCardMemory.values()];
-      if (!cards.length) throw error;
-    }
+  try {
+    const apiCards = await pokemonTcgRequest(`name:${searchValue}*`, 1);
+    const allCards = uniqueCards([...pokemonCardMemory.values(), ...apiCards]);
+    
+    return allCards.filter(card => 
+      String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
+    );
+  } catch (error) {
+    console.error('Direct Pokémon lookup failed, attempting local cache fallback:', error);
+    const localCards = [...pokemonCardMemory.values()];
+    const filtered = localCards.filter(card => 
+      String(card?.name || '').trim().toLowerCase().startsWith(searchValue)
+    );
+    
+    if (filtered.length > 0) return filtered;
+    throw error;
   }
-  return uniqueCards(cards.filter(card => String(card?.name || '').trim().toLowerCase().startsWith(searchValue)));
 }
 
 async function searchBySet(value) {
   const searchValue = String(value || '').trim().toLowerCase();
   if (!searchValue) return [];
-  let cards = [...pokemonCardMemory.values()];
 
-  if (!pokemonCardIndexLoaded) {
-    try {
-      cards = await ensurePokemonCardIndex();
-    } catch (error) {
-      console.error('Set lookup failed:', error);
-      cards = [...pokemonCardMemory.values()];
-      if (!cards.length) throw error;
-    }
+  try {
+    const apiCards = await pokemonTcgRequest(`set.name:"*${searchValue}*"`, 1);
+    const allCards = uniqueCards([...pokemonCardMemory.values(), ...apiCards]);
+    return allCards.filter(card => String(card?.set?.name || '').toLowerCase().includes(searchValue));
+  } catch (error) {
+    console.error('Set lookup failed:', error);
+    return uniqueCards([...pokemonCardMemory.values()].filter(card => String(card?.set?.name || '').toLowerCase().includes(searchValue)));
   }
-  return uniqueCards(cards.filter(card => String(card?.set?.name || '').toLowerCase().includes(searchValue)));
 }
 
 async function searchByCard(value) {
@@ -131,52 +102,38 @@ async function searchByCard(value) {
 
   if (numberMatch) {
     const number = numberMatch[1];
-    let localResults = [...pokemonCardMemory.values()].filter(card => String(card?.number || '').split('/')[0] === number);
-    if (!pokemonCardIndexLoaded) {
-      try {
-        const apiResults = await pokemonTcgRequestAll(`number:${number}`, 100);
-        localResults = uniqueCards([...apiResults, ...localResults]);
-      } catch (error) {
-        console.error('Card number lookup failed:', error);
-      }
+    try {
+      const apiResults = await pokemonTcgRequest(`number:${number}`, 1);
+      return uniqueCards([...apiResults, ...pokemonCardMemory.values()]).filter(card => String(card?.number || '').split('/')[0] === number);
+    } catch (error) {
+      console.error('Card number lookup failed:', error);
+      return uniqueCards([...pokemonCardMemory.values()].filter(card => String(card?.number || '').split('/')[0] === number));
     }
-    return uniqueCards(localResults);
   }
 
   const embeddedNumber = clean.match(/#?(\d+)(?:\/\d+)?$/);
   let namePart = embeddedNumber ? clean.slice(0, embeddedNumber.index).trim() : clean;
-  let cards = [...pokemonCardMemory.values()];
 
-  if (!pokemonCardIndexLoaded) {
-    try {
-      cards = await ensurePokemonCardIndex();
-    } catch (error) {
-      console.error('Card lookup failed:', error);
+  try {
+    const apiCards = namePart ? await pokemonTcgRequest(`name:"*${namePart}*"`, 1) : [];
+    let results = uniqueCards([...apiCards, ...pokemonCardMemory.values()]).filter(card => 
+      !namePart || String(card?.name || '').toLowerCase().includes(namePart.toLowerCase())
+    );
+    if (embeddedNumber) {
+      const number = embeddedNumber[1];
+      results = results.filter(card => String(card?.number || '').split('/')[0] === number);
     }
+    return uniqueCards(results);
+  } catch (error) {
+    console.error('Card lookup failed:', error);
+    return [];
   }
-
-  let results = cards.filter(card => !namePart || String(card?.name || '').toLowerCase().includes(namePart.toLowerCase()));
-  if (embeddedNumber) {
-    const number = embeddedNumber[1];
-    results = results.filter(card => String(card?.number || '').split('/')[0] === number);
-  }
-  return uniqueCards(results);
 }
 
 async function searchByVariant(value) {
   const q = String(value || '').trim().toLowerCase();
   if (!q) return [...pokemonCardMemory.values()];
-  let cards = [...pokemonCardMemory.values()];
-
-  if (!pokemonCardIndexLoaded) {
-    try {
-      cards = await ensurePokemonCardIndex();
-    } catch (error) {
-      console.error('Variant lookup failed:', error);
-      return [];
-    }
-  }
-  return uniqueCards(cards.filter(card => getPokemonCardVariants(card).some(v => v.toLowerCase().includes(q))));
+  return uniqueCards([...pokemonCardMemory.values()].filter(card => getPokemonCardVariants(card).some(v => v.toLowerCase().includes(q))));
 }
 
 async function searchPokemonCards(search) {
@@ -262,8 +219,6 @@ function filterPokemonCards(cards, criteria) {
 function clearPokemonTcgCache() {
   pokemonCardSearchCache.clear();
   pokemonCardMemory.clear();
-  pokemonCardIndexLoaded = false;
-  pokemonCardIndexPromise = null;
 }
 
 // Global Exposure
