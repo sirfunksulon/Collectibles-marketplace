@@ -272,9 +272,21 @@ function routeItemToQueue(item, channelList=channels, s=state){
  const existingIds=(queues[target.id]||[]).filter(id=>id!==item.id);
  const existing=existingIds.map(id=>items.find(z=>z.id===id)).find(x=>x&&!x.sold&&x.status==='Live');
  if(existing){
-  channelList.forEach(c=>{queues[c.id]=(queues[c.id]||[]).filter(id=>id!==item.id);});
-  item.channel=null;item.channelId=null;item.status='Staged · Channel occupied';item.endsAt=0;
-  return null;
+  /* Keep the item in the channel's public queue behind the live item. */
+  item.channel=target.name;
+  item.channelId=target.id;
+  item.auctionType=auctionType;
+  item.startingPrice=startPrice;
+  item.current=startPrice;
+  item.internal=item.internal||{};
+  item.internal.auctionType=auctionType;
+  item.internal.startingPrice=startPrice;
+  item.internal.era=era;
+  queues[target.id]=(queues[target.id]||[]).filter(id=>id!==item.id);
+  queues[target.id].push(item.id);
+  item.status='Queued';
+  item.endsAt=0;
+  return target;
  }
  item.channel=target.name;
  item.channelId=target.id;
@@ -404,7 +416,7 @@ function explore(){
 }
 function auctions(){
  const activeChannels=getActiveChannels();
- return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1><p>Only channel permutations with your own staged inventory appear here. Each channel holds one live auction; there is no public queue.</p></section><div class="ruChannelGrid">${activeChannels.map(c=>{const x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div></div><div><button class="primary" onclick="openAuction('${x.id}')">Join</button></div></article>`}).join('')}</div>${activeChannels.length?'':`<div class="empty">No auction channels currently contain eligible inventory.</div>`}</main>`
+ return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1><p>Specialized channels run one live auction at a time while every eligible consignment remains visible in the public queue.</p></section><div class="ruChannelGrid">${activeChannels.map(c=>{const pool=queuePool(c.id),x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div><div class="tiny muted" style="margin-top:6px"><b>${pool.length}</b> item${pool.length===1?'':'s'} in public queue${pool.length>1?` · ${pool.length-1} upcoming`:''}</div></div><div class="actions"><button class="primary" onclick="openAuction('${x.id}')">Join</button><button class="secondary" onclick="openQueue('${c.id}')">View Queue</button></div></article>`}).join('')}</div>${activeChannels.length?'':`<div class="empty">No auction channels currently contain eligible inventory.</div>`}</main>`
 }
 
 function openAuction(id){const x=item(id);if(!x||x.sold)return setToast('That auction is no longer available.');if(x.status!=='Live')return setToast('That auction is not currently live.');state.activeItem=id;state.page='auction';state.modal=null;render();window.scrollTo(0,0)}
@@ -1450,10 +1462,33 @@ function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.statu
 function finishAuction(x){
  const bids=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount),winning=bids[0],wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current,c=channel(x.channelId),cid=c?.id;
  x.endsAt=0;ensureQueueState(state);
- if(!winning){x.sold=false;x.status='Auction ended · No sale';if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='seller';state.sellerTab='inventory';state.activeItem=null;activity(`${x.name} ended with no sale.`);}return;}
- x.sold=true;x.status='Auction closed';if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
  if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);
- save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
+ if(!winning){
+  x.sold=false;x.status='Auction ended · No sale';
+ }else{
+  x.sold=true;x.status='Auction closed';
+  if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
+ }
+ /* Immediately promote the next public queue item into the live slot. */
+ if(cid){
+  const nextPool=queuePool(cid,state);
+  const next=nextPool.find(z=>!z.sold&&z.id!==x.id);
+  if(next){
+   next.status='Live';
+   next.channelId=cid;next.channel=c.name;next.auctionType=c.auctionType;
+   next.internal=next.internal||{};next.internal.auctionType=c.auctionType;
+   next.endsAt=Date.now()+180000;
+   next.current=Math.max(1,Number(next.startingPrice)||1);
+   next.auction=next.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
+   state.channelPos[cid]=0;
+   next.status='Live';
+  }
+ }
+ save();
+ if(state.page==='auction'&&state.activeItem===x.id){
+  if(cid&&queuePool(cid,state).length){state.activeItem=queuePool(cid,state)[0].id;state.page='auction';activity(`${x.name} ended. The next item is now live in the channel.`);}
+  else{state.page='explore';state.activeItem=null;activity(`${x.name} ended and the channel is now available for another seller listing.`);}
+ }else{render();}
 }
 function tick(){
  const now=Date.now();
