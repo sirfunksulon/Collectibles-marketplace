@@ -181,6 +181,38 @@ body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
 .auctionScreen .ruChannelName{top:17px!important;left:255px!important;right:12px!important;width:auto!important;max-width:none!important;transform:none!important;padding:0 0 0 0!important;text-align:left!important;}
 @media(max-width:620px){.auctionScreen .ruChannelName{top:15px!important;left:250px!important;right:8px!important;padding:0!important;max-width:none!important;text-align:left!important;}}
 </style>
+<style>
+/* RU-SURGICAL v28 — auction title visibility only */
+.auctionScreen .ruChannelName{
+  top:17px!important;
+  left:240px!important;
+  right:8px!important;
+  width:auto!important;
+  max-width:none!important;
+  transform:none!important;
+  padding:0!important;
+  text-align:left!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:16px!important;
+}
+@media(max-width:620px){
+  .auctionScreen .ruChannelName{
+    top:15px!important;
+    left:240px!important;
+    right:8px!important;
+    max-width:none!important;
+    padding:0!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    line-height:15px!important;
+  }
+}
+</style>
 </head>
 <body><div id="app"></div>
 
@@ -314,18 +346,11 @@ function routeItemToQueue(item, channelList=channels, s=state){
   item.channel=null;item.channelId=null;item.status='Unassigned';item.endsAt=0;
   return null;
  }
- const existingIds=(queues[target.id]||[]).filter(id=>id!==item.id);
- const existing=existingIds.map(id=>items.find(z=>z.id===id)).find(x=>x&&!x.sold&&x.status==='Live');
- if(existing){
-  channelList.forEach(c=>{queues[c.id]=(queues[c.id]||[]).filter(id=>id!==item.id);});
-  item.channel=null;item.channelId=null;item.status='Staged · Channel occupied';item.endsAt=0;
-  return null;
- }
  item.channel=target.name;
  item.channelId=target.id;
  item.auctionType=auctionType;
  item.startingPrice=startPrice;
- item.current=startPrice;
+ if(!Number.isFinite(Number(item.current))||Number(item.current)<=0)item.current=startPrice;
  item.internal=item.internal||{};
  item.internal.auctionType=auctionType;
  item.internal.startingPrice=startPrice;
@@ -362,11 +387,11 @@ function rebuildQueues(s=state){
 function normalizeAuctions(s=state){
  const now=Date.now();ensureQueueState(s);
  channels.forEach(c=>s.channelQueues[c.id]=[]);
- items.filter(x=>x.method==='auction'&&!x.sold).forEach(x=>evaluateAndEnqueue(x,s));
+ items.filter(x=>x.method==='auction'&&!x.sold&&x.status!=='Auction ended · No sale'&&x.status!=='Auction closed').forEach(x=>evaluateAndEnqueue(x,s));
  channels.forEach(c=>{
   const pool=queuePool(c.id,s);if(!pool.length){s.channelPos[c.id]=0;return;}
   const x=pool[0];s.channelPos[c.id]=0;x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.era=getCardEra(x.internal.year??x.year);x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.startingPrice=x.internal.startingPrice;x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
-  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+45000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
+  if(!x.endsAt){x.endsAt=now+45000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
   x.status='Live';
  });
 }
@@ -431,15 +456,15 @@ function updateAllVisualCountdowns(){
     }
   }
 }
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+45000;return live}return null}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold);return live||null}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
 function setToast(msg){state.toast=msg;render();clearTimeout(window.__toast);window.__toast=setTimeout(()=>{state.toast='';render()},3000)}
 function activity(msg){state.activity=msg;render();clearTimeout(window.__activity);window.__activity=setTimeout(()=>{state.activity='';render()},3200)}
 function notify(text,target,itemId,type='MARKETPLACE'){state.notifications.unshift({id:'n'+Date.now()+Math.random(),text,target,item:itemId,type,read:false,created:Date.now()});state.unread=state.notifications.filter(n=>!n.read).length;save()}
-function route(page){const allowed=['explore','auctions','buy','auction','item','buyer','seller'];if(!allowed.includes(page))return;state.page=page;state.modal=null;state.profile=false;if(!state.activeItem)state.activeItem='a1';try{render();}catch(e){console.error('RapidUp route render error',page,e);state.page='explore';try{render()}catch(_){}}try{window.scrollTo(0,0)}catch(_){};try{normalizeAuctions(state);save();}catch(e){console.warn('RapidUp route persistence warning',e)}}
-function openModal(type,data=null){state.modal={type,data};state.profile=false;try{render()}catch(e){console.error('RapidUp modal error',type,e);return}if(type==='consign')initConsignmentGenerator()}
+function route(page){const allowed=['explore','auctions','buy','auction','item','buyer','seller'];if(!allowed.includes(page))return;state.page=page;state.modal=null;state.profile=false;if(!state.activeItem)state.activeItem='a1';try{render();}catch(e){console.error('RapidUp route render error',page,e);state.page='explore';try{render()}catch(_){}}try{window.scrollTo(0,0)}catch(_){};}
+function openModal(type,data=null){state.modal={type,data};state.profile=false;try{render()}catch(e){console.error('RapidUp modal error',type,e);return}if(type==='consign')initConsignmentGenerator();if(type==='customBid')setTimeout(()=>{const input=document.getElementById('customBidInput');if(input){input.focus();input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitCustomBid(data)}}}},0)}
 function closeModal(){state.modal=null;render()}
 function openProfile(){state.profile=true;state.modal=null;try{render()}catch(e){console.error('RapidUp profile error',e)}}
 function closeProfile(){state.profile=false;render()}
@@ -451,7 +476,7 @@ function itemCard(x){
   if(auction&&x.status!=='Live')return '';
   const title=fullItemTitle(x);
   const method=auction?'AUCTION':'BUY NOW';
-  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?fmt(secondsLeft(x))+' remaining':'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="addToCart('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
+  return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?`<span data-item-timer="${x.id}">${fmt(secondsLeft(x))}</span> remaining`:'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="addToCart('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
 }
 function buildConsignmentTitle(data={}){
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -682,10 +707,10 @@ function submitCustomBid(id){
   const minimum=minBid(x);
   if(!Number.isFinite(max)||max<minimum)return setToast(`Maximum must be at least ${money(minimum)}.`);
   const opening=Math.min(max,minimum);
+  if(!submitBid(id,opening,{buyer:'You',proxyOpening:true}))return;
   state.proxyBids=state.proxyBids||{};
   state.proxyBids[id]={item:id,buyer:'You',max,increment,created:Date.now(),active:true};
   closeModal();
-  submitBid(id,opening,{buyer:'You',proxyOpening:true});
   activity(`Proxy bid active through ${money(max)} with a ${money(increment)} increment.`);
 }
 
@@ -1549,10 +1574,10 @@ function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.statu
 function finishAuction(x){
  const bids=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount),winning=bids[0],wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current,c=channel(x.channelId),cid=c?.id;
  x.endsAt=0;ensureQueueState(state);
- if(!winning){x.sold=false;x.status='Auction ended · No sale';if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='seller';state.sellerTab='inventory';state.activeItem=null;activity(`${x.name} ended with no sale.`);}return;}
+ if(!winning){x.sold=false;x.status='Auction ended · No sale';if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);normalizeAuctions(state);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='seller';state.sellerTab='inventory';state.activeItem=null;activity(`${x.name} ended with no sale.`);}return;}
  x.sold=true;x.status='Auction closed';if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
  if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);
- save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
+ normalizeAuctions(state);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
 }
 function tick(){
  const now=Date.now();
