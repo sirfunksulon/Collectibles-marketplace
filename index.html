@@ -1512,24 +1512,24 @@ function tick(){
  const now=Date.now();
  let changed=expireOffers(now);
  items.filter(x=>x.method==='auction'&&!x.sold&&x.status==='Live').forEach(x=>{
-  // Elastic cycle state advances with the authoritative countdown. When the
-  // countdown organically moves below the integer where the current decay
-  // cycle began, the immediately lower integer starts a fresh cycle. This is
-  // intentionally NOT triggered by every integer change: upward movement from
-  // an Elastic extension and revisits within the current cycle preserve their
-  // existing state.
+  // Elastic cycle state changes are timer-state mutations only. When the
+  // authoritative countdown moves below the current cycle boundary, the
+  // immediately lower integer starts a fresh decay cycle. This does not use
+  // the global `changed` flag because that flag triggers a full render(),
+  // which would destroy unrelated active DOM such as lookup inputs/results.
+  // Upward Elastic extensions cannot satisfy this condition because they only
+  // increase endsAt.
   if(x.auctionType==='ELASTIC'&&remainingMs(x)>0){
-   const a=x.auction||{};
-   const remaining=secondsLeft(x);
-   const whole=Math.max(0,Math.min(30,Math.floor(remaining)));
-   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
-   if(cycleStart!=null&&whole<cycleStart){
-    a.cycleStartInteger=whole;
-    a.usedIntegers=[];
-    a.coef=.2;
-    a.nextCoefficient=.2;
-    a.decayActive=false;
-    x.auction=a;
+   x.auction=x.auction||{};
+   const whole=Math.floor(secondsLeft(x));
+   const cycleStart=Number.isFinite(Number(x.auction.cycleStartInteger))
+     ?Number(x.auction.cycleStartInteger):null;
+   if(cycleStart!==null&&whole<cycleStart){
+    x.auction.cycleStartInteger=whole;
+    x.auction.usedIntegers=[];
+    x.auction.coef=.2;
+    x.auction.nextCoefficient=.2;
+    x.auction.decayActive=false;
    }
   }
   if(remainingMs(x)<=0){finishAuction(x);changed=true}
