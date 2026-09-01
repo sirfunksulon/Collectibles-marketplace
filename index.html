@@ -135,46 +135,9 @@ body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
  .auctionScreen .ruLive #auctionTimer{font-size:15px!important}
  .auctionScreen .ruChannelInfo{left:14px!important;bottom:22px!important;font-size:10px!important}
 }
-</style>
-<style>
-/* RU-SURGICAL auction presentation refinement */
-.auctionScreen .ruChannelName{top:0!important;left:0!important;right:0!important;width:100%!important;max-width:none!important;transform:none!important;box-sizing:border-box!important;padding:10px 130px!important;background:rgba(0,0,0,.34);backdrop-filter:blur(8px);font-size:13px!important;line-height:20px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:6!important}
-.auctionScreen .ruReturn{z-index:8!important}
-.auctionScreen .ruBidRow{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:repeat(2,minmax(44px,1fr))!important;gap:8px!important;align-items:stretch!important}
-.auctionScreen .ruBidActions{display:contents!important}
-.auctionScreen .ruLive{display:contents!important}
-.auctionScreen #swipeBidControl{grid-column:1;grid-row:1;width:100%!important;min-width:0!important;height:44px!important;min-height:44px!important;box-sizing:border-box!important;border-radius:10px!important}
-.auctionScreen .ruBidActions .overlayCustom{grid-column:1;grid-row:2;width:100%!important;height:44px!important;min-height:44px!important;box-sizing:border-box!important;border-radius:10px!important;font-size:11px!important}
-.auctionScreen .ruLive>div{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;width:100%;height:44px;min-height:44px;box-sizing:border-box;padding:5px 10px;border:1px solid rgba(255,255,255,.22);border-radius:10px;background:rgba(0,0,0,.28);backdrop-filter:blur(8px);text-shadow:0 1px 4px rgba(0,0,0,.8)}
-.auctionScreen .ruLive>div:first-child{grid-column:2;grid-row:1}
-.auctionScreen .ruLive>div:last-child{grid-column:2;grid-row:2}
-.auctionScreen .ruLive span{font-size:8px!important;line-height:1!important;margin-bottom:3px}
-.auctionScreen .ruLive #auctionCurrent,.auctionScreen .ruLive #auctionTimer{font-size:20px!important;line-height:1!important;font-weight:850!important}
-.auctionScreen #swipeBidControl .swipeTrack{font-size:10px!important;padding-left:46px;padding-right:42px;white-space:nowrap}
-.auctionScreen #swipeBidControl .swipeThumb{width:38px!important;height:34px!important;top:4px!important;left:4px!important;border-radius:9px!important;font-size:15px!important}
-.auctionScreen #swipeBidControl .swipeHint{right:9px!important;font-size:8px!important}
-@media(max-width:620px){
- .auctionScreen .ruChannelName{top:0!important;font-size:11px!important;line-height:18px!important;padding:9px 92px!important}
- .auctionScreen .ruAuctionControls{left:14px!important;right:14px!important;bottom:78px!important}
- .auctionScreen .ruProductName{font-size:13px!important;margin-bottom:8px!important}
- .auctionScreen .ruBidRow{gap:7px!important;grid-template-rows:repeat(2,42px)!important}
- .auctionScreen #swipeBidControl,.auctionScreen .ruBidActions .overlayCustom,.auctionScreen .ruLive>div{height:42px!important;min-height:42px!important}
- .auctionScreen .ruLive>div{padding:4px 8px}
- .auctionScreen .ruLive #auctionCurrent,.auctionScreen .ruLive #auctionTimer{font-size:18px!important}
- .auctionScreen #swipeBidControl .swipeTrack{font-size:9px!important;padding-left:38px;padding-right:34px}
- .auctionScreen #swipeBidControl .swipeThumb{width:34px!important;height:32px!important;top:4px!important}
-}
-/* RU-SURGICAL auction presentation refinement v2 — presentation only */
-.auctionScreen .auctionImage>img{transform:translateY(-5vh)!important}
-.auctionScreen .ruChannelName{text-align:left!important;padding-left:230px!important;padding-right:12px!important}
-.auctionScreen .ruBidRow{grid-template-rows:repeat(2,48px)!important}
-.auctionScreen #swipeBidControl,.auctionScreen .ruBidActions .overlayCustom,.auctionScreen .ruLive>div{height:48px!important;min-height:48px!important}
-@media(max-width:620px){
- .auctionScreen .auctionImage>img{transform:translateY(-6vh)!important}
- .auctionScreen .ruChannelName{padding-left:220px!important;padding-right:8px!important}
- .auctionScreen .ruBidRow{grid-template-rows:repeat(2,46px)!important}
- .auctionScreen #swipeBidControl,.auctionScreen .ruBidActions .overlayCustom,.auctionScreen .ruLive>div{height:46px!important;min-height:46px!important}
-}
+/* RU-SURGICAL: auction channel title alignment */
+.auctionScreen .ruChannelName{left:clamp(250px,48vw,420px)!important;right:14px!important;top:18px!important;transform:none!important;max-width:none!important;text-align:left!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media(max-width:620px){.auctionScreen .ruChannelName{left:clamp(240px,48vw,330px)!important;right:10px!important;top:14px!important;font-size:12px!important;max-width:none!important;}}
 </style>
 </head>
 <body><div id="app"></div>
@@ -361,7 +324,7 @@ function normalizeAuctions(s=state){
  channels.forEach(c=>{
   const pool=queuePool(c.id,s);if(!pool.length){s.channelPos[c.id]=0;return;}
   const x=pool[0];s.channelPos[c.id]=0;x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.era=getCardEra(x.internal.year??x.year);x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.startingPrice=x.internal.startingPrice;x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
-  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+180000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
+  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+45000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
   x.status='Live';
  });
 }
@@ -426,7 +389,7 @@ function updateAllVisualCountdowns(){
     }
   }
 }
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return null}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+45000;return live}return null}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
@@ -448,7 +411,26 @@ function itemCard(x){
   const method=auction?'AUCTION':'BUY NOW';
   return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${method}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(title)}</div><div class="ruPrice">${money(auction?x.current:x.price)}</div><div class="ruMeta">${auction?fmt(secondsLeft(x))+' remaining':'Available now'}</div><div class="ruActions">${auction?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="primary" onclick="addToCart('${x.id}')">Buy Now</button><button class="secondary" onclick="makeOffer('${x.id}')">Offer</button>`}</div></div></article>`;
 }
-function fullItemTitle(x){return x.fullName||`${x.year||inferYear(x)} Pokemon ${x.set||''} ${x.variant||''} ${x.name||''}${isGraded(x)?` ${x.grader||graderFromGrade(x.grade)||''} ${x.grade||''}`:''}`.replace(/\s+/g,' ').trim();}
+function buildConsignmentTitle(data={}){
+  const grade=String(data.grade||'').trim();
+  const graded=String(data.condition||'').toLowerCase()==='graded'||!!data.grader||isGraded({grade,grader:data.grader});
+  const grader=data.grader||graderFromGrade(grade);
+  const gradeMatch=grade.match(/(?:PSA|CGC|BGS|SGC|TAG)\s*(\d+(?:\.5)?)/i);
+  const gradeNumber=gradeMatch?.[1]||'';
+  const gradeLabel=gradeNumber?`${grader||''} ${gradeNumber}`.trim():grade;
+  const qualifier=graded&&gradeNumber==='10'?'GEM MINT':'';
+  return [
+    data.year,
+    data.category||'Pokemon',
+    data.setName,
+    data.variant,
+    data.cardName,
+    data.cardNumber?`#${data.cardNumber}`:'',
+    graded?gradeLabel:'',
+    graded?qualifier:''
+  ].filter(v=>String(v??'').trim()).join(' ').replace(/\s+/g,' ').trim();
+}
+function fullItemTitle(x){return x.fullName||buildConsignmentTitle({year:x.year||inferYear(x),category:x.category||'Pokemon',setName:String(x.set||'').replace(/\s+#?\d+$/,''),variant:x.variant,name:x.name,cardName:x.name,cardNumber:String(x.set||'').match(/#([^\s]+)/)?.[1]||'',condition:x.internal?.condition||x.condition,grader:x.grader,grade:x.grade});}
 function inferYear(x){const m=String(x.name||'').match(/\b(19|20)\d{2}\b/);return m?m[0]:'2025';}
 function isGraded(x){return /\b(PSA|CGC|BGS|SGC|TAG|GEM|NM|MT)\b/i.test(String(x.grade||''))||!!x.grader;}
 function graderFromGrade(g){const m=String(g||'').match(/\b(PSA|CGC|BGS|SGC|TAG)\b/i);return m?m[1].toUpperCase():'';}
@@ -502,71 +484,31 @@ function calculateNewEndTime(currentEndTimeMs, bidTimestampMs, extensionWindowSe
   return currentEndTimeMs;
 }
 
-function initElasticState(auction){
-  if(!auction.elastic){
-    auction.elastic={
-      usedIntegers:[],
-      coefficient:0.2,
-      cycleStartInt:null,
-      lastInt:null
-    };
-  }
-}
-function updateElasticClock(auction,currentSecondsLeft){
-  if(auction.auctionType!=='ELASTIC'||currentSecondsLeft<=0)return;
-  initElasticState(auction);
-  const currentInt=Math.floor(currentSecondsLeft);
-  const state=auction.elastic;
-  if(state.lastInt!==null&&currentInt<state.lastInt){
-    if(state.cycleStartInt!==null&&currentInt<state.cycleStartInt){
-      state.usedIntegers=[];
-      state.coefficient=0.2;
-      state.cycleStartInt=null;
-    }
-  }
-  state.lastInt=currentInt;
-}
-function calculateElasticExtension(auction,currentSecondsLeft){
-  if(auction.auctionType!=='ELASTIC'||currentSecondsLeft>30||currentSecondsLeft<=0)return {canExtend:false,extensionSeconds:0};
-  initElasticState(auction);
-  const currentInt=Math.floor(currentSecondsLeft);
-  const state=auction.elastic;
-  const mirrorInt=30-currentInt;
-  const extensionSeconds=mirrorInt*state.coefficient;
-  return {canExtend:extensionSeconds>0,extensionSeconds:extensionSeconds,currentInt:currentInt,appliedCoefficient:state.coefficient};
-}
-function applyElasticBid(auction,currentSecondsLeft){
-  const preview=calculateElasticExtension(auction,currentSecondsLeft);
-  if(!preview.canExtend)return 0;
-  const state=auction.elastic;
-  const addedMs=preview.extensionSeconds*1000;
-  auction.endsAt+=addedMs;
-  if(!state.usedIntegers.includes(preview.currentInt))state.usedIntegers.push(preview.currentInt);
-  if(state.cycleStartInt===null)state.cycleStartInt=preview.currentInt;
-  state.coefficient=state.coefficient/2;
-  return preview.extensionSeconds;
-}
 function elasticPreview(x){
   if(!x||x.auctionType!=='ELASTIC')return {active:false};
-  const remaining=secondsLeft(x),result=calculateElasticExtension(x,remaining);
-  const state=x.auction?.elastic;
-  if(!result.canExtend)return {active:false,remaining,whole:Math.floor(remaining),subsequent:Math.max(0,Math.floor(remaining)-1),mirrored:30-Math.floor(remaining),coef:state?.coefficient??.2,nextCoef:state?.coefficient??.2,extension:0,used:false,cycleStart:state?.cycleStartInt??null};
-  const used=state.usedIntegers.includes(result.currentInt);
-  return {active:true,remaining,whole:result.currentInt,subsequent:Math.max(0,result.currentInt-1),mirrored:30-result.currentInt,coef:result.appliedCoefficient,nextCoef:result.appliedCoefficient/2,extension:used?0:result.extensionSeconds,used,cycleStart:state.cycleStartInt,newCycle:state.cycleStartInt===null};
+  const remaining=secondsLeft(x);
+  const whole=Math.floor(remaining);
+  const a=x.auction||{};
+  const coef=Number(a.coef??.2);
+  const usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
+  const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+  // Each decay cycle is local to the lower integer at which it began.
+  // When the countdown passes below that starting integer, the next integer
+  // begins a fresh cycle with a fresh coefficient and fresh consumed set.
+  if(whole<0||whole>30)return {active:false,remaining,whole,subsequent:Math.max(0,whole-1),mirrored:whole>=0?30-whole:0,coef,nextCoef:coef,extension:0,used:usedIntegers.includes(whole),cycleStart};
+  const startsNewCycle=cycleStart==null||whole<cycleStart;
+  const effectiveCoef=startsNewCycle?.2:coef;
+  const effectiveUsed=startsNewCycle?false:usedIntegers.includes(whole);
+  const mirrored=30-whole;
+  const extension=effectiveUsed?0:mirrored*effectiveCoef;
+  return {active:true,remaining,whole,subsequent:Math.max(0,whole-1),mirrored,coef:effectiveCoef,nextCoef:effectiveUsed?effectiveCoef:effectiveCoef/2,extension,used:effectiveUsed,cycleStart:startsNewCycle?whole:cycleStart,newCycle:startsNewCycle};
 }
 function auctionPage(){
   const x=item(state.activeItem);
   if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;
   const c=channel(x.channelId),nextBid=minBid(x),ep=elasticPreview(x),showElastic=x.auctionType==='ELASTIC'&&secondsLeft(x)<=30;
   const elasticInfo=showElastic?`<div class="ruExtend"><span>EXTEND</span><b id="elasticNextExtension">${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b></div>`:'';
-  const q=queueCriteria(c),d=x.internal||{};
-  const criteria=[
-    c?.category,
-    q?.yearMin!=null?`${q.yearMin}–${q.yearMax}`:null,
-    q?.conditions?.length?q.conditions.join('/'):d.condition||(x.grade==='Raw'?'Raw':null),
-    q?.startingMin!=null?`${money(q.startingMin)} Start`:null,
-    d.presentation||x.presentation||null
-  ].filter(Boolean).join(' · ');
+  const criteria=[c?.category,c?.auctionType,x.method==='auction'?'Auction':'Buy Now'].filter(Boolean).join(' · ');
   return `<main class="auctionScreen">
     <div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div>
       <div class="ruChannelName">${esc(c?.name||'Auction')}</div>
@@ -575,7 +517,7 @@ function auctionPage(){
         <div class="ruProductName">${esc(fullItemTitle(x))}</div>
         <div class="ruBidRow">
           <div class="ruBidActions"><div id="swipeBidControl" class="swipeBid" data-bid-id="${x.id}" onpointerdown="startSwipe(event,'${x.id}')" onpointermove="moveSwipe(event)" onpointerup="endSwipe(event,'${x.id}')" onpointercancel="cancelSwipe(event)"><div class="swipeProgress" id="swipeProgress"></div><div class="swipeTrack">SWIPE TO BID ${money(nextBid)} →</div><div class="swipeThumb" id="swipeThumb">→</div><span class="swipeHint">SLIDE</span></div><button class="overlayCustom" onclick="openModal('customBid','${x.id}')">CUSTOM BID</button></div>
-          <div class="ruLive"><div><span>CURRENT BID</span><b id="auctionCurrent">${money(x.current)}</b></div><div><span>TIME REMAINING</span><b id="auctionTimer">${fmt(secondsLeft(x))}</b></div></div>
+          <div class="ruLive"><div><span>CURRENT BID</span><b id="auctionCurrent">${money(x.current)}</b></div><div><b id="auctionTimer">${fmt(secondsLeft(x))}</b></div></div>
         </div>
       </div>
       <button class="ruChannelInfo" onclick="openModal('channelInfo','${x.channelId}')"><span class="ruAuctionInfoIcon">i</span><span>${esc(criteria)}</span></button>
@@ -626,7 +568,7 @@ function submitBid(id,amount,opts={}){
   x.bidCount=(Number(x.bidCount)||0)+1;
   state.bids.push(bid);
   if(x.auctionType==='ELASTIC'&&before>0&&before<=30){
-    applyElasticBid(x,before);
+    applyElasticReup(x,before);
   }else{
     x.endsAt=calculateNewEndTime(Number(x.endsAt)||0,bidTimestampMs,15,15);
   }
@@ -644,7 +586,10 @@ function placeBid(id){const input=document.getElementById('bidInput');submitBid(
 function customBidModal(id){
   const x=item(id);if(!x)return '';
   return `<div class="modal customBidModal"><div class="modalHead"><div><div class="eyebrow">CUSTOM PROXY BID</div><h2>${esc(x.name)}</h2></div><button class="close" onclick="closeModal()">×</button></div>
-  <label class="tiny muted" for="customBidInput">Maximum you are willing to pay</label><input id="customBidInput" class="input" type="number" inputmode="decimal" min="${minBid(x)}" step="1" placeholder="${minBid(x)}" autofocus style="margin:8px 0 12px">
+  <div class="customBidSummary"><div class="step"><span class="tiny muted">Current bid</span><b>${money(x.current)}</b></div><div class="step"><span class="tiny muted">Minimum opening bid</span><b>${money(minBid(x))}</b></div></div>
+  <label class="tiny muted" for="customBidInput">Maximum you are willing to pay</label><input id="customBidInput" class="input" type="number" min="${minBid(x)}" step="1" placeholder="${minBid(x)}" style="margin:8px 0 12px">
+  <label class="tiny muted" for="proxyIncrement">Bid increment</label><select id="proxyIncrement" class="input" style="margin:8px 0 12px"><option value="1">$1 increment</option><option value="2">$2 increment</option><option value="5">$5 increment</option><option value="10">$10 increment</option><option value="25">$25 increment</option></select>
+  <div class="notice">This is a private proxy maximum, not a pre-bid. RapidUp opens at the minimum valid amount, then automatically competes against later bids by the selected increment, never exceeding your maximum. Other buyers never see your maximum.</div>
   <button class="primary" style="width:100%;margin-top:12px" onclick="submitCustomBid('${id}')">SET PROXY BID</button></div>`;
 }
 
@@ -672,8 +617,68 @@ function resolveProxyForIncomingBid(x){
   const before=secondsLeft(x);
   x.current=response;x.bidCount=(Number(x.bidCount)||0)+1;
   state.bids.push({id:'proxy'+Date.now()+Math.random(),item:x.id,amount:response,created:Date.now(),buyer:'You',proxy:true});
-  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticBid(x,before);
+  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticReup(x,before);
   if(response>=p.max)p.active=false;
+}
+
+function applyElasticReup(x,before){
+  const a=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,lastInteger:null,cycleStartInteger:null,usedIntegers:[],lastExtension:null,lastExtensionAt:null,lastMirrored:null,lastAppliedCoefficient:null,nextCoefficient:.2};
+  a.usedIntegers=Array.isArray(a.usedIntegers)?a.usedIntegers:[];
+
+  const whole=Math.max(0,Math.min(30,Math.floor(before)));
+
+  // A decay cycle belongs to the lower integer at which it was started.
+  // The cycle's consumed-integer set is local: a later cycle does not inherit
+  // integers consumed by an earlier cycle. When the countdown passes below
+  // the prior cycle's starting integer, that subsequent integer starts fresh
+  // at the base coefficient.
+  const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+  if(cycleStart==null||whole<cycleStart){
+    a.cycleStartInteger=whole;
+    a.usedIntegers=[];
+    a.coef=.2;
+    a.nextCoefficient=.2;
+    a.decayActive=false;
+  }
+
+  const coef=Number(a.coef??.2);
+
+  // Only one bid at each integer qualifies within the active decay cycle.
+  // Re-visiting a consumed integer has no extension and does not cause another
+  // coefficient decay.
+  if(a.usedIntegers.includes(whole)){
+    a.lastTrigger=before;
+    a.lastInteger=whole;
+    a.reups=(a.reups||0)+1;
+    a.decayActive=true;
+    a.lastExtension=0;
+    a.lastExtensionAt=Date.now();
+    a.lastMirrored=30-whole;
+    a.lastAppliedCoefficient=coef;
+    a.nextCoefficient=coef;
+    x.auction=a;
+    state.activity=`Elastic re-up at ${whole}s: integer already consumed in this decay cycle · +0.00s · coefficient remains ${coef.toFixed(4)}`;
+    return 0;
+  }
+
+  const mirrored=30-whole;
+  const extension=mirrored*coef;
+  x.endsAt+=extension*1000;
+  a.lastReupAt=Date.now();
+  a.lastTrigger=before;
+  a.lastInteger=whole;
+  a.reups=(a.reups||0)+1;
+  a.decayActive=true;
+  a.usedIntegers.push(whole);
+  a.lastExtension=extension;
+  a.lastExtensionAt=Date.now();
+  a.lastMirrored=mirrored;
+  a.lastAppliedCoefficient=coef;
+  a.coef=coef/2;
+  a.nextCoefficient=a.coef;
+  x.auction=a;
+  state.activity=`Elastic re-up at ${whole}s: +${extension.toFixed(2)}s · mirrored ${mirrored} × ${coef.toFixed(4)} · next coefficient ${a.coef.toFixed(4)} · cycle starts at ${a.cycleStartInteger}s`;
+  return extension;
 }
 
 function renderBuyNowPage(){const list=items.filter(x=>x.method==='buy'&&!x.sold);return `<main><section class="hero"><div class="eyebrow">BUY NOW</div><h1>Immediate means immediate.</h1><p>Buy Now remains executable at the listed price until the seller intentionally changes the selling state. Offers never reserve inventory.</p></section><div class="grid">${list.map(itemCard).join('')}</div></main>`}
@@ -825,7 +830,7 @@ function channelInfoModal(cid){const c=channel(cid),q=queueCriteria(c);return `<
 function auctionInfoModal(id){const x=item(id);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">BUYER AUCTION VIEW</div><h2>${esc(x.auctionType)} auction</h2></div><button class="close" onclick="closeModal()">×</button></div><p><b>Competitive surface only.</b></p><p>You see the item, current bid, bid count, live timer, auction type and your own bid.</p><div class="privacyNote">You do not see other buyers' offers, competing offer amounts, demand ranges, identities or seller analytics.</div></div>`}
 function interestsModal(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">CONCIERGE</div><h2>Saved interests</h2></div><button class="close" onclick="closeModal()">×</button></div><p class="muted">Interests can include cards, sets, variants, language, grading company, grade ranges, target prices and preferred selling methods.</p><div class="list">${state.interests.map((i,k)=>`<div class="listrow"><span>${esc(i)}</span><button class="secondary" onclick="state.interests.splice(${k},1);save();openModal('interests')">Remove</button></div>`).join('')}</div><input id="interestInput" class="input" placeholder="Add an interest" style="margin-top:12px"><button class="primary" style="margin-top:9px" onclick="addInterest()">Add interest</button></div>`}
 function addInterest(){const v=document.getElementById('interestInput')?.value.trim();if(!v)return;state.interests.push(v);save();openModal('interests');notify(`Concierge is now watching ${v}.`,'buyer',null,'CONCIERGE')}
-function consignModal(){return `<div class="modal consignmentModal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB</div><h2>Consignment Inventory Generator</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice">Identify the collectible first. Once a valid API card is selected, configure the complete seller-controlled selling state before staging it.</div><div class="consignGrid" style="margin-top:18px"><label class="consignField"><span class="eyebrow">Pokémon / Character</span><input id="consignPokemon" class="input" placeholder="Type or select Pokémon…" autocomplete="off" onfocus="openConsignmentSuggestions('pokemon')" oninput="consignmentPokemonChanged(this.value)"><div id="consignPokemonSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Set</span><input id="consignSet" class="input" placeholder="Type or select set…" autocomplete="off" onfocus="openConsignmentSuggestions('set')" oninput="consignmentSetChanged(this.value)"><div id="consignSetSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Card / Number</span><input id="consignCard" class="input" placeholder="Type card name or number…" autocomplete="off" onfocus="openConsignmentSuggestions('card')" oninput="consignmentCardChanged(this.value)"><div id="consignCardSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Variant</span><input id="consignVariant" class="input" placeholder="Type or select variant…" autocomplete="off" onfocus="openConsignmentSuggestions('variant')" oninput="consignmentVariantChanged(this.value)"><div id="consignVariantSuggestions" class="consignSuggestions" hidden></div></label></div><div id="consignStatus" class="tiny muted" style="margin-top:12px">Start typing in any field to search the Pokémon TCG database.</div><div id="consignPreview" class="consignPreview"><div class="eyebrow">STANDARDIZED TITLE PREVIEW</div><div id="consignTitlePreview" class="big" style="font-size:25px;margin-top:7px">Select a card and variant.</div></div><div id="sellerConfig" class="sellerConfig" style="margin-top:16px;opacity:.48;pointer-events:none"><div class="sectionhead" style="margin:0 0 12px"><div><div class="eyebrow">SELLER-CONTROLLED ATTRIBUTES</div><h3 style="margin:5px 0 0">Configure listing</h3></div><span class="pill">Required before staging</span></div><div class="sellerConfigGrid"><label><span class="eyebrow">Selling method</span><select id="consignMethod" class="input" onchange="updateSellerConfigUI()"><option value="buy">BUY NOW</option><option value="auction">PUBLIC AUCTION</option></select></label><label><span class="eyebrow">Presentation</span><select id="consignPresentation" class="input" onchange="updateSellerConfigUI()"><option value="Standard">Standard</option><option value="Premium">Premium</option></select></label><label><span class="eyebrow">Condition</span><select id="consignCondition" class="input" onchange="updateSellerConfigUI()"><option value="Raw">Raw</option><option value="Graded">Graded</option></select></label><label><span class="eyebrow">Language</span><select id="consignLanguage" class="input" onchange="updateSellerConfigUI()"><option value="English">English</option><option value="Japanese">Japanese</option><option value="Korean">Korean</option><option value="Chinese">Chinese</option></select></label><label id="consignGradeWrap" style="display:none"><span class="eyebrow">Grade</span><select id="consignGrade" class="input" onchange="updateSellerConfigUI()"><option value="PSA 10">PSA 10</option><option value="PSA 9">PSA 9</option><option value="CGC 9.5">CGC 9.5</option><option value="BGS 9.5">BGS 9.5</option></select></label><label id="consignAuctionTypeWrap" style="display:none"><span class="eyebrow">Auction type</span><select id="consignAuctionType" class="input" onchange="updateSellerConfigUI()"><option value="ELASTIC">ELASTIC</option><option value="SUDDEN DEATH">SUDDEN DEATH</option></select></label><label id="consignAuctionStartWrap" style="display:none"><span class="eyebrow">Auction starting price</span><select id="consignAuctionStart" class="input" onchange="updateSellerConfigUI()"><option value="1">$1</option><option value="5">$5</option><option value="10">$10</option><option value="25">$25</option><option value="50">$50</option><option value="100">$100</option></select></label><label id="consignBuyPriceWrap"><span class="eyebrow">Buy Now price</span><input id="consignBuyPrice" class="input" type="number" min="1" step="1" value="1" placeholder="Listed price" oninput="updateSellerConfigUI()"></label></div><div id="sellerConfigStatus" class="tiny muted" style="margin-top:10px">Select a card and variant to unlock seller settings.</div></div><div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" id="consignSubmit" onclick="submitConsignment()" disabled>Stage Inventory</button></div></div>`}
+function consignModal(){return `<div class="modal consignmentModal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB</div><h2>Consignment Inventory Generator</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice">Identify the collectible first. Once a valid API card is selected, configure the complete seller-controlled selling state before staging it.</div><div class="consignGrid" style="margin-top:18px"><label class="consignField"><span class="eyebrow">Pokémon / Character</span><input id="consignPokemon" class="input" placeholder="Type or select Pokémon…" autocomplete="off" onfocus="openConsignmentSuggestions('pokemon')" oninput="consignmentPokemonChanged(this.value)"><div id="consignPokemonSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Set</span><input id="consignSet" class="input" placeholder="Type or select set…" autocomplete="off" onfocus="openConsignmentSuggestions('set')" oninput="consignmentSetChanged(this.value)"><div id="consignSetSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Card / Number</span><input id="consignCard" class="input" placeholder="Type card name or number…" autocomplete="off" onfocus="openConsignmentSuggestions('card')" oninput="consignmentCardChanged(this.value)"><div id="consignCardSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Variant</span><input id="consignVariant" class="input" placeholder="Type or select variant…" autocomplete="off" onfocus="openConsignmentSuggestions('variant')" oninput="consignmentVariantChanged(this.value)"><div id="consignVariantSuggestions" class="consignSuggestions" hidden></div></label></div><div id="consignStatus" class="tiny muted" style="margin-top:12px">Start typing in any field to search the Pokémon TCG database.</div><div id="consignPreview" class="consignPreview"><div class="eyebrow">STANDARDIZED TITLE PREVIEW</div><div id="consignTitlePreview" class="big" style="font-size:25px;margin-top:7px">Select a card and variant.</div></div><div id="sellerConfig" class="sellerConfig" style="margin-top:16px;opacity:.48;pointer-events:none"><div class="sectionhead" style="margin:0 0 12px"><div><div class="eyebrow">SELLER-CONTROLLED ATTRIBUTES</div><h3 style="margin:5px 0 0">Configure listing</h3></div><span class="pill">Required before staging</span></div><div class="sellerConfigGrid"><label><span class="eyebrow">Selling method</span><select id="consignMethod" class="input" onchange="updateSellerConfigUI()"><option value="buy">BUY NOW</option><option value="auction">PUBLIC AUCTION</option></select></label><label><span class="eyebrow">Presentation</span><select id="consignPresentation" class="input" onchange="updateSellerConfigUI()"><option value="Standard">Standard</option><option value="Premium">Premium</option></select></label><label><span class="eyebrow">Condition</span><select id="consignCondition" class="input" onchange="updateSellerConfigUI()"><option value="Raw">Raw</option><option value="Graded">Graded</option></select></label><label><span class="eyebrow">Language</span><select id="consignLanguage" class="input" onchange="updateSellerConfigUI()"><option value="English">English</option><option value="Japanese">Japanese</option><option value="Korean">Korean</option><option value="Chinese">Chinese</option></select></label><label id="consignGradeWrap" style="display:none"><span class="eyebrow">Grade</span><select id="consignGrade" class="input" onchange="updateSellerConfigUI()"><option value="PSA 10">PSA 10</option><option value="PSA 9">PSA 9</option><option value="CGC 10">CGC 10</option><option value="CGC 9.5">CGC 9.5</option><option value="BGS 10">BGS 10</option><option value="BGS 9.5">BGS 9.5</option></select></label><label id="consignAuctionTypeWrap" style="display:none"><span class="eyebrow">Auction type</span><select id="consignAuctionType" class="input" onchange="updateSellerConfigUI()"><option value="ELASTIC">ELASTIC</option><option value="SUDDEN DEATH">SUDDEN DEATH</option></select></label><label id="consignAuctionStartWrap" style="display:none"><span class="eyebrow">Auction starting price</span><select id="consignAuctionStart" class="input" onchange="updateSellerConfigUI()"><option value="1">$1</option><option value="5">$5</option><option value="10">$10</option><option value="25">$25</option><option value="50">$50</option><option value="100">$100</option></select></label><label id="consignBuyPriceWrap"><span class="eyebrow">Buy Now price</span><input id="consignBuyPrice" class="input" type="number" min="1" step="1" value="1" placeholder="Listed price" oninput="updateSellerConfigUI()"></label></div><div id="sellerConfigStatus" class="tiny muted" style="margin-top:10px">Select a card and variant to unlock seller settings.</div></div><div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" id="consignSubmit" onclick="submitConsignment()" disabled>Stage Inventory</button></div></div>`}
 
 let consignmentCache={
   cards:[],
@@ -1430,9 +1435,11 @@ function updateConsignmentPreview(){
   const card=selectedConsignmentCard();
   const variant=consignmentCache.selectedVariant;
 
+  const condition=document.getElementById('consignCondition')?.value||'Raw';
+  const grade=condition==='Graded'?(document.getElementById('consignGrade')?.value||''):' ';
   const title=
     card&&variant
-      ? `${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`
+      ? buildConsignmentTitle({year:card.releaseYear,category:'Pokemon',setName:card.setName,variant,cardName:card.cardName,cardNumber:card.cardNumber,condition,grade})
       : 'Select a card and variant.';
 
   preview.textContent=title;
@@ -1493,7 +1500,7 @@ function submitConsignment(){
  const method=document.getElementById('consignMethod')?.value||'buy',presentation=document.getElementById('consignPresentation')?.value||'Standard',condition=document.getElementById('consignCondition')?.value||'Raw',language=document.getElementById('consignLanguage')?.value||'English',grade=condition==='Graded'?(document.getElementById('consignGrade')?.value||'PSA 10'):'Raw',auctionType=method==='auction'?(document.getElementById('consignAuctionType')?.value||'ELASTIC'):null,startingPrice=method==='auction'?Math.max(1,Number(document.getElementById('consignAuctionStart')?.value)||1):null,buyNowPrice=method==='buy'?Math.max(1,Number(document.getElementById('consignBuyPrice')?.value)||1):null;
  const submit=document.getElementById('consignSubmit');if(submit){submit.disabled=true;submit.textContent='Staging…';}
  try{
-  const title=`${card.cardName} #${card.cardNumber} ${card.setName} [${variant}]`,itemId=`consign-${Date.now()}`,year=card.releaseYear||new Date().getFullYear();
+  const title=buildConsignmentTitle({year:card.releaseYear||new Date().getFullYear(),category:'Pokemon',setName:card.setName,variant,cardName:card.cardName,cardNumber:card.cardNumber,condition,grade}),itemId=`consign-${Date.now()}`,year=card.releaseYear||new Date().getFullYear();
   const staged={id:itemId,name:card.cardName,set:`${card.setName} #${card.cardNumber}`,fullName:title,year,era:getCardEra(year),category:'Pokemon',method,type:method==='auction'?'Auction':'Buy Now',channel:null,channelId:null,auctionType,startingPrice:startingPrice||0,current:method==='auction'?startingPrice:buyNowPrice,price:buyNowPrice||0,market:0,grade,lang:language,variant,presentation,sold:false,staged:true,status:'Staged',endsAt:0,bidCount:0,img:card.images?.large||card.images?.small||IMG.cards,internal:{category:'Pokemon',year,era:getCardEra(year),condition,language,variant,presentation,auctionType,startingPrice:startingPrice||0},auction:{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2},consignment:{setId:card.setId,setName:card.setName,releaseYear:card.releaseYear,pokemon:card.pokemon,cardId:card.id,apiCardId:card.id,cardNumber:card.cardNumber,cardName:card.cardName,selectedVariant:variant,externalSource:'Pokemon TCG API'}};
   items.push(staged);
   if(method==='auction'){const target=evaluateAndEnqueue(staged);if(target){staged.status='Live';normalizeAuctions(state);}else if(staged.status!=='Staged · Channel occupied'){staged.status='Unassigned';}}else staged.status='Available now';
@@ -1536,7 +1543,18 @@ function tick(){
   // an Elastic extension and revisits within the current cycle preserve their
   // existing state.
   if(x.auctionType==='ELASTIC'&&remainingMs(x)>0){
-   updateElasticClock(x,secondsLeft(x));
+   const a=x.auction||{};
+   const remaining=secondsLeft(x);
+   const whole=Math.max(0,Math.min(30,Math.floor(remaining)));
+   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+   if(cycleStart!=null&&whole<cycleStart){
+    a.cycleStartInteger=whole;
+    a.usedIntegers=[];
+    a.coef=.2;
+    a.nextCoefficient=.2;
+    a.decayActive=false;
+    x.auction=a;
+   }
   }
   if(remainingMs(x)<=0){finishAuction(x);changed=true}
  });
