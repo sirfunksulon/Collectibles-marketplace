@@ -136,6 +136,35 @@ body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
  .auctionScreen .ruChannelInfo{left:14px!important;bottom:22px!important;font-size:10px!important}
 }
 </style>
+<style>
+/* RU-SURGICAL auction presentation refinement */
+.auctionScreen .ruChannelName{top:0!important;left:0!important;right:0!important;width:100%!important;max-width:none!important;transform:none!important;box-sizing:border-box!important;padding:10px 130px!important;background:rgba(0,0,0,.34);backdrop-filter:blur(8px);font-size:13px!important;line-height:20px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:6!important}
+.auctionScreen .ruReturn{z-index:8!important}
+.auctionScreen .ruBidRow{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:repeat(2,minmax(44px,1fr))!important;gap:8px!important;align-items:stretch!important}
+.auctionScreen .ruBidActions{display:contents!important}
+.auctionScreen .ruLive{display:contents!important}
+.auctionScreen #swipeBidControl{grid-column:1;grid-row:1;width:100%!important;min-width:0!important;height:44px!important;min-height:44px!important;box-sizing:border-box!important;border-radius:10px!important}
+.auctionScreen .ruBidActions .overlayCustom{grid-column:1;grid-row:2;width:100%!important;height:44px!important;min-height:44px!important;box-sizing:border-box!important;border-radius:10px!important;font-size:11px!important}
+.auctionScreen .ruLive>div{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;width:100%;height:44px;min-height:44px;box-sizing:border-box;padding:5px 10px;border:1px solid rgba(255,255,255,.22);border-radius:10px;background:rgba(0,0,0,.28);backdrop-filter:blur(8px);text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.auctionScreen .ruLive>div:first-child{grid-column:2;grid-row:1}
+.auctionScreen .ruLive>div:last-child{grid-column:2;grid-row:2}
+.auctionScreen .ruLive span{font-size:8px!important;line-height:1!important;margin-bottom:3px}
+.auctionScreen .ruLive #auctionCurrent,.auctionScreen .ruLive #auctionTimer{font-size:20px!important;line-height:1!important;font-weight:850!important}
+.auctionScreen #swipeBidControl .swipeTrack{font-size:10px!important;padding-left:46px;padding-right:42px;white-space:nowrap}
+.auctionScreen #swipeBidControl .swipeThumb{width:38px!important;height:34px!important;top:4px!important;left:4px!important;border-radius:9px!important;font-size:15px!important}
+.auctionScreen #swipeBidControl .swipeHint{right:9px!important;font-size:8px!important}
+@media(max-width:620px){
+ .auctionScreen .ruChannelName{top:0!important;font-size:11px!important;line-height:18px!important;padding:9px 92px!important}
+ .auctionScreen .ruAuctionControls{left:14px!important;right:14px!important;bottom:78px!important}
+ .auctionScreen .ruProductName{font-size:13px!important;margin-bottom:8px!important}
+ .auctionScreen .ruBidRow{gap:7px!important;grid-template-rows:repeat(2,42px)!important}
+ .auctionScreen #swipeBidControl,.auctionScreen .ruBidActions .overlayCustom,.auctionScreen .ruLive>div{height:42px!important;min-height:42px!important}
+ .auctionScreen .ruLive>div{padding:4px 8px}
+ .auctionScreen .ruLive #auctionCurrent,.auctionScreen .ruLive #auctionTimer{font-size:18px!important}
+ .auctionScreen #swipeBidControl .swipeTrack{font-size:9px!important;padding-left:38px;padding-right:34px}
+ .auctionScreen #swipeBidControl .swipeThumb{width:34px!important;height:32px!important;top:4px!important}
+}
+</style>
 </head>
 <body><div id="app"></div>
 
@@ -519,7 +548,7 @@ function auctionPage(){
   if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;
   const c=channel(x.channelId),nextBid=minBid(x),ep=elasticPreview(x),showElastic=x.auctionType==='ELASTIC'&&secondsLeft(x)<=30;
   const elasticInfo=showElastic?`<div class="ruExtend"><span>EXTEND</span><b id="elasticNextExtension">${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b></div>`:'';
-  const criteria=[c?.category,c?.auctionType,x.method==='auction'?'Auction':'Buy Now'].filter(Boolean).join(' · ');
+  const criteria=[c?.category,criteriaText(c)].filter(Boolean).join(' · ');
   return `<main class="auctionScreen">
     <div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div>
       <div class="ruChannelName">${esc(c?.name||'Auction')}</div>
@@ -528,7 +557,7 @@ function auctionPage(){
         <div class="ruProductName">${esc(fullItemTitle(x))}</div>
         <div class="ruBidRow">
           <div class="ruBidActions"><div id="swipeBidControl" class="swipeBid" data-bid-id="${x.id}" onpointerdown="startSwipe(event,'${x.id}')" onpointermove="moveSwipe(event)" onpointerup="endSwipe(event,'${x.id}')" onpointercancel="cancelSwipe(event)"><div class="swipeProgress" id="swipeProgress"></div><div class="swipeTrack">SWIPE TO BID ${money(nextBid)} →</div><div class="swipeThumb" id="swipeThumb">→</div><span class="swipeHint">SLIDE</span></div><button class="overlayCustom" onclick="openModal('customBid','${x.id}')">CUSTOM BID</button></div>
-          <div class="ruLive"><div><span>CURRENT BID</span><b id="auctionCurrent">${money(x.current)}</b></div><div><b id="auctionTimer">${fmt(secondsLeft(x))}</b></div></div>
+          <div class="ruLive"><div><span>CURRENT BID</span><b id="auctionCurrent">${money(x.current)}</b></div><div><span>TIME REMAINING</span><b id="auctionTimer">${fmt(secondsLeft(x))}</b></div></div>
         </div>
       </div>
       <button class="ruChannelInfo" onclick="openModal('channelInfo','${x.channelId}')"><span class="ruAuctionInfoIcon">i</span><span>${esc(criteria)}</span></button>
