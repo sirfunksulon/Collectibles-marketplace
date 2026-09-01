@@ -164,6 +164,17 @@ body.auction-mode #app{height:100dvh;width:100vw;overflow:hidden}
  .auctionScreen #swipeBidControl .swipeTrack{font-size:9px!important;padding-left:38px;padding-right:34px}
  .auctionScreen #swipeBidControl .swipeThumb{width:34px!important;height:32px!important;top:4px!important}
 }
+/* RU-SURGICAL auction presentation refinement v2 — presentation only */
+.auctionScreen .auctionImage>img{transform:translateY(-5vh)!important}
+.auctionScreen .ruChannelName{text-align:left!important;padding-left:230px!important;padding-right:12px!important}
+.auctionScreen .ruBidRow{grid-template-rows:repeat(2,48px)!important}
+.auctionScreen #swipeBidControl,.auctionScreen .ruBidActions .overlayCustom,.auctionScreen .ruLive>div{height:48px!important;min-height:48px!important}
+@media(max-width:620px){
+ .auctionScreen .auctionImage>img{transform:translateY(-6vh)!important}
+ .auctionScreen .ruChannelName{padding-left:220px!important;padding-right:8px!important}
+ .auctionScreen .ruBidRow{grid-template-rows:repeat(2,46px)!important}
+ .auctionScreen #swipeBidControl,.auctionScreen .ruBidActions .overlayCustom,.auctionScreen .ruLive>div{height:46px!important;min-height:46px!important}
+}
 </style>
 </head>
 <body><div id="app"></div>
@@ -548,7 +559,14 @@ function auctionPage(){
   if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;
   const c=channel(x.channelId),nextBid=minBid(x),ep=elasticPreview(x),showElastic=x.auctionType==='ELASTIC'&&secondsLeft(x)<=30;
   const elasticInfo=showElastic?`<div class="ruExtend"><span>EXTEND</span><b id="elasticNextExtension">${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b></div>`:'';
-  const criteria=[c?.category,criteriaText(c)].filter(Boolean).join(' · ');
+  const q=queueCriteria(c),d=x.internal||{};
+  const criteria=[
+    c?.category,
+    q?.yearMin!=null?`${q.yearMin}–${q.yearMax}`:null,
+    q?.conditions?.length?q.conditions.join('/'):d.condition||(x.grade==='Raw'?'Raw':null),
+    q?.startingMin!=null?`${money(q.startingMin)} Start`:null,
+    d.presentation||x.presentation||null
+  ].filter(Boolean).join(' · ');
   return `<main class="auctionScreen">
     <div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div>
       <div class="ruChannelName">${esc(c?.name||'Auction')}</div>
@@ -626,10 +644,7 @@ function placeBid(id){const input=document.getElementById('bidInput');submitBid(
 function customBidModal(id){
   const x=item(id);if(!x)return '';
   return `<div class="modal customBidModal"><div class="modalHead"><div><div class="eyebrow">CUSTOM PROXY BID</div><h2>${esc(x.name)}</h2></div><button class="close" onclick="closeModal()">×</button></div>
-  <div class="customBidSummary"><div class="step"><span class="tiny muted">Current bid</span><b>${money(x.current)}</b></div><div class="step"><span class="tiny muted">Minimum opening bid</span><b>${money(minBid(x))}</b></div></div>
-  <label class="tiny muted" for="customBidInput">Maximum you are willing to pay</label><input id="customBidInput" class="input" type="number" min="${minBid(x)}" step="1" placeholder="${minBid(x)}" style="margin:8px 0 12px">
-  <label class="tiny muted" for="proxyIncrement">Bid increment</label><select id="proxyIncrement" class="input" style="margin:8px 0 12px"><option value="1">$1 increment</option><option value="2">$2 increment</option><option value="5">$5 increment</option><option value="10">$10 increment</option><option value="25">$25 increment</option></select>
-  <div class="notice">This is a private proxy maximum, not a pre-bid. RapidUp opens at the minimum valid amount, then automatically competes against later bids by the selected increment, never exceeding your maximum. Other buyers never see your maximum.</div>
+  <label class="tiny muted" for="customBidInput">Maximum you are willing to pay</label><input id="customBidInput" class="input" type="number" inputmode="decimal" min="${minBid(x)}" step="1" placeholder="${minBid(x)}" autofocus style="margin:8px 0 12px">
   <button class="primary" style="width:100%;margin-top:12px" onclick="submitCustomBid('${id}')">SET PROXY BID</button></div>`;
 }
 
