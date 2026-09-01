@@ -612,6 +612,9 @@ function applyElasticReup(x,before){
   // at the base coefficient.
   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
   if(cycleStart==null||whole<cycleStart){
+    // Lower integers are new Elastic decay cycles. This is also a fallback
+    // for a bid arriving before the next timer tick; upward extensions never
+    // satisfy this condition.
     a.cycleStartInteger=whole;
     a.usedIntegers=[];
     a.coef=.2;
@@ -1524,12 +1527,15 @@ function tick(){
    const whole=Math.max(0,Math.min(30,Math.floor(remaining)));
    const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
    if(cycleStart!=null&&whole<cycleStart){
+    // Commit the new Elastic cycle directly to authoritative auction state.
+    // This is timer state only: never route it through global `changed`.
     a.cycleStartInteger=whole;
     a.usedIntegers=[];
     a.coef=.2;
     a.nextCoefficient=.2;
     a.decayActive=false;
     x.auction=a;
+    save();
    }
   }
   if(remainingMs(x)<=0){finishAuction(x);changed=true}
