@@ -272,21 +272,9 @@ function routeItemToQueue(item, channelList=channels, s=state){
  const existingIds=(queues[target.id]||[]).filter(id=>id!==item.id);
  const existing=existingIds.map(id=>items.find(z=>z.id===id)).find(x=>x&&!x.sold&&x.status==='Live');
  if(existing){
-  /* Keep the item in the channel's public queue behind the live item. */
-  item.channel=target.name;
-  item.channelId=target.id;
-  item.auctionType=auctionType;
-  item.startingPrice=startPrice;
-  item.current=startPrice;
-  item.internal=item.internal||{};
-  item.internal.auctionType=auctionType;
-  item.internal.startingPrice=startPrice;
-  item.internal.era=era;
-  queues[target.id]=(queues[target.id]||[]).filter(id=>id!==item.id);
-  queues[target.id].push(item.id);
-  item.status='Queued';
-  item.endsAt=0;
-  return target;
+  channelList.forEach(c=>{queues[c.id]=(queues[c.id]||[]).filter(id=>id!==item.id);});
+  item.channel=null;item.channelId=null;item.status='Staged · Channel occupied';item.endsAt=0;
+  return null;
  }
  item.channel=target.name;
  item.channelId=target.id;
@@ -363,6 +351,41 @@ function fmt(sec){
 }
 function fmtPrecise(sec){return `${Math.max(0,Number(sec)||0).toFixed(2)}s`}
 function updatePreciseTimerDisplays(){document.querySelectorAll('[data-item-timer]').forEach(el=>{const x=item(el.dataset.itemTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});document.querySelectorAll('[data-channel-timer]').forEach(el=>{const x=activeForChannel(el.dataset.channelTimer);if(x&&x.status==='Live')el.textContent=fmt(secondsLeft(x));});const x=state.page==='auction'?item(state.activeItem):null;if(x){const el=document.getElementById('auctionTimer');if(el)el.textContent=fmt(secondsLeft(x));const bid=document.getElementById('auctionCurrent');if(bid)bid.textContent=money(x.current);const bc=document.getElementById('auctionBids');if(bc)bc.textContent=`${x.bidCount||0} bids`;const box=document.getElementById('elasticNextExtension');if(box){const ep=elasticPreview(x);box.textContent=ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—';}const et=document.querySelector('.elasticTransparency');if(et)et.style.display=(x.auctionType==='ELASTIC'&&secondsLeft(x)<=30)?'block':'none';}}
+
+function updateAllVisualCountdowns(){
+  const now=Date.now();
+  document.querySelectorAll('[data-item-timer]').forEach(element=>{
+    const x=item(element.dataset.itemTimer);
+    if(!x||x.status!=='Live')return;
+    const remainingMs=Math.max(0,(Number(x.endsAt)||0)-now);
+    const secondsTotal=Math.floor(remainingMs/1000);
+    const mins=Math.floor(secondsTotal/60);
+    const secs=secondsTotal%60;
+    const displayTime=`${mins}:${secs<10?'0':''}${secs}`;
+    element.textContent=remainingMs>0?displayTime:'ENDED';
+  });
+  document.querySelectorAll('[data-channel-timer]').forEach(element=>{
+    const x=activeForChannel(element.dataset.channelTimer);
+    if(!x||x.status!=='Live')return;
+    const remainingMs=Math.max(0,(Number(x.endsAt)||0)-now);
+    const secondsTotal=Math.floor(remainingMs/1000);
+    const mins=Math.floor(secondsTotal/60);
+    const secs=secondsTotal%60;
+    const displayTime=`${mins}:${secs<10?'0':''}${secs}`;
+    element.textContent=remainingMs>0?displayTime:'ENDED';
+  });
+  const auction=document.getElementById('auctionTimer');
+  if(auction){
+    const x=state.page==='auction'?item(state.activeItem):null;
+    if(x){
+      const remainingMs=Math.max(0,(Number(x.endsAt)||0)-now);
+      const secondsTotal=Math.floor(remainingMs/1000);
+      const mins=Math.floor(secondsTotal/60);
+      const secs=secondsTotal%60;
+      auction.textContent=remainingMs>0?`${mins}:${secs<10?'0':''}${secs}`:'ENDED';
+    }
+  }
+}
 function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return null}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
@@ -416,7 +439,7 @@ function explore(){
 }
 function auctions(){
  const activeChannels=getActiveChannels();
- return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1><p>Specialized channels run one live auction at a time while every eligible consignment remains visible in the public queue.</p></section><div class="ruChannelGrid">${activeChannels.map(c=>{const pool=queuePool(c.id),x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div><div class="tiny muted" style="margin-top:6px"><b>${pool.length}</b> item${pool.length===1?'':'s'} in public queue${pool.length>1?` · ${pool.length-1} upcoming`:''}</div></div><div class="actions"><button class="primary" onclick="openAuction('${x.id}')">Join</button><button class="secondary" onclick="openQueue('${c.id}')">View Queue</button></div></article>`}).join('')}</div>${activeChannels.length?'':`<div class="empty">No auction channels currently contain eligible inventory.</div>`}</main>`
+ return `<main><section class="hero"><div class="eyebrow">AUCTION DIRECTORY</div><h1>Choose a channel.</h1><p>Only channel permutations with your own staged inventory appear here. Each channel holds one live auction; there is no public queue.</p></section><div class="ruChannelGrid">${activeChannels.map(c=>{const x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${img(x)}</div><div><div class="eyebrow">${esc(c.auctionType)}</div><h2>${esc(c.name)}</h2><div class="ruChannelName">${esc(fullItemTitle(x))}</div><div class="tiny muted"><span data-channel-timer="${c.id}">${fmt(secondsLeft(x))}</span> · ${money(x.current)} current</div></div><div><button class="primary" onclick="openAuction('${x.id}')">Join</button></div></article>`}).join('')}</div>${activeChannels.length?'':`<div class="empty">No auction channels currently contain eligible inventory.</div>`}</main>`
 }
 
 function openAuction(id){const x=item(id);if(!x||x.sold)return setToast('That auction is no longer available.');if(x.status!=='Live')return setToast('That auction is not currently live.');state.activeItem=id;state.page='auction';state.modal=null;render();window.scrollTo(0,0)}
@@ -426,6 +449,19 @@ function openQueue(cid){openModal('queue',cid)}
 function queueModal(cid){const c=channel(cid),pool=queuePool(cid),pos=state.channelPos[cid]||0;return `<div class="modal full queueShell"><div class="modalHead"><div><div class="eyebrow">QUEUE CRITERIA</div><h2>${esc(c.name)}</h2><div class="ruQueueCriteria">${esc(criteriaText(c))}</div></div><button class="close" onclick="closeModal()">×</button></div><div class="queueScroll">${pool.map((x,i)=>`<div class="queueItem ${i===pos?'activeRow':''}" onclick="queueSelect('${cid}',${i})"><div class="queueNum">${i+1}</div><img class="queueImg" src="${x.img}" alt="${esc(x.name)}"><div><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">${i===pos?'LIVE':'QUEUED'} · ${i===pos?fmt(secondsLeft(x)):'Upcoming'}</div></div><div style="text-align:right">${i===pos?`<span class="queueStatus live">LIVE</span><div class="tiny muted">${money(x.current)}</div>`:`<span class="queueStatus queued">QUEUED</span><button class="secondary ruQueueOffer" onclick="event.stopPropagation();makeOffer('${x.id}')">Offer</button>`}</div></div>`).join('')}</div></div>`}
 function queueSelect(cid,i){const pool=queuePool(cid),x=pool[i],pos=state.channelPos[cid];if(i===pos){closeModal();openAuction(x.id);return}openModal('queueItem',{cid,i,id:x.id})}
 function queueItemModal(d){const x=item(d.id),c=channel(d.cid);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">QUEUE POSITION ${d.i+1}</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div class="visual">${img(x)}</div><div class="panel"><div class="price">${money(x.current||x.price||1)}</div><p class="muted">Queued in ${esc(c.name)}. This item cannot receive a public bid until it reaches the active slot.</p><div class="actions"><button class="primary" onclick="makeOffer('${x.id}')">Make Offer</button><button class="secondary" onclick="closeModal();openQueue('${d.cid}')">Back to Queue</button></div></div></div></div>`}
+function calculateNewEndTime(currentEndTimeMs, bidTimestampMs, extensionWindowSeconds = 15, extensionDurationSeconds = 15) {
+  const timeRemainingMs = currentEndTimeMs - bidTimestampMs;
+  const windowMs = extensionWindowSeconds * 1000;
+  const extensionMs = extensionDurationSeconds * 1000;
+
+  // If bid arrives within the extension window, extend from the current end time
+  // (or current time + extension duration).
+  if (timeRemainingMs > 0 && timeRemainingMs <= windowMs) {
+    return Math.max(currentEndTimeMs + extensionMs, bidTimestampMs + extensionMs);
+  }
+  return currentEndTimeMs;
+}
+
 function elasticPreview(x){
   if(!x||x.auctionType!=='ELASTIC')return {active:false};
   const remaining=secondsLeft(x);
@@ -503,12 +539,17 @@ function submitBid(id,amount,opts={}){
   if(!Number.isFinite(amount)||amount<minimum)return setToast(`Minimum bid is ${money(minimum)}.`),false;
   const before=secondsLeft(x);
   if(before<=0){tick();return setToast('This auction has ended.'),false;}
+  const bidTimestampMs=Date.now();
   const buyer=opts.buyer||'You';
-  const bid={id:'bid'+Date.now()+Math.random(),item:id,amount,created:Date.now(),buyer};
+  const bid={id:'bid'+bidTimestampMs+Math.random(),item:id,amount,created:bidTimestampMs,buyer};
   x.current=amount;
   x.bidCount=(Number(x.bidCount)||0)+1;
   state.bids.push(bid);
-  if(x.auctionType==='ELASTIC'&&before>0&&before<=30)applyElasticReup(x,before);
+  if(x.auctionType==='ELASTIC'&&before>0&&before<=30){
+    applyElasticReup(x,before);
+  }else{
+    x.endsAt=calculateNewEndTime(Number(x.endsAt)||0,bidTimestampMs,15,15);
+  }
   if(buyer!=='You')resolveProxyForIncomingBid(x);
   save();
   render();
@@ -1462,33 +1503,10 @@ function expireOffers(now){let changed=false;state.offers.forEach(o=>{if(o.statu
 function finishAuction(x){
  const bids=state.bids.filter(b=>b.item===x.id).sort((a,b)=>b.amount-a.amount),winning=bids[0],wasMine=winning&&winning.buyer==='You'&&winning.amount===x.current,c=channel(x.channelId),cid=c?.id;
  x.endsAt=0;ensureQueueState(state);
+ if(!winning){x.sold=false;x.status='Auction ended · No sale';if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='seller';state.sellerTab='inventory';state.activeItem=null;activity(`${x.name} ended with no sale.`);}return;}
+ x.sold=true;x.status='Auction closed';if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
  if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);
- if(!winning){
-  x.sold=false;x.status='Auction ended · No sale';
- }else{
-  x.sold=true;x.status='Auction closed';
-  if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
- }
- /* Immediately promote the next public queue item into the live slot. */
- if(cid){
-  const nextPool=queuePool(cid,state);
-  const next=nextPool.find(z=>!z.sold&&z.id!==x.id);
-  if(next){
-   next.status='Live';
-   next.channelId=cid;next.channel=c.name;next.auctionType=c.auctionType;
-   next.internal=next.internal||{};next.internal.auctionType=c.auctionType;
-   next.endsAt=Date.now()+180000;
-   next.current=Math.max(1,Number(next.startingPrice)||1);
-   next.auction=next.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
-   state.channelPos[cid]=0;
-   next.status='Live';
-  }
- }
- save();
- if(state.page==='auction'&&state.activeItem===x.id){
-  if(cid&&queuePool(cid,state).length){state.activeItem=queuePool(cid,state)[0].id;state.page='auction';activity(`${x.name} ended. The next item is now live in the channel.`);}
-  else{state.page='explore';state.activeItem=null;activity(`${x.name} ended and the channel is now available for another seller listing.`);}
- }else{render();}
+ save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
 }
 function tick(){
  const now=Date.now();
@@ -1522,7 +1540,7 @@ document.addEventListener('click',function(e){
  if(actionEl){e.preventDefault();const a=actionEl.getAttribute('data-ru-action');if(a==='notifications')openModal('notifications');else if(a==='profile')openProfile();}
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(state.modal)closeModal();else if(state.profile)closeProfile()}});
-state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();if(window.__rapidUpTickTimer)clearInterval(window.__rapidUpTickTimer);if(window.__rapidUpDisplayTimer)clearInterval(window.__rapidUpDisplayTimer);window.__rapidUpTickTimer=setInterval(tick,250);window.__rapidUpDisplayTimer=setInterval(updatePreciseTimerDisplays,50);updatePreciseTimerDisplays();
+state.exploreFilters=state.exploreFilters||{};normalizeAuctions(state);save();render();tick();if(window.__rapidUpTickTimer)clearInterval(window.__rapidUpTickTimer);if(window.__rapidUpDisplayTimer)clearInterval(window.__rapidUpDisplayTimer);window.__rapidUpTickTimer=setInterval(tick,250);window.__rapidUpDisplayTimer=setInterval(updatePreciseTimerDisplays,50);if(window.__rapidUpVisualCountdownTimer)clearInterval(window.__rapidUpVisualCountdownTimer);window.__rapidUpVisualCountdownTimer=setInterval(updateAllVisualCountdowns,1000);updatePreciseTimerDisplays();updateAllVisualCountdowns();
 </script>
 <script>window.POKEMON_TCG_MIN_SEARCH_LENGTH=3;</script>
 <script src="poketcg.js?v=20260831-pokemon-search-v3"></script>
