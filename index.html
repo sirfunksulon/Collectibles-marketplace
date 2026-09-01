@@ -1512,10 +1512,27 @@ function tick(){
  const now=Date.now();
  let changed=expireOffers(now);
  items.filter(x=>x.method==='auction'&&!x.sold&&x.status==='Live').forEach(x=>{
-  // Elastic decay and consumed-integer state persist for the lifetime of the
-  // active auction. Crossing N → N-1 must never reset the coefficient or make
-  // a previously consumed integer available again. A fresh auction receives
-  // a fresh Elastic state in finishAuction().
+  // Elastic cycle state advances with the authoritative countdown. When the
+  // countdown organically moves below the integer where the current decay
+  // cycle began, the immediately lower integer starts a fresh cycle. This is
+  // intentionally NOT triggered by every integer change: upward movement from
+  // an Elastic extension and revisits within the current cycle preserve their
+  // existing state.
+  if(x.auctionType==='ELASTIC'&&remainingMs(x)>0){
+   const a=x.auction||{};
+   const remaining=secondsLeft(x);
+   const whole=Math.max(0,Math.min(30,Math.floor(remaining)));
+   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+   if(cycleStart!=null&&whole<cycleStart){
+    a.cycleStartInteger=whole;
+    a.usedIntegers=[];
+    a.coef=.2;
+    a.nextCoefficient=.2;
+    a.decayActive=false;
+    x.auction=a;
+    changed=true;
+   }
+  }
   if(remainingMs(x)<=0){finishAuction(x);changed=true}
  });
  if(state.modal?.type==='privateBuyer'||state.modal?.type==='privateSeller'){
