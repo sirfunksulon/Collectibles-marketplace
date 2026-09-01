@@ -321,7 +321,7 @@ function normalizeAuctions(s=state){
  channels.forEach(c=>{
   const pool=queuePool(c.id,s);if(!pool.length){s.channelPos[c.id]=0;return;}
   const x=pool[0];s.channelPos[c.id]=0;x.channelId=c.id;x.channel=c.name;x.auctionType=c.auctionType;x.internal=x.internal||{};x.internal.auctionType=c.auctionType;x.internal.era=getCardEra(x.internal.year??x.year);x.internal.startingPrice=Number(x.internal.startingPrice??x.startingPrice??x.current??1);x.startingPrice=x.internal.startingPrice;x.auction=x.auction||{coef:.2,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.2};
-  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+180000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
+  if(!x.endsAt||x.endsAt<=now){x.endsAt=now+45000;const bidHigh=Math.max(0,...(s.bids||[]).filter(b=>b.item===x.id).map(b=>Number(b.amount)||0));const offerHigh=Math.max(0,...(s.offers||[]).filter(o=>o.item===x.id&&o.status==='active'&&o.expires>now).map(o=>Number(o.amount)||0));x.current=Math.max(1,bidHigh,offerHigh,Number(x.startingPrice)||1);}
   x.status='Live';
  });
 }
@@ -386,7 +386,7 @@ function updateAllVisualCountdowns(){
     }
   }
 }
-function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+180000;return live}return null}
+function activeForChannel(cid){const pool=queuePool(cid);if(!pool.length)return null;const live=pool.find(x=>x.status==='Live'&&!x.sold)||pool[0];if(live&&!live.sold){state.channelPos[cid]=0;if(live.status!=='Live')live.status='Live';if(!Number.isFinite(Number(live.endsAt))||Number(live.endsAt)<=Date.now())live.endsAt=Date.now()+45000;return live}return null}
 function activeOffers(itemId){return state.offers.filter(o=>o.item===itemId&&o.status==='active'&&o.expires>Date.now())}
 function myOffer(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>b.created-a.created)[0]}
 function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>b.created-a.created)[0]}
@@ -1512,24 +1512,24 @@ function tick(){
  const now=Date.now();
  let changed=expireOffers(now);
  items.filter(x=>x.method==='auction'&&!x.sold&&x.status==='Live').forEach(x=>{
-  // Elastic cycle state changes are timer-state mutations only. When the
-  // authoritative countdown moves below the current cycle boundary, the
-  // immediately lower integer starts a fresh decay cycle. This does not use
-  // the global `changed` flag because that flag triggers a full render(),
-  // which would destroy unrelated active DOM such as lookup inputs/results.
-  // Upward Elastic extensions cannot satisfy this condition because they only
-  // increase endsAt.
+  // Elastic cycle state advances with the authoritative countdown. When the
+  // countdown organically moves below the integer where the current decay
+  // cycle began, the immediately lower integer starts a fresh cycle. This is
+  // intentionally NOT triggered by every integer change: upward movement from
+  // an Elastic extension and revisits within the current cycle preserve their
+  // existing state.
   if(x.auctionType==='ELASTIC'&&remainingMs(x)>0){
-   x.auction=x.auction||{};
-   const whole=Math.floor(secondsLeft(x));
-   const cycleStart=Number.isFinite(Number(x.auction.cycleStartInteger))
-     ?Number(x.auction.cycleStartInteger):null;
-   if(cycleStart!==null&&whole<cycleStart){
-    x.auction.cycleStartInteger=whole;
-    x.auction.usedIntegers=[];
-    x.auction.coef=.2;
-    x.auction.nextCoefficient=.2;
-    x.auction.decayActive=false;
+   const a=x.auction||{};
+   const remaining=secondsLeft(x);
+   const whole=Math.max(0,Math.min(30,Math.floor(remaining)));
+   const cycleStart=Number.isFinite(Number(a.cycleStartInteger))?Number(a.cycleStartInteger):null;
+   if(cycleStart!=null&&whole<cycleStart){
+    a.cycleStartInteger=whole;
+    a.usedIntegers=[];
+    a.coef=.2;
+    a.nextCoefficient=.2;
+    a.decayActive=false;
+    x.auction=a;
    }
   }
   if(remainingMs(x)<=0){finishAuction(x);changed=true}
