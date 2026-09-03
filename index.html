@@ -515,7 +515,7 @@ function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>
 function setToast(msg){state.toast=msg;render();clearTimeout(window.__toast);window.__toast=setTimeout(()=>{state.toast='';render()},3000)}
 function activity(msg){state.activity=msg;render();clearTimeout(window.__activity);window.__activity=setTimeout(()=>{state.activity='';render()},3200)}
 function notify(text,target,itemId,type='MARKETPLACE'){state.notifications.unshift({id:'n'+Date.now()+Math.random(),text,target,item:itemId,type,read:false,created:Date.now()});state.unread=state.notifications.filter(n=>!n.read).length;save()}
-function route(page){const allowed=['explore','auctions','buy','auction','item','buyer','seller'];if(!allowed.includes(page))return;state.page=page;state.modal=null;state.profile=false;state.menuOpen=false;if(!state.activeItem)state.activeItem='a1';try{render();}catch(e){console.error('RapidUp route render error',page,e);state.page='explore';try{render()}catch(_){}}try{window.scrollTo(0,0)}catch(_){};}
+function route(page){const allowed=['index','explore','auctions','buy','auction','item','buyer','seller'];if(!allowed.includes(page))return;state.page=page;state.modal=null;state.profile=false;state.menuOpen=false;if(!state.activeItem)state.activeItem='a1';try{render();}catch(e){console.error('RapidUp route render error',page,e);state.page='explore';try{render()}catch(_){}}try{window.scrollTo(0,0)}catch(_){};}
 function openModal(type,data=null){state.modal={type,data};state.profile=false;state.menuOpen=false;try{render()}catch(e){console.error('RapidUp modal error',type,e);return}if(type==='consign')initConsignmentGenerator();if(type==='customBid')setTimeout(()=>{const input=document.getElementById('customBidInput');if(input){input.focus();input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitCustomBid(data)}}}},0)}
 function closeModal(){state.modal=null;render()}
 function openProfile(){state.profile=true;state.modal=null;try{render()}catch(e){console.error('RapidUp profile error',e)}}
@@ -1623,7 +1623,7 @@ function finishAuction(x){
  }
  x.sold=true;x.status='Auction closed';if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
  if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);
- normalizeAuctions(state);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
+ normalizeAuctions(state);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='index';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
 }
 function tick(){
  const now=Date.now();
@@ -1670,40 +1670,15 @@ stageRuSurgicalFixture();state.exploreFilters=state.exploreFilters||{};state.sch
 <script src="poketcg.js?v=20260831-pokemon-search-v3"></script>
 
 <script>
-/* RU-SURGICAL: fixed weekly marketplace Index/schedule layer */
-window.RU_SURGICAL_SCHEDULE={"Monday":[{"start":1,"grade":"Graded","era":"Classic","format":"Elastic"},{"start":1,"grade":"Graded","era":"Classic","format":"Sudden Death"},{"start":1,"grade":"Graded","era":"Mid Era","format":"Elastic"},{"start":1,"grade":"Graded","era":"Mid Era","format":"Sudden Death"},{"start":1,"grade":"Graded","era":"Modern","format":"Elastic"},{"start":1,"grade":"Graded","era":"Modern","format":"Sudden Death"},{"start":1,"grade":"Raw","era":"Classic","format":"Elastic"},{"start":1,"grade":"Raw","era":"Classic","format":"Sudden Death"},{"start":1,"grade":"Raw","era":"Mid Era","format":"Elastic"},{"start":1,"grade":"Raw","era":"Mid Era","format":"Sudden Death"}],"Tuesday":[{"start":1,"grade":"Raw","era":"Modern","format":"Elastic"},{"start":1,"grade":"Raw","era":"Modern","format":"Sudden Death"},{"start":5,"grade":"Graded","era":"Classic","format":"Elastic"},{"start":5,"grade":"Graded","era":"Classic","format":"Sudden Death"},{"start":5,"grade":"Graded","era":"Mid Era","format":"Elastic"},{"start":5,"grade":"Graded","era":"Mid Era","format":"Sudden Death"},{"start":5,"grade":"Graded","era":"Modern","format":"Elastic"},{"start":5,"grade":"Graded","era":"Modern","format":"Sudden Death"},{"start":5,"grade":"Raw","era":"Classic","format":"Elastic"},{"start":5,"grade":"Raw","era":"Classic","format":"Sudden Death"}],"Wednesday":[{"start":5,"grade":"Raw","era":"Mid Era","format":"Elastic"},{"start":5,"grade":"Raw","era":"Mid Era","format":"Sudden Death"},{"start":5,"grade":"Raw","era":"Modern","format":"Elastic"},{"start":5,"grade":"Raw","era":"Modern","format":"Sudden Death"},{"start":10,"grade":"Graded","era":"Classic","format":"Elastic"},{"start":10,"grade":"Graded","era":"Classic","format":"Sudden Death"},{"start":10,"grade":"Graded","era":"Mid Era","format":"Elastic"},{"start":10,"grade":"Graded","era":"Mid Era","format":"Sudden Death"},{"start":10,"grade":"Graded","era":"Modern","format":"Elastic"},{"start":10,"grade":"Graded","era":"Modern","format":"Sudden Death"}],"Thursday":[{"start":10,"grade":"Raw","era":"Classic","format":"Elastic"},{"start":10,"grade":"Raw","era":"Classic","format":"Sudden Death"},{"start":10,"grade":"Raw","era":"Mid Era","format":"Elastic"},{"start":10,"grade":"Raw","era":"Mid Era","format":"Sudden Death"},{"start":10,"grade":"Raw","era":"Modern","format":"Elastic"},{"start":10,"grade":"Raw","era":"Modern","format":"Sudden Death"},{"start":25,"grade":"Graded","era":"Mid Era","format":"Elastic"},{"start":25,"grade":"Graded","era":"Mid Era","format":"Sudden Death"},{"start":25,"grade":"Graded","era":"Modern","format":"Elastic"},{"start":25,"grade":"Graded","era":"Modern","format":"Sudden Death"}],"Friday":[{"start":25,"grade":"Raw","era":"Mid Era","format":"Elastic"},{"start":25,"grade":"Raw","era":"Mid Era","format":"Sudden Death"},{"start":25,"grade":"Raw","era":"Modern","format":"Elastic"},{"start":25,"grade":"Raw","era":"Modern","format":"Sudden Death"},{"start":50,"grade":"Graded","era":"Mid Era","format":"Elastic"},{"start":50,"grade":"Graded","era":"Mid Era","format":"Sudden Death"},{"start":25,"grade":"Raw","era":"Classic","format":"Elastic"},{"start":25,"grade":"Raw","era":"Classic","format":"Sudden Death"},{"start":25,"grade":"Graded","era":"Classic","format":"Elastic"},{"start":25,"grade":"Graded","era":"Classic","format":"Sudden Death"}],"Saturday":[{"start":50,"grade":"Graded","era":"Modern","format":"Elastic"},{"start":50,"grade":"Graded","era":"Modern","format":"Sudden Death"},{"start":50,"grade":"Raw","era":"Mid Era","format":"Elastic"},{"start":50,"grade":"Raw","era":"Mid Era","format":"Sudden Death"},{"start":50,"grade":"Raw","era":"Modern","format":"Elastic"},{"start":50,"grade":"Raw","era":"Modern","format":"Sudden Death"},{"start":100,"grade":"Graded","era":"Mid Era","format":"Elastic"},{"start":50,"grade":"Raw","era":"Classic","format":"Elastic"},{"start":50,"grade":"Raw","era":"Classic","format":"Sudden Death"},{"start":50,"grade":"Graded","era":"Classic","format":"Elastic"},{"start":50,"grade":"Graded","era":"Classic","format":"Sudden Death"}],"Sunday":[{"start":100,"grade":"Graded","era":"Mid Era","format":"Sudden Death"},{"start":100,"grade":"Graded","era":"Modern","format":"Elastic"},{"start":100,"grade":"Graded","era":"Modern","format":"Sudden Death"},{"start":100,"grade":"Raw","era":"Mid Era","format":"Elastic"},{"start":100,"grade":"Raw","era":"Mid Era","format":"Sudden Death"},{"start":100,"grade":"Raw","era":"Modern","format":"Elastic"},{"start":100,"grade":"Raw","era":"Modern","format":"Sudden Death"},{"start":100,"grade":"Raw","era":"Classic","format":"Elastic"},{"start":100,"grade":"Raw","era":"Classic","format":"Sudden Death"},{"start":100,"grade":"Graded","era":"Classic","format":"Elastic"},{"start":100,"grade":"Graded","era":"Classic","format":"Sudden Death"}]};
-window.RU_SURGICAL_START_HOUR=6;
-window.RU_SURGICAL_LOGO_SHA256="d6e0720a7886713b51bf2b00331ba1729bf110b003095915840ca042ea778167";
+/* RU-SURGICAL SAFETY: preserve the working application if stale local state/render fails. */
 (function(){
- const DAY=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
- const marketplaceDay=()=>{const d=new Date();d.setHours(d.getHours()-6);return DAY[d.getDay()]};
- const key=c=>[c.start,c.grade,c.era,c.format].join("|");
- const label=c=>["$"+c.start+" START",c.grade,c.era,c.format].join(" · ");
- const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
- window.RU_SURGICAL_MARKETPLACE_DAY=marketplaceDay;
- window.RU_SURGICAL_OPEN_QUEUE=function(k){if(window.state){window.state.selectedQueue=k;window.state.page="auctions";}window.render?.()};
- function renderIndex(){
-   const app=document.getElementById("app")||document.body, old=document.getElementById("ru-index-search");
-   const q=(old?.value||"").trim().toLowerCase(), today=marketplaceDay();
-   let h='<section id="ru-surgical-index" style="padding:18px"><div style="display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap"><div><h1 style="margin:0">Marketplace Index</h1><div style="opacity:.72;margin-top:4px">72 channels · fixed weekly public schedule · private offers remain available across the full index</div></div><input id="ru-index-search" value="'+esc(q)+'" placeholder="Search items or channels…" style="min-width:280px;padding:10px 12px;border-radius:8px;border:1px solid #ccc"></div>';
-   for(const d of ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]){
-     const active=d===today, arr=window.RU_SURGICAL_SCHEDULE[d]||[];
-     const shown=arr.filter(c=>!q||label(c).toLowerCase().includes(q));
-     h+='<section style="margin-top:18px;padding:14px;border-radius:12px;'+(active?'font-weight:700;box-shadow:0 0 0 2px rgba(0,0,0,.18);':'border:1px solid rgba(0,0,0,.10);')+'"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">'+d+(active?' · TODAY':'')+'</h2>'+(active?'<button id="ru-go-auctions" type="button">Visit Auction Tab →</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:10px">';
-     for(const c of shown)h+='<article style="border:1px solid #ccc;border-radius:10px;padding:10px"><strong>'+esc(label(c))+'</strong><div style="font-size:.9em;margin-top:5px">25 staged positions</div><button type="button" data-ruq="'+esc(key(c))+'" style="margin-top:8px">View Queue</button></article>';
-     h+='</div></section>';
-   }
-   h+='</section>'; app.innerHTML=h;
-   document.getElementById("ru-index-search")?.addEventListener("input",renderIndex);
-   document.getElementById("ru-go-auctions")?.addEventListener("click",()=>window.navigate?.("auctions"));
-   app.querySelectorAll("[data-ruq]").forEach(b=>b.addEventListener("click",()=>window.RU_SURGICAL_OPEN_QUEUE(b.dataset.ruq)));
- }
- const nav0=window.navigate, render0=window.render;
- if(nav0)window.navigate=function(p){if(p==="explore")p="index";if(p==="index"){window.state&&(window.state.page="index");renderIndex();return}return nav0.apply(this,arguments)};
- if(render0)window.render=function(){if(window.state?.page==="index"||window.state?.page==="explore")return renderIndex();return render0.apply(this,arguments)};
- function navFix(){document.querySelectorAll("button,a,[role=tab]").forEach(el=>{if((el.textContent||"").trim()==="Explore"){el.textContent="Index";el.onclick=e=>{e.preventDefault();window.navigate?.("index")}}})}
- window.RU_SURGICAL_VALIDATE=()=>({daily:Object.fromEntries(Object.entries(window.RU_SURGICAL_SCHEDULE).map(([d,a])=>[d,a.length])),channels:72,unique:new Set(Object.values(window.RU_SURGICAL_SCHEDULE).flat().map(key)).size,logoSha256:window.RU_SURGICAL_LOGO_SHA256});
- setInterval(navFix,750);
+  window.addEventListener('error', function(e){
+    if(!document.getElementById('app')) return;
+    var app=document.getElementById('app');
+    if(!app.innerHTML.trim()){
+      app.innerHTML='<main style="padding:32px"><div class="eyebrow">RAPIDUP</div><h1>Marketplace Index</h1><p class="muted">The marketplace is restoring its working state.</p><button class="primary" onclick="try{localStorage.removeItem('rapidup_refinement_v27_indexed_inventory');location.reload()}catch(_){location.reload()}">Restore Marketplace</button></main>';
+    }
+  });
 })();
 </script>
 </body>
