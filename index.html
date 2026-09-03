@@ -515,7 +515,7 @@ function myBid(itemId){return state.bids.filter(b=>b.item===itemId).sort((a,b)=>
 function setToast(msg){state.toast=msg;render();clearTimeout(window.__toast);window.__toast=setTimeout(()=>{state.toast='';render()},3000)}
 function activity(msg){state.activity=msg;render();clearTimeout(window.__activity);window.__activity=setTimeout(()=>{state.activity='';render()},3200)}
 function notify(text,target,itemId,type='MARKETPLACE'){state.notifications.unshift({id:'n'+Date.now()+Math.random(),text,target,item:itemId,type,read:false,created:Date.now()});state.unread=state.notifications.filter(n=>!n.read).length;save()}
-function route(page){const allowed=['index','explore','auctions','buy','auction','item','buyer','seller'];if(!allowed.includes(page))return;state.page=page;state.modal=null;state.profile=false;state.menuOpen=false;if(!state.activeItem)state.activeItem='a1';try{render();}catch(e){console.error('RapidUp route render error',page,e);state.page='explore';try{render()}catch(_){}}try{window.scrollTo(0,0)}catch(_){};}
+function route(page){const allowed=['explore','auctions','buy','auction','item','buyer','seller'];if(!allowed.includes(page))return;state.page=page;state.modal=null;state.profile=false;state.menuOpen=false;if(!state.activeItem)state.activeItem='a1';try{render();}catch(e){console.error('RapidUp route render error',page,e);state.page='explore';try{render()}catch(_){}}try{window.scrollTo(0,0)}catch(_){};}
 function openModal(type,data=null){state.modal={type,data};state.profile=false;state.menuOpen=false;try{render()}catch(e){console.error('RapidUp modal error',type,e);return}if(type==='consign')initConsignmentGenerator();if(type==='customBid')setTimeout(()=>{const input=document.getElementById('customBidInput');if(input){input.focus();input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitCustomBid(data)}}}},0)}
 function closeModal(){state.modal=null;render()}
 function openProfile(){state.profile=true;state.modal=null;try{render()}catch(e){console.error('RapidUp profile error',e)}}
@@ -1623,7 +1623,7 @@ function finishAuction(x){
  }
  x.sold=true;x.status='Auction closed';if(wasMine){state.won.push({item:x.id,price:x.current,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(x.current)}.`,'won',x.id,'AUCTION WON');}
  if(cid)state.channelQueues[cid]=(state.channelQueues[cid]||[]).filter(id=>id!==x.id);
- normalizeAuctions(state);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='index';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
+ normalizeAuctions(state);save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} sold and the channel is now available for another seller listing.`);}
 }
 function tick(){
  const now=Date.now();
@@ -1668,18 +1668,5 @@ stageRuSurgicalFixture();state.exploreFilters=state.exploreFilters||{};state.sch
 </script>
 <script>window.POKEMON_TCG_MIN_SEARCH_LENGTH=3;</script>
 <script src="poketcg.js?v=20260831-pokemon-search-v3"></script>
-
-<script>
-/* RU-SURGICAL SAFETY: preserve the working application if stale local state/render fails. */
-(function(){
-  window.addEventListener('error', function(e){
-    if(!document.getElementById('app')) return;
-    var app=document.getElementById('app');
-    if(!app.innerHTML.trim()){
-      app.innerHTML='<main style="padding:32px"><div class="eyebrow">RAPIDUP</div><h1>Marketplace Index</h1><p class="muted">The marketplace is restoring its working state.</p><button class="primary" onclick="try{localStorage.removeItem('rapidup_refinement_v27_indexed_inventory');location.reload()}catch(_){location.reload()}">Restore Marketplace</button></main>';
-    }
-  });
-})();
-</script>
 </body>
 </html>
