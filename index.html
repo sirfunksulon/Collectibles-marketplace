@@ -2090,5 +2090,287 @@ state.exploreFilters=state.exploreFilters||{};ensureMarketplaceCycle(state);norm
   window.route=function(page){if(page==='index')page='explore';return oldRoute(page);};
 })();
 </script>
+
+<style>
+/* RU-SURGICAL v30 — final marketplace information architecture */
+.rapidup-header-v30{max-width:1280px;margin:0 auto;padding:9px 22px 8px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;min-width:0}
+.rapidup-header-v30 .rapidup-header-brand{min-width:0;display:flex;align-items:center;justify-content:flex-start}
+.rapidup-header-v30 .rapidup-approved-logo{display:block;width:min(300px,100%);height:auto;max-height:64px;object-fit:contain;object-position:left center;flex:none}
+.rapidup-header-v30 .rapidup-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:none}
+.rapidup-header-v30 .icon{flex:none}
+.rapidup-market-tabs{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.rapidup-market-tabs>a{display:flex;align-items:center;justify-content:center;min-height:46px;padding:11px 8px;text-decoration:none;text-transform:uppercase;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--muted);border-bottom:3px solid transparent}
+.rapidup-market-tabs>a+a{border-left:1px solid var(--line)}
+.rapidup-market-tabs>a.active{color:var(--ink);border-bottom-color:var(--ink)}
+.ruCohortGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ruCohort{cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.ruCohort:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(0,0,0,.08);border-color:#c9cbc3}
+.ruCohort.isOpen{border-color:#111;box-shadow:0 14px 38px rgba(0,0,0,.08)}
+.ruCohortHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ruCohortTitle{font-size:27px;font-weight:750;letter-spacing:-.045em;margin:4px 0}
+.ruCohortMeta{font-size:12px;color:var(--muted);line-height:1.5}
+.ruCohortStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.ruCohortNav{margin-top:14px;padding:14px;background:#f7f7f3;border:1px solid var(--line);border-radius:18px}
+.ruCohortNavGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+.ruCohortNavItem{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:left;cursor:pointer}
+.ruCohortNavItem:hover{border-color:#aaa;box-shadow:0 8px 22px rgba(0,0,0,.06)}
+.ruCohortNavItem b{display:block;font-size:14px}
+.ruCohortNavItem small{display:block;color:var(--muted);margin-top:3px;font-size:10px}
+.ruViewAll{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:#111;color:#fff;border:1px solid #111;border-radius:14px;padding:13px 14px;margin-top:10px;text-align:left;font-weight:900;cursor:pointer}
+.ruViewAll small{display:block;color:#c9cbc4;font-weight:600;margin-top:3px}
+.ruItemList{display:grid;gap:8px;margin-top:12px}
+.ruMarketplaceItem{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:9px;cursor:pointer}
+.ruMarketplaceItem .mini{width:48px;height:62px}
+.ruMarketplaceItemMain{min-width:0;flex:1}
+.ruMarketplaceItemMain>b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ruMarketplaceItemMain .tiny{line-height:1.45}
+.ruItemAction{flex:none}
+.ruAuctionCohort{border:1px solid var(--line);border-radius:20px;background:#fff;padding:16px;margin-bottom:18px}
+.ruAuctionCohortHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.ruAuctionCohortTitle{font-size:27px;font-weight:750;letter-spacing:-.045em;margin:4px 0}
+.ruAuctionNav{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:14px}
+.ruAuctionNav button{min-height:48px}
+.ruAuctionChannelGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.ruAuctionChannel{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px;text-align:left;cursor:pointer}
+.ruAuctionChannel:hover{border-color:#aaa;box-shadow:0 8px 22px rgba(0,0,0,.06)}
+.ruAuctionChannel b{display:block;font-size:14px}
+.ruAuctionChannel small{display:block;color:var(--muted);margin-top:3px;font-size:10px}
+@media(max-width:700px){
+ .rapidup-header-v30{padding:7px 10px;gap:7px}
+ .rapidup-header-v30 .rapidup-approved-logo{width:min(210px,calc(100vw - 135px));max-height:58px}
+ .rapidup-header-v30 .rapidup-header-actions{gap:4px}
+ .rapidup-header-v30 .icon{width:36px;height:36px}
+ .rapidup-market-tabs>a{min-height:44px;font-size:10px;letter-spacing:.09em}
+ .ruCohortGrid,.ruCohortNavGrid,.ruAuctionChannelGrid{grid-template-columns:1fr}
+ .ruCohortTitle,.ruAuctionCohortTitle{font-size:23px}
+ .ruAuctionNav{grid-template-columns:1fr}
+}
+</style>
+<script>
+/* RU-SURGICAL v30 — final buyer-facing marketplace hierarchy */
+(function(){
+  const previousHeader=window.header;
+  const dayMs=86400000;
+  const ensureCycle=window.ensureMarketplaceCycle;
+  const isOpen=window.isOpenMarket;
+  const isLive=window.isLiveAuction;
+  const isToday=window.isAuctionToday;
+  const highest=window.highestOpenOffer;
+  const activeCount=x=>(state.offers||[]).filter(o=>o.item===x.id&&o.status==='active').length;
+  const mineOffer=x=>(state.offers||[]).filter(o=>o.item===x.id&&o.buyer==='You'&&Number(o.amount)>0).sort((a,b)=>Number(b.created)-Number(a.created))[0]?.amount||0;
+
+  function logoSrcFromHeader(){
+    try{
+      const h=previousHeader();
+      const m=h.match(/<img[^>]+class="rapidup-approved-logo"[^>]+src="([^"]+)"/);
+      return m?m[1]:'';
+    }catch(_){return '';}
+  }
+
+  function fmtClose(ts){
+    const d=new Date(ts),now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),date=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+    const diff=Math.round((date-today)/dayMs);
+    const relative=diff===0?'today':diff===1?'tomorrow':diff>1?`in ${diff} days`: 'today';
+    return `Closes ${relative} · ${d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`;
+  }
+
+  function poolKey(x){
+    return String(Number(x.auctionStartAt||0));
+  }
+
+  function openPools(){
+    const map=new Map();
+    items.filter(x=>!x.sold&&isOpen(x)).forEach(x=>{
+      const key=poolKey(x);
+      if(!map.has(key))map.set(key,{key,auctionStartAt:Number(x.auctionStartAt),items:[]});
+      map.get(key).items.push(x);
+    });
+    return [...map.values()].sort((a,b)=>a.auctionStartAt-b.auctionStartAt);
+  }
+
+  function offerChannelLabel(c){
+    const f=c.filters||{};
+    const parts=['Elastic'];
+    if(f.startingPrice!=null)parts.push(money(f.startingPrice)+' Start');
+    if(f.condition)parts.push(f.condition);
+    if(f.era)parts.push(f.era);
+    return parts.join(' · ');
+  }
+
+  function cohortChannels(group){
+    const groups=calculateChannelStructure(group.items);
+    return groups.filter(g=>g.items?.length).map(g=>({
+      key:g.items.map(x=>x.id).sort().join('|'),
+      items:g.items,
+      filters:g.filters||{},
+      name:offerChannelLabel({filters:g.filters||{}})
+    }));
+  }
+
+  function selectedOfferSource(group,channelKey,view){
+    if(view==='all')return group.items;
+    const c=cohortChannels(group).find(v=>v.key===channelKey);
+    return c?c.items:[];
+  }
+
+  function offerItemRow(x){
+    const hi=highest(x),mine=mineOffer(x);
+    const day=Math.min(6,Math.max(1,Math.floor((Date.now()-Number(x.injectedAt||x.stagedAt||x.createdAt||Date.now()))/dayMs)+1));
+    return `<div class="ruMarketplaceItem" onclick="openMarketItem('${x.id}')"><div class="mini">${img(x)}</div><div class="ruMarketplaceItemMain"><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">Day ${day} · ${hi?`current highest offer ${money(hi)}`:'no offer yet'}${mine?` · your offer ${money(mine)}`:''}</div><div class="tiny muted">Auction threshold ${money(x.startingPrice||x.internal?.startingPrice||1)}</div></div><div class="ruItemAction"><span class="pill">${hi?money(hi):'OFFER'}</span></div></div>`;
+  }
+
+  function renderCohort(group,index){
+    const selected=state.openOfferPool===group.key;
+    const view=selected?(state.openOfferView||'channels'):'channels';
+    const channels=cohortChannels(group);
+    const selectedChannel=state.openOfferChannel||'';
+    const source=selectedOfferSource(group,selectedChannel,view);
+    const activeOffers=group.items.reduce((n,x)=>n+activeCount(x),0);
+    const close=group.auctionStartAt;
+    return `<section class="card ruCohort ${selected?'isOpen':''}" onclick="state.openOfferPool='${group.key}';state.openOfferView='channels';state.openOfferChannel='';render()">
+      <div class="ruCohortHead"><div><div class="eyebrow">OPEN MARKET</div><div class="ruCohortTitle">${esc(fmtClose(close))}</div><div class="ruCohortMeta">${group.items.length} item${group.items.length===1?'':'s'} · ${channels.length} channel${channels.length===1?'':'s'}</div></div><span class="pill">Days 1–6</span></div>
+      <div class="ruCohortStats"><div class="offerStat"><span class="tiny muted">Items</span><b>${group.items.length}</b></div><div class="offerStat"><span class="tiny muted">Active offers</span><b>${activeOffers}</b></div><div class="offerStat"><span class="tiny muted">Auction begins</span><b>${new Date(close).toLocaleDateString([], {month:'short',day:'numeric'})}</b></div></div>
+      ${selected?`<div class="ruCohortNav" onclick="event.stopPropagation()">
+        <div class="row"><div><b>Browse this Open Market</b><div class="tiny muted">Channels describe the cohort. View All shows the full population.</div></div><button class="ghost" onclick="state.openOfferPool=null;state.openOfferView='channels';state.openOfferChannel='';render()">Close</button></div>
+        <button class="ruViewAll" onclick="event.stopPropagation();state.openOfferView='all';state.openOfferChannel='';render()"><span>VIEW ALL<small>${group.items.length} item${group.items.length===1?'':'s'} · unfiltered</small></span><span>→</span></button>
+        <div class="ruCohortNavGrid">${channels.map(ch=>{const sel=state.openOfferView==='channel'&&selectedChannel===ch.key;return `<button class="ruCohortNavItem" onclick="event.stopPropagation();state.openOfferView='channel';state.openOfferChannel='${ch.key}';render()"><span><b>${esc(ch.name)}</b><small>${ch.items.length} item${ch.items.length===1?'':'s'} · ${ch.items.reduce((n,x)=>n+activeCount(x),0)} active offers</small></span><span class="pill ${sel?'live':''}">${sel?'OPEN':'VIEW'}</span></button>`}).join('')}</div>
+        ${view==='all'||view==='channel'?`<div class="ruItemList">${source.map(offerItemRow).join('')||'<div class="empty">No inventory matches this selection.</div>'}</div>`:''}
+      </div>`:''}
+    </section>`;
+  }
+
+  window.explore=function(){
+    ensureCycle(state);
+    const pools=openPools();
+    const total=pools.reduce((n,g)=>n+g.items.length,0);
+    const offers=pools.reduce((n,g)=>n+g.items.reduce((a,x)=>a+activeCount(x),0),0);
+    return `<main><div class="ruExploreTop"><div><div class="eyebrow">LIQUIDITY MARKETPLACE</div><h1>Open Offers</h1><div class="tiny muted" style="margin-top:6px">Open Market · Days 1–6 · public competitive offers</div></div></div>
+      <div class="card" style="margin-bottom:18px"><div class="row"><div><div class="eyebrow">OPEN MARKET</div><h2 style="margin:6px 0">Choose a cohort.</h2><div class="tiny muted">Each cohort contains inventory injected during the same lifecycle period. Browse by cohort, View All, or use a descriptive channel.</div></div><span class="pill">${total} items · ${offers} active offers</span></div></div>
+      <div class="ruCohortGrid">${pools.map(renderCohort).join('')||'<div class="empty card">No items are currently in the Open Market. Inventory enters here for Days 1–6 before Day 7.</div>'}</div></main>`;
+  };
+
+  function auctionItemsToday(){
+    return items.filter(x=>!x.sold&&isToday(x));
+  }
+
+  function auctionChannelLabel(c){
+    const q=c.criteria||{};
+    const parts=['Elastic'];
+    if(q.startBand){
+      const labels={'1_4':'$1–$4','5_9':'$5–$9','10_24':'$10–$24','25_49':'$25–$49','50_99':'$50–$99','100_plus':'$100+'};
+      parts.push(labels[q.startBand]||q.startBand);
+    }else if(q.startingMin!=null)parts.push(money(q.startingMin)+' Start');
+    if(q.conditions?.length)parts.push(q.conditions.join('/'));
+    if(q.eras?.length)parts.push(q.eras.join('/'));
+    return parts.join(' · ');
+  }
+
+  function auctionItemRow(x){
+    const live=isLive(x),c=(state.presentedChannels||[]).find(ch=>(state.channelQueues?.[ch.id]||[]).includes(x.id));
+    return `<div class="ruMarketplaceItem"><div class="mini">${img(x)}</div><div class="ruMarketplaceItemMain"><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">${live?`LIVE · current bid ${money(x.current)}`:`QUEUED · current ${money(x.current||x.startingPrice)}`} · ${fmt(secondsLeft(x))} remaining</div><div class="tiny muted">Seller threshold ${money(x.startingPrice)}</div></div><div class="ruItemAction">${live?`<button class="primary" onclick="event.stopPropagation();openAuction('${x.id}')">JOIN</button>`:(c?`<button class="secondary" onclick="event.stopPropagation();openQueue('${c.id}')">QUEUE</button>`:'')}</div></div>`;
+  }
+
+  function renderAuctions(){
+    ensureCycle(state);
+    const today=auctionItemsToday();
+    const channelsToday=(state.presentedChannels||[]).filter(c=>(state.channelQueues?.[c.id]||[]).some(id=>today.some(x=>x.id===id)));
+    const view=state.auctionView||'channels';
+    const selected=state.auctionChannelFilter||'';
+    const source=selected?today.filter(x=>(state.channelQueues?.[selected]||[]).includes(x.id)):today;
+    return `<main><div class="ruExploreTop"><div><div class="eyebrow">DAY 7 MARKETPLACE</div><h1>Auctions</h1><div class="tiny muted" style="margin-top:6px">Today's ending cohort only · locked public auctions</div></div></div>
+      <section class="ruAuctionCohort"><div class="ruAuctionCohortHead"><div><div class="eyebrow">TODAY'S AUCTION COHORT</div><div class="ruAuctionCohortTitle">${today.length} item${today.length===1?'':'s'} ending today</div><div class="tiny muted">This view contains only Day 7 inventory whose auction is occurring today.</div></div><span class="pill">${channelsToday.length} channel${channelsToday.length===1?'':'s'}</span></div>
+      <div class="ruAuctionNav"><button class="${view==='all'?'primary':'secondary'}" onclick="state.auctionView='all';state.auctionChannelFilter='';render()">VIEW ALL</button><button class="${view==='channels'?'primary':'secondary'}" onclick="state.auctionView='channels';state.auctionChannelFilter='';render()">CHANNELS</button></div>
+      ${view==='channels'?`<div class="ruAuctionChannelGrid">${channelsToday.map(c=>{const count=(state.channelQueues?.[c.id]||[]).filter(id=>today.some(x=>x.id===id)).length;const live=(state.channelQueues?.[c.id]||[]).map(id=>item(id)).find(x=>x&&isLive(x));return `<button class="ruAuctionChannel" onclick="state.auctionChannelFilter='${c.id}';state.auctionView='all';render()"><span><b>${esc(auctionChannelLabel(c))}</b><small>${count} item${count===1?'':'s'} · ${live?'LIVE NOW':'today'}</small></span><span class="pill">${live?'LIVE':'VIEW'}</span></button>`}).join('')||'<div class="empty card">No auction channels are ending today.</div>'}</div>`:`<div class="ruItemList">${source.map(auctionItemRow).join('')||'<div class="empty">No auctions are currently in today’s cohort.</div>'}</div>`}
+      </section></main>`;
+  }
+
+  window.auctionsV30=renderAuctions;
+  window.header=function(){
+    const src=logoSrcFromHeader();
+    return `<header class="topbar"><div class="rapidup-header-v30"><div class="rapidup-header-brand"><img class="rapidup-approved-logo" src="${src}" alt="RapidUp"></div><div class="rapidup-header-actions"><button class="icon ruSearchIcon" aria-label="Global search" onclick="openModal('exploreFilters')">⌕</button><button class="icon" aria-label="Concierge" onclick="route('buyer');state.buyerTab='concierge';render()">✦</button><button class="icon rapidup-menu-button" aria-label="Account menu" onclick="state.menuOpen=true;render()">☰</button></div></div><nav class="rapidup-market-tabs" aria-label="Marketplace"><a class="${state.page==='explore'?'active':''}" href="#offers" onclick="route('explore');return false">Open Offers</a><a class="${state.page==='auctions'||state.page==='auction'?'active':''}" href="#auctions" onclick="route('auctions');return false">Auctions</a><a class="${state.page==='buy'||state.page==='item'?'active':''}" href="#buy" onclick="route('buy');return false">Buy Now</a></nav></header>`;
+  };
+
+  state.openOfferPool=state.openOfferPool||null;
+  state.openOfferView=state.openOfferView||'channels';
+  state.openOfferChannel=state.openOfferChannel||'';
+  state.auctionView=state.auctionView||'channels';
+  state.auctionChannelFilter=state.auctionChannelFilter||'';
+
+  const oldRoute=window.route;
+  window.route=function(page){
+    if(page==='index')page='explore';
+    if(page==='explore'){state.openOfferPool=null;state.openOfferView='channels';state.openOfferChannel='';}
+    if(page==='auctions'){state.auctionView='channels';state.auctionChannelFilter='';}
+    return oldRoute(page);
+  };
+
+  const oldRender=window.render;
+  window.render=function(){
+    if(state.page==='explore'||state.page==='auctions'){
+      ensureCycle(state);
+      const body=state.page==='explore'?window.explore():renderAuctions();
+      document.body.classList.toggle('auction-mode',false);
+      document.getElementById('app').innerHTML=header()+body+modals()+renderCartDrawer()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');
+      return;
+    }
+    oldRender();
+  };
+  render();
+})();
+</script>
+
+
+<style>
+/* RU-SURGICAL v31 — lifecycle lock + calibration guard */
+.ruLockedNote{border:1px solid #ead7bc;background:#f7eee2;border-radius:14px;padding:12px 14px;font-size:12px;line-height:1.5}
+</style>
+<script>
+/* RU-SURGICAL v31 — preserve seller calibration while enforcing Day 7 lock */
+(function(){
+  const oldSaveStageEdit=window.saveStageEdit;
+  const oldConvertMethod=window.convertMethod;
+  const oldStageEditModal=window.stageEditModal;
+  const isLive=window.isLiveAuction;
+
+  function day7Locked(x){return !!x&&isLive(x);}
+
+  window.setAuctionStartPrice=function(id){
+    const x=item(id);
+    if(!x||x.sold)return setToast('That item is no longer available.');
+    if(day7Locked(x))return setToast('Day 7 is locked. The auction starting price can no longer be changed.');
+    if(x.method!=='auction')return setToast('Auction calibration is available only for public auctions.');
+    const current=Number(x.startingPrice||x.internal?.startingPrice||1);
+    const raw=prompt(`Auction starting price for ${x.name}:`,String(current));
+    if(raw===null)return;
+    const price=Number(raw);
+    if(!Number.isFinite(price)||price<=0)return setToast('Enter a valid auction starting price.');
+    x.startingPrice=price;
+    x.internal=x.internal||{};
+    x.internal.startingPrice=price;
+    save();
+    render();
+    activity(`${x.name} auction starting price calibrated to ${money(price)}.`);
+  };
+
+  window.saveStageEdit=function(id){
+    const x=item(id);
+    if(day7Locked(x))return setToast('Day 7 is locked. Seller settings cannot be changed during the live auction.');
+    return oldSaveStageEdit(id);
+  };
+
+  window.convertMethod=function(id,method){
+    const x=item(id);
+    if(day7Locked(x))return setToast('Day 7 is locked. The live auction cannot be changed to another selling method.');
+    return oldConvertMethod(id,method);
+  };
+
+  window.stageEditModal=function(id){
+    const x=item(id);
+    if(!day7Locked(x))return oldStageEditModal(id);
+    return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB · DAY 7</div><h2>Auction locked</h2><div class="tiny muted">${esc(fullItemTitle(x))}</div></div><button class="close" onclick="closeModal()">×</button></div><div class="ruLockedNote"><b>This auction is locked.</b><br>The starting price, selling method, and auction configuration were finalized before Day 7. Seller changes are unavailable until the auction concludes.</div><div class="list" style="margin-top:14px"><div class="listrow"><span>Starting price</span><b>${money(x.startingPrice)}</b></div><div class="listrow"><span>Current competitive bid</span><b>${money(x.current)}</b></div><div class="listrow"><span>Auction type</span><b>ELASTIC</b></div><div class="listrow"><span>Status</span><b>DAY 7 · LOCKED</b></div></div><div class="actions" style="margin-top:16px"><button class="primary" onclick="closeModal()">Done</button></div></div>`;
+  };
+})();
+</script>
+
 </body>
 </html>
