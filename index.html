@@ -2372,5 +2372,85 @@ state.exploreFilters=state.exploreFilters||{};ensureMarketplaceCycle(state);norm
 })();
 </script>
 
+
+<style>
+/* RU-SURGICAL v32 — seller cleanup + deterministic test staging */
+.ruSellerStageAction{margin-bottom:16px;display:flex;justify-content:flex-end}
+</style>
+<script>
+/* RU-SURGICAL v32 — remove private-auction entry UI, restore consignment entry, and stage a seven-pool test fixture. */
+(function(){
+  // Seller-facing private auctions are no longer an available selling path.
+  window.methodModal=function(id){
+    const x=item(id);
+    if(!x)return '';
+    const method=x.method==='auction'?'auction':'buy';
+    return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">SELLING METHOD</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div>
+      <div class="methodBox current"><div class="eyebrow">CURRENT METHOD</div><b>${method==='buy'?'BUY NOW':'PUBLIC AUCTION'}</b><p class="tiny muted">Choose a new selling state explicitly. RapidUp will update the inventory object rather than merely showing a suggestion.</p></div>
+      <div class="sectionhead"><h3>Available methods</h3></div>
+      <div class="methodGrid">
+        <button class="methodOption ${method==='buy'?'current':''}" onclick="convertMethod('${id}','buy')"><b>BUY NOW</b><span class="tiny muted">Immediate execution at a listed price.</span></button>
+        <button class="methodOption ${method==='auction'?'current':''}" onclick="convertMethod('${id}','auction')"><b>PUBLIC AUCTION</b><span class="tiny muted">Enter the seven-day Open Market → Day 7 lifecycle.</span></button>
+      </div>
+      <div class="notice" style="margin-top:13px"><b>What will happen?</b><br>${method==='buy'?'Changing away from Buy Now removes immediate purchase availability until you return it.':'Changing to Buy Now makes the listed price immediately executable.'} Public auctions use the seller-controlled Elastic starting price and seven-day lifecycle.</div></div>`;
+  };
+
+  // The consignment generator remains the seller's normal listing-entry surface.
+  const priorSellerOverview=window.sellerOverview;
+  window.sellerOverview=function(){
+    const base=priorSellerOverview?priorSellerOverview():'';
+    return `${base}<div class="ruSellerStageAction"><button class="primary" onclick="openModal('consign')">Consign / Create Listing</button></div>`;
+  };
+
+  // Keep the obsolete private-auction seller tab/surface unavailable even if older state contains it.
+  const SEED='ru-test-fixture-v32';
+  if(state.ruTestFixture===SEED)return;
+
+  const day=86400000,now=Date.now(),d=new Date(now);
+  const localDayStart=new Date(d.getFullYear(),d.getMonth(),d.getDate(),9,0,0,0).getTime();
+  const auctionStart=Math.min(now-15*60*1000,localDayStart+3*60*60*1000);
+  const auctionEnd=auctionStart+12*60*60*1000;
+  const poolConfigs=[
+    {injectedAt:auctionStart-6*day},
+    {injectedAt:auctionStart-5*day},
+    {injectedAt:auctionStart-4*day},
+    {injectedAt:auctionStart-3*day},
+    {injectedAt:auctionStart-2*day},
+    {injectedAt:auctionStart-1*day},
+    {injectedAt:auctionStart}
+  ];
+  const starts=[1,5,10,25,50];
+  const conditions=['Raw','Graded'];
+  const years=[2000,2008,2018,2021,2024];
+  const testItems=[];
+  function baseItem(id,method,idx){
+    const start=starts[idx%starts.length],condition=conditions[idx%conditions.length],year=years[idx%years.length],era=getCardEra(year),grade=condition==='Graded'?'PSA 10':'Raw';
+    const title=`RapidUp Test Collectible ${String(idx+1).padStart(2,'0')}`;
+    return {id,name:title,set:`Test Set ${String((idx%5)+1).padStart(2,'0')} #${idx+1}`,fullName:title,year,era,category:'Pokemon',method,type:method==='auction'?'Auction':'Buy Now',channel:null,channelId:null,auctionType:method==='auction'?'ELASTIC':null,startingPrice:method==='auction'?start:0,current:method==='auction'?start:0,price:method==='buy'?start:0,market:start*2,grade,lang:'English',variant:'Standard',presentation:'Standard',sold:false,staged:true,status:method==='auction'?'Open Market':'Available now',endsAt:0,bidCount:0,img:null,internal:{category:'Pokemon',year,era,condition,language:'English',variant:'Standard',presentation:'Standard',auctionType:method==='auction'?'ELASTIC':null,startingPrice:method==='auction'?start:0},auction:{coef:.4,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.4}};
+  }
+  poolConfigs.forEach((pool,p)=>{
+    for(let i=0;i<25;i++){
+      const x=baseItem(`ru-test-p${p+1}-${i+1}`,'auction',i+p);
+      x.injectedAt=pool.injectedAt;
+      x.auctionStartAt=p===0?auctionStart:pool.injectedAt+6*day;
+      x.auctionEndAt=p===0?auctionEnd:x.auctionStartAt+12*60*60*1000;
+      x.status=p===0?'Live':'Open Market';
+      if(p===0){x.endsAt=x.auctionEndAt;}
+      testItems.push(x);
+    }
+  });
+  for(let i=0;i<25;i++)testItems.push(baseItem(`ru-test-buy-${i+1}`,'buy',i));
+
+  // Remove only a prior v32 fixture, never user inventory.
+  for(let i=items.length-1;i>=0;i--)if(String(items[i].id||'').startsWith('ru-test-'))items.splice(i,1);
+  items.push(...testItems);
+  state.ruTestFixture=SEED;
+  state.sellerTab='overview';
+  save();
+  if(typeof ensureCycleV28==='function')ensureCycleV28(state);
+  render();
+})();
+</script>
+
 </body>
 </html>
