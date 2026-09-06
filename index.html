@@ -1785,8 +1785,8 @@ state.exploreFilters=state.exploreFilters||{};ensureMarketplaceCycle(state);norm
   }
   function activeOpenOffers(id){return (state.offers||[]).filter(o=>o.item===id&&o.status==='active');}
   function highestOpenOffer(x){const os=activeOpenOffers(x.id);return os.length?Math.max(...os.map(o=>Number(o.amount)||0)):0;}
-  function offerLeaderCount(x){return activeOpenOffers(x.id).length;}
-  function priorOfferForBuyer(x){const os=(state.offers||[]).filter(o=>o.item===x.id&&o.buyer==='You'&&Number(o.amount)>0).sort((a,b)=>Number(b.created)-Number(a.created));return os[0]?.amount||0;}
+  function activeOfferCount(x){return activeOpenOffers(x.id).length;}
+  function myOpenOffer(x){const os=(state.offers||[]).filter(o=>o.item===x.id&&o.buyer==='You'&&Number(o.amount)>0).sort((a,b)=>Number(b.created)-Number(a.created));return os[0]?.amount||0;}
   function closeOpenOffersForAuction(x){
     const os=activeOpenOffers(x.id);
     const hi=os.reduce((m,o)=>Math.max(m,Number(o.amount)||0),0);
@@ -1916,8 +1916,8 @@ state.exploreFilters=state.exploreFilters||{};ensureMarketplaceCycle(state);norm
   window.submitBid=function(id,amount,opts={}){const x=item(id);if(!isLiveAuction(x))return setToast('Only the live Day 7 auction can receive bids.'),false;const min=window.minBid(x);if(!Number.isFinite(amount)||amount<min)return setToast(`Minimum bid is ${money(min)}.`),false;const ts=Date.now(),buyer=opts.buyer||'You';x.current=Number(amount);x.bidCount=(Number(x.bidCount)||0)+1;state.bids=state.bids||[];state.bids.push({id:'bid'+ts+Math.random(),item:id,amount:Number(amount),created:ts,buyer});if(secondsLeft(x)<=RU_ELASTIC_WINDOW)applyElasticV28(x);if(buyer!=='You')window.resolveProxyForIncomingBid(x);save();render();if(buyer==='You')setToast(`Bid accepted at ${money(amount)}.`);return true;};
   window.submitCustomBid=function(id){const x=item(id);if(!isLiveAuction(x))return setToast('Only the live Day 7 auction can receive a proxy bid.');const max=Number(prompt(`Maximum proxy bid for ${x.name}. Your maximum remains private:`));if(!Number.isFinite(max)||max<window.minBid(x))return setToast(`Maximum must be at least ${money(window.minBid(x))}.`);state.proxyBids=state.proxyBids||{};state.proxyBids[id]={item:id,buyer:'You',max,increment:1,created:Date.now(),active:true};window.submitBid(id,window.minBid(x),{buyer:'You',proxyOpening:true});activity(`Private proxy maximum set to ${money(max)}.`);};
   window.resolveProxyForIncomingBid=function(x){const p=state.proxyBids?.[x.id];if(!p?.active||p.buyer!=='You')return;if(x.current>=p.max){p.active=false;return;}const response=Math.min(p.max,x.current+p.increment),before=secondsLeft(x);if(response<=x.current){p.active=false;return;}x.current=response;x.bidCount=(Number(x.bidCount)||0)+1;state.bids.push({id:'proxy'+Date.now()+Math.random(),item:x.id,amount:response,created:Date.now(),buyer:'You',proxy:true});if(before<=RU_ELASTIC_WINDOW)applyElasticV28(x);if(response>=p.max)p.active=false;};
-  window.auctionPage=function(){const x=item(state.activeItem);if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;if(!isLiveAuction(x))return `<main class="auctionScreen"><div class="empty">This auction is not live.</div></main>`;const ep=elasticPreviewV28(x),p=state.proxyBids?.[x.id];return `<main class="auctionScreen"><div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div><div class="ruChannelName">DAY 7 · ELASTIC AUCTION</div><button class="ruReturn" onclick="route('explore')">← Return to Index</button><div class="elasticTransparency" style="display:${ep.active?'block':'none'}"><div class="elasticReadout"><span>NEXT ELASTIC RESPONSE</span><b id="elasticNextExtension">${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b><span class="sub">${ep.active?(ep.used?'integer already consumed':'finite response from current integer'):'outside terminal zone'}</span></div></div><div class="ruAuctionControls"><div class="ruProductName">${esc(fullItemTitle(x))}</div><div class="ruBidRow"><div class="ruBidActions"><button class="fastBid" onclick="submitBid('${x.id}',window.minBid(item('${x.id}')),{buyer:'You'})">BID ${money(window.minBid(x))}</button><button class="overlayCustom" onclick="submitCustomBid('${x.id}')">SET PROXY MAX</button></div><div class="ruLive"><div><span>CURRENT BID</span><b id="auctionCurrent">${money(x.current)}</b></div><div><span>TIME REMAINING</span><b id="auctionTimer">${fmt(secondsLeft(x))}</b></div></div></div></div><button class="ruChannelInfo" onclick="openModal('auctionInfo','${x.id}')"><span class="ruAuctionInfoIcon">i</span><span>Seller threshold ${money(x.startingPrice)} · ${p?.active?'your proxy maximum is private':''}</span></button></div></div></main>`;};
-  window.finishAuction=function(x){if(!x||x.sold)return;const bids=(state.bids||[]).filter(b=>b.item===x.id&&Number(b.amount)>0);x.endsAt=0;if(!bids.length){x.status='Auction failed';x.auction=x.auction||{};x.auction.failed=true;x.auction.failedAt=Date.now();x.channel=null;x.channelId=null;save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} did not sell at the seller's auction price.`)}return;}const winning=bids.sort((a,b)=>Number(b.amount)-Number(a.amount))[0];x.sold=true;x.status='Sold';x.soldAt=Date.now();if(winning.buyer==='You'){state.won.push({item:x.id,price:winning.amount,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(winning.amount)}.`,'won',x.id,'AUCTION WON');}save();if(state.page==='auction'&&state.activeItem===x.id){state.page='explore';state.activeItem=null;activity(`${x.name} sold at ${money(winning.amount)}.`)}};
+  window.auctionPage=function(){const x=item(state.activeItem);if(!x||x.sold)return `<main class="auctionScreen"><div class="empty">This auction is no longer active.</div></main>`;if(!isLiveAuction(x))return `<main class="auctionScreen"><div class="empty">This auction is not live.</div></main>`;const ep=elasticPreviewV28(x),p=state.proxyBids?.[x.id];return `<main class="auctionScreen"><div class="auctionStage"><div class="auctionImage elevatedAuctionImage">${img(x)}<div class="auctionOverlayShade"></div><div class="ruChannelName">DAY 7 · ELASTIC AUCTION</div><button class="ruReturn" onclick="route('auctions')">← Return to Auctions</button><div class="elasticTransparency" style="display:${ep.active?'block':'none'}"><div class="elasticReadout"><span>NEXT ELASTIC RESPONSE</span><b id="elasticNextExtension">${ep.active?(ep.used?'+0.00s':'+'+ep.extension.toFixed(2)+'s'):'—'}</b><span class="sub">${ep.active?(ep.used?'integer already consumed':'finite response from current integer'):'outside terminal zone'}</span></div></div><div class="ruAuctionControls"><div class="ruProductName">${esc(fullItemTitle(x))}</div><div class="ruBidRow"><div class="ruBidActions"><button class="fastBid" onclick="submitBid('${x.id}',window.minBid(item('${x.id}')),{buyer:'You'})">BID ${money(window.minBid(x))}</button><button class="overlayCustom" onclick="submitCustomBid('${x.id}')">SET PROXY MAX</button></div><div class="ruLive"><div><span>CURRENT BID</span><b id="auctionCurrent">${money(x.current)}</b></div><div><span>TIME REMAINING</span><b id="auctionTimer">${fmt(secondsLeft(x))}</b></div></div></div></div><button class="ruChannelInfo" onclick="openModal('auctionInfo','${x.id}')"><span class="ruAuctionInfoIcon">i</span><span>Seller threshold ${money(x.startingPrice)} · ${p?.active?'your proxy maximum is private':''}</span></button></div></div></main>`;};
+  window.finishAuction=function(x){if(!x||x.sold)return;const bids=(state.bids||[]).filter(b=>b.item===x.id&&Number(b.amount)>0);x.endsAt=0;if(!bids.length){x.status='Auction failed';x.auction=x.auction||{};x.auction.failed=true;x.auction.failedAt=Date.now();x.channel=null;x.channelId=null;save();if(state.page==='auction'&&state.activeItem===x.id){state.page='auctions';state.activeItem=null;activity(`${x.name} did not sell at the seller's auction price.`)}return;}const winning=bids.sort((a,b)=>Number(b.amount)-Number(a.amount))[0];x.sold=true;x.status='Sold';x.soldAt=Date.now();if(winning.buyer==='You'){state.won.push({item:x.id,price:winning.amount,source:'Public Auction',date:Date.now()});notify(`You won ${x.name} for ${money(winning.amount)}.`,'won',x.id,'AUCTION WON');}save();if(state.page==='auction'&&state.activeItem===x.id){state.page='auctions';state.activeItem=null;activity(`${x.name} sold at ${money(winning.amount)}.`)}};
   function recoveryModal(id){const x=item(id);if(!x)return '';return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">AUCTION FAILED</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice"><b>No buyer met the seller's auction price.</b><br>The seller can now choose a new Buy Now price or re-inject the item into a fresh seven-day lifecycle.</div><div class="actions" style="margin-top:15px"><button class="primary" onclick="postFailedToBuyNow('${id}')">Move to Buy Now</button><button class="secondary" onclick="reinjectItem('${id}')">Re-inject Inventory</button></div></div>`;}
   window.postFailedToBuyNow=function(id){const x=item(id);if(!x||x.sold||x.status!=='Auction failed')return setToast('Only a failed auction can move to Buy Now.');const price=Number(prompt(`Buy Now price for ${x.name}:`,String(x.startingPrice||1)));if(!Number.isFinite(price)||price<=0)return;x.method='buy';x.type='Buy Now';x.price=price;x.current=price;x.status='Available now';x.auction=null;x.channel=null;x.channelId=null;x.endsAt=0;save();closeModal();activity(`${x.name} moved to Buy Now at ${money(price)}.`)};
   window.reinjectItem=function(id){const x=item(id);if(!x||x.sold||x.status!=='Auction failed')return setToast('Only a failed auction can be re-injected.');x.injectedAt=Date.now();x.auctionStartAt=auctionStartFor(x.injectedAt);x.auctionEndAt=x.auctionStartAt+RU_AUCTION_SECONDS*1000;x.status='Open Market';x.method='auction';x.type='Auction';x.startingPrice=Math.max(1,Number(x.startingPrice||x.internal?.startingPrice||1));x.current=x.startingPrice;x.endsAt=0;x.bidCount=0;x.channel=null;x.channelId=null;x.auction={failed:false,elastic:{usedIntegers:[],coefficient:RU_ELASTIC_COEFFICIENT,cycleStartInt:null,lastInt:null}};save();rebuildMarketplaceV28(state);closeModal();activity(`${x.name} re-injected into a fresh seven-day lifecycle.`)};
@@ -1943,8 +1943,8 @@ state.exploreFilters=state.exploreFilters||{};ensureMarketplaceCycle(state);norm
   };
   function criteriaTextV28(c){const q=queueCriteriaV28(c),b=q.startBand?bandByKey(q.startBand).label:'All starts';return [b,q.conditions?.join('/'),q.eras?.join('/')].filter(Boolean).join(' · ');}
   function channelCardV28(c){const pool=queuePool(c.id),x=activeForChannel(c.id);return `<article class="card ruChannel"><div class="itemimg">${x?img(x):'<div class="empty" style="padding:15px">No current item</div>'}</div><div><span class="pill ${x?'live':''}">${x?'LIVE':'TODAY'}</span><span class="pill">${pool.length} item${pool.length===1?'':'s'}</span><h2 style="margin:7px 0 3px">${esc(c.name)}</h2><div class="ruChannelName">Elastic · ${esc(criteriaTextV28(c))}</div><div class="tiny muted" style="margin-top:5px">${x?`Ends ${new Date(x.auctionEndAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`:'Auction cohort'}</div></div><div class="channel-actions"><button class="secondary" onclick="openQueue('${c.id}')">View Queue</button>${x?`<button class="primary" onclick="openAuction('${x.id}')">Join</button>`:''}<button class="info" onclick="openModal('channelInfo','${c.id}')">i</button></div></article>`;}
-  function indexItemCardV28(x){const l=lifecycle(x),auction=x.method==='auction',hi=highestOpenOffer(x);return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${auction?'AUCTION':'BUY NOW'}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(fullItemTitle(x))}</div><div class="ruPrice">${money(auction?(l.phase==='open'?(hi||x.startingPrice):x.current):x.price)}</div><div class="ruMeta">${auction?(l.phase==='open'?`OPEN MARKET · ${offerLeaderCount(x)} offer${offerLeaderCount(x)===1?'':'s'}`:l.phase==='auction'?`LIVE · <span data-item-timer="${x.id}">${fmt(secondsLeft(x))}</span> remaining`:'AUCTION FAILED'): 'Available now'}</div><div class="ruActions">${auction?(l.phase==='open'?`<button class="primary" onclick="openMarketItem('${x.id}')">View Open Market</button>`:l.phase==='auction'?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="secondary" onclick="openItem('${x.id}')">View Result</button>`):`<button class="primary" onclick="route('buy')">Buy Now</button>`}</div></div></article>`;}
-  function openMarketCardV28(x){const hi=highestOpenOffer(x),mine=priorOfferForBuyer(x),counter=Number(x.sellerCounter||0),start=Number(x.startingPrice||1),l=lifecycle(x);return `<article class="card ruOpenOfferCard"><div class="row"><div><div class="eyebrow">OPEN OFFER · DAY ${l.day}</div><h3 style="margin:5px 0">${esc(fullItemTitle(x))}</h3></div><span class="pill">${offerLeaderCount(x)} active</span></div><div class="offerGrid"><div class="offerStat"><span class="tiny muted">Highest offer</span><b>${hi?money(hi):'—'}</b></div><div class="offerStat"><span class="tiny muted">Seller counter</span><b>${counter?money(counter):'—'}</b></div><div class="offerStat"><span class="tiny muted">Auction price</span><b>${money(start)}</b></div><div class="offerStat"><span class="tiny muted">Auction begins</span><b>${new Date(l.auctionStartAt).toLocaleDateString([], {month:'short',day:'numeric'})}</b></div></div><div class="actions" style="margin-top:12px"><button class="primary" onclick="openMarketItem('${x.id}')">${hi?'Compete with '+money(hi):'Make first offer'}</button>${mine?`<span class="pill">Your offer ${money(mine)}</span>`:''}</div></article>`;}
+  function indexItemCardV28(x){const l=lifecycle(x),auction=x.method==='auction',hi=highestOpenOffer(x);return `<article class="card itemcard"><div class="itemimg clickable" onclick="openItem('${x.id}');return false">${img(x)}</div><div class="itembody"><span class="ruSelling">${auction?'AUCTION':'BUY NOW'}</span><div class="ruTitle clickable" onclick="openItem('${x.id}');return false">${esc(fullItemTitle(x))}</div><div class="ruPrice">${money(auction?(l.phase==='open'?(hi||x.startingPrice):x.current):x.price)}</div><div class="ruMeta">${auction?(l.phase==='open'?`OPEN MARKET · ${activeOfferCount(x)} offer${activeOfferCount(x)===1?'':'s'}`:l.phase==='auction'?`LIVE · <span data-item-timer="${x.id}">${fmt(secondsLeft(x))}</span> remaining`:'AUCTION FAILED'): 'Available now'}</div><div class="ruActions">${auction?(l.phase==='open'?`<button class="primary" onclick="openMarketItem('${x.id}')">View Open Market</button>`:l.phase==='auction'?`<button class="primary" onclick="openAuction('${x.id}')">View Auction</button>`:`<button class="secondary" onclick="openItem('${x.id}')">View Result</button>`):`<button class="primary" onclick="route('buy')">Buy Now</button>`}</div></div></article>`;}
+  function openMarketCardV28(x){const hi=highestOpenOffer(x),mine=myOpenOffer(x),counter=Number(x.sellerCounter||0),start=Number(x.startingPrice||1),l=lifecycle(x);return `<article class="card ruOpenOfferCard"><div class="row"><div><div class="eyebrow">OPEN OFFER · DAY ${l.day}</div><h3 style="margin:5px 0">${esc(fullItemTitle(x))}</h3></div><span class="pill">${activeOfferCount(x)} active</span></div><div class="offerGrid"><div class="offerStat"><span class="tiny muted">Highest offer</span><b>${hi?money(hi):'—'}</b></div><div class="offerStat"><span class="tiny muted">Seller counter</span><b>${counter?money(counter):'—'}</b></div><div class="offerStat"><span class="tiny muted">Auction price</span><b>${money(start)}</b></div><div class="offerStat"><span class="tiny muted">Auction begins</span><b>${new Date(l.auctionStartAt).toLocaleDateString([], {month:'short',day:'numeric'})}</b></div></div><div class="actions" style="margin-top:12px"><button class="primary" onclick="openMarketItem('${x.id}')">${hi?'Compete with '+money(hi):'Make first offer'}</button>${mine?`<span class="pill">Your offer ${money(mine)}</span>`:''}</div></article>`;}
   window.openMarketItem=function(id){const x=item(id);if(!x||!isOpenMarket(x))return setToast('Open Offers are available only during Days 1–6.');state.activeItem=id;openModal('openMarket',id)};
   window.activeOffers=function(itemId){return (state.offers||[]).filter(o=>o.item===itemId&&o.status==='active');};
   window.myOffer=function(itemId){return activeOffers(itemId).filter(o=>o.buyer==='You').sort((a,b)=>Number(b.created)-Number(a.created))[0]||null;};
@@ -1988,6 +1988,107 @@ state.exploreFilters=state.exploreFilters||{};ensureMarketplaceCycle(state);norm
   ensureCycleV28(state);save();render();tick();window.__rapidUpTickTimer=setInterval(tick,250);window.__rapidUpDisplayTimer=setInterval(updatePreciseTimerDisplays,50);window.__rapidUpVisualCountdownTimer=setInterval(updateAllVisualCountdowns,1000);
 })();
 
+</script>
+
+<style>
+/* RU-SURGICAL v29 — marketplace navigation architecture */
+.rapidup-header{grid-template-columns:minmax(0,1fr) auto auto!important;align-items:center!important}
+.rapidup-approved-logo{width:min(300px,100%)!important;max-height:70px!important;transform:none!important}
+.rapidup-header nav{display:flex!important;align-items:center!important;gap:20px!important;white-space:nowrap!important}
+.rapidup-header nav a{font-weight:900!important;text-decoration:none!important;padding:10px 3px 8px!important;color:var(--ink)!important}
+.rapidup-header nav a.active{border-bottom:3px solid var(--ink)!important}
+@media(max-width:700px){
+  .rapidup-header{grid-template-columns:minmax(135px,1fr) auto auto!important;gap:7px!important;padding:7px 10px!important}
+  .rapidup-approved-logo{width:min(145px,100%)!important;max-width:145px!important;max-height:55px!important}
+  .rapidup-header nav{gap:8px!important}
+  .rapidup-header nav a{font-size:10px!important;padding:9px 1px 7px!important;letter-spacing:-.02em!important}
+  .rapidup-header .icon{width:34px!important;height:34px!important}
+  .rapidup-header-actions{gap:4px!important}
+}
+.ruOfferPoolGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ruOfferPool{cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.ruOfferPool:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(0,0,0,.08);border-color:#c9cbc3}
+.ruOfferPool.isOpen{border-color:#111;box-shadow:0 14px 38px rgba(0,0,0,.08)}
+.ruOfferPoolHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ruOfferPoolTitle{font-size:26px;font-weight:750;letter-spacing:-.045em;margin:4px 0}
+.ruOfferPoolMeta{font-size:12px;color:var(--muted);line-height:1.45}
+.ruOfferPoolStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.ruOfferPoolStats .offerStat{min-width:0}
+.ruOfferChannels{margin-top:12px;padding:14px;background:#f7f7f3;border:1px solid var(--line);border-radius:18px}
+.ruOfferChannelGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+.ruOfferChannel{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:left;cursor:pointer}
+.ruOfferChannel:hover{border-color:#aaa;box-shadow:0 8px 22px rgba(0,0,0,.06)}
+.ruOfferChannel b{display:block;font-size:14px}
+.ruOfferChannel small{display:block;color:var(--muted);margin-top:3px;font-size:10px}
+.ruOfferItems{margin-top:12px;display:grid;gap:8px}
+.ruOfferItem{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:9px;cursor:pointer}
+.ruOfferItem .mini{width:45px;height:58px}
+.ruOfferItemMain{min-width:0;flex:1}
+.ruOfferItemMain b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:620px){
+ .ruOfferPoolGrid,.ruOfferChannelGrid{grid-template-columns:1fr}
+ .ruOfferPoolTitle{font-size:23px}
+ .ruOfferPoolStats{grid-template-columns:1fr 1fr 1fr}
+}
+</style>
+<script>
+/* RU-SURGICAL v29 — Open Offers is the marketplace landing surface. */
+(function(){
+  const OFFER_BANDS=[{key:'1_4',label:'$1–$4',min:1,max:4},{key:'5_9',label:'$5–$9',min:5,max:9},{key:'10_24',label:'$10–$24',min:10,max:24},{key:'25_49',label:'$25–$49',min:25,max:49},{key:'50_99',label:'$50–$99',min:50,max:99},{key:'100_plus',label:'$100+',min:100,max:Infinity}];
+  const offerStartBand=price=>{const n=Math.max(1,Number(price)||1);return OFFER_BANDS.find(b=>n>=b.min&&n<=b.max)||OFFER_BANDS[OFFER_BANDS.length-1];};
+  const offerLifecycle=x=>{const dayMs=86400000,injected=Number(x.injectedAt||x.stagedAt||x.createdAt||Date.now()),start=Number(x.auctionStartAt||injected+6*dayMs),now=Date.now();return {day:Math.min(6,Math.max(1,Math.floor((now-injected)/dayMs)+1)),auctionStartAt:start};};
+  const activeOfferCount=x=>(state.offers||[]).filter(o=>o.item===x.id&&o.status==='active').length;
+  const myOpenOffer=x=>(state.offers||[]).filter(o=>o.item===x.id&&o.buyer==='You'&&Number(o.amount)>0).sort((a,b)=>Number(b.created)-Number(a.created))[0]?.amount||0;
+  function openOfferItems(){return items.filter(x=>!x.sold&&window.isOpenMarket(x));}
+  function offerBandItems(xs){
+    const groups=new Map();
+    xs.forEach(x=>{
+      const b=offerStartBand(x.startingPrice??x.internal?.startingPrice??1);
+      if(!groups.has(b.key))groups.set(b.key,{band:b,items:[]});
+      groups.get(b.key).items.push(x);
+    });
+    return [...groups.values()].sort((a,b)=>a.band.min-b.band.min);
+  }
+  function offerChannels(group){
+    const map=new Map();
+    group.items.forEach(x=>{
+      const condition=String(x.internal?.condition||x.condition||(isGraded(x)?'Graded':'Raw'));
+      const era=String(x.internal?.era||x.era||getCardEra(x.internal?.year??x.year));
+      const key=condition+'|'+era;
+      if(!map.has(key))map.set(key,{condition,era,items:[]});
+      map.get(key).items.push(x);
+    });
+    return [...map.values()].sort((a,b)=>`${a.condition}|${a.era}`.localeCompare(`${b.condition}|${b.era}`));
+  }
+  function offerChannelLabel(ch){return [ch.condition,ch.era].filter(v=>v&&v!=='Unknown').join(' · ')||'All applicable cards';}
+  function openOfferItemRow(x){
+    const hi=highestOpenOffer(x),mine=myOpenOffer(x),l=offerLifecycle(x);
+    return `<div class="ruOfferItem" onclick="openMarketItem('${x.id}')"><div class="mini">${img(x)}</div><div class="ruOfferItemMain"><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">Day ${l.day} · ${hi?`highest offer ${money(hi)}`:'no offer yet'}${mine?` · yours ${money(mine)}`:''}</div></div><span class="pill">${hi?money(hi):'OFFER'}</span></div>`;
+  }
+  function renderOfferPool(group,index,selectedGroup,selectedChannel){
+    const active=selectedGroup===group.band.key;
+    const channels=offerChannels(group);
+    const shown=active&&selectedChannel?channels.find(c=>`${c.condition}|${c.era}`===selectedChannel):null;
+    const source=shown?shown.items:group.items;
+    const activeOffers=group.items.reduce((n,x)=>n+activeOfferCount(x),0);
+    const hi=Math.max(0,...group.items.map(x=>highestOpenOffer(x)));
+    return `<section class="card ruOfferPool ${active?'isOpen':''}" onclick="state.openOfferGroup='${group.band.key}';state.openOfferChannel=${shown?'null':JSON.stringify(selectedChannel||null)};render()"><div class="ruOfferPoolHead"><div><div class="eyebrow">AUCTION POOL ${index+1}</div><div class="ruOfferPoolTitle">${esc(group.band.label)}</div><div class="ruOfferPoolMeta">Open Market · Days 1–6 · ${group.items.length} item${group.items.length===1?'':'s'}</div></div><span class="pill">${channels.length} channel${channels.length===1?'':'s'}</span></div><div class="ruOfferPoolStats"><div class="offerStat"><span class="tiny muted">Active offers</span><b>${activeOffers}</b></div><div class="offerStat"><span class="tiny muted">Highest offer</span><b>${hi?money(hi):'—'}</b></div><div class="offerStat"><span class="tiny muted">Auction day</span><b>Day 7</b></div></div>${active?`<div class="ruOfferChannels" onclick="event.stopPropagation()"><div class="row"><div><b>Navigation channels</b><div class="tiny muted">Choose a channel to narrow this pool.</div></div><button class="ghost" onclick="state.openOfferGroup=null;state.openOfferChannel=null;render()">Close</button></div><div class="ruOfferChannelGrid">${channels.map(ch=>{const key=ch.condition+'|'+ch.era,sel=selectedChannel===key;return `<button class="ruOfferChannel" onclick="event.stopPropagation();state.openOfferChannel='${key}';render()"><span><b>${esc(offerChannelLabel(ch))}</b><small>${ch.items.length} item${ch.items.length===1?'':'s'} · ${ch.items.reduce((n,x)=>n+activeOfferCount(x),0)} active offers</small></span><span class="pill ${sel?'live':''}">${sel?'OPEN':'VIEW'}</span></button>`}).join('')}</div>${shown?`<div class="ruOfferItems">${source.map(openOfferItemRow).join('')}</div>`:''}</div>`:''}</section>`;
+  }
+  window.explore=function(){
+    ensureCycleV28(state);
+    const xs=openOfferItems();
+    const groups=offerBandItems(xs);
+    const selectedGroup=state.openOfferGroup||'';
+    const selectedChannel=state.openOfferChannel||'';
+    const selected=groups.find(g=>g.band.key===selectedGroup);
+    const totalOffers=xs.reduce((n,x)=>n+activeOfferCount(x),0);
+    return `<main><div class="ruExploreTop"><div><div class="eyebrow">LIQUIDITY MARKETPLACE</div><h1>Open Offers</h1><div class="tiny muted" style="margin-top:6px">Competitive Open Market · Days 1–6 · Auction on Day 7</div></div><button class="icon ruSearchIcon" aria-label="Global search" onclick="openModal('exploreFilters')">⌕</button></div><div class="card" style="margin-bottom:18px"><div class="row"><div><div class="eyebrow">OPEN MARKET</div><h2 style="margin:6px 0">Choose an auction pool.</h2><div class="tiny muted">Buyers compete against the current highest offer. Select a pool to reveal the navigation channels within it.</div></div><span class="pill">${xs.length} items · ${totalOffers} offers</span></div></div><div class="ruOfferPoolGrid">${groups.map((g,i)=>renderOfferPool(g,i,selectedGroup,selectedChannel)).join('')||'<div class="empty card">No items are currently in the Open Market. Items move here for six days before their Day 7 auction.</div>'}</div></main>`;
+  };
+  const previousHeader=window.header;
+  window.header=function(){const h=previousHeader();return h.replace(/<nav aria-label="Primary">[\s\S]*?<\/nav>/,`<nav aria-label="Primary"><a class="${state.page==='explore'?'active':''}" href="#offers" onclick="route('explore');return false">Open Offers</a><a class="${state.page==='auctions'||state.page==='auction'?'active':''}" href="#auctions" onclick="route('auctions');return false">Auctions</a><a class="${state.page==='buy'||state.page==='item'?'active':''}" href="#buy" onclick="route('buy');return false">Buy Now</a></nav>`)};
+  const oldRoute=window.route;
+  window.route=function(page){if(page==='index')page='explore';return oldRoute(page);};
+})();
 </script>
 </body>
 </html>
