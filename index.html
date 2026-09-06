@@ -2452,5 +2452,185 @@ state.exploreFilters=state.exploreFilters||{};ensureMarketplaceCycle(state);norm
 })();
 </script>
 
+<style>
+/* RU-SURGICAL v33 — RapidUp Cycle: universal lifecycle, no Buy Now, no cohorts */
+.elasticTransparency,.ruExtend{display:none!important}
+.ruCycleChoice{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ruCycleChoice button{border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px;text-align:left}.ruCycleChoice button.current{border:2px solid #111}.ruCycleChoice b{display:block;margin-bottom:4px}.ruCyclePrice{font-size:24px;font-weight:900}
+@media(max-width:620px){.ruCycleChoice{grid-template-columns:1fr}}
+</style>
+<script>
+/* RU-SURGICAL v33 — implement the agreed RapidUp Cycle architecture. */
+(function(){
+  function cycleDay(x,now=Date.now()){
+    if(typeof lifecycle==='function')return lifecycle(x,now).day;
+    const injected=Number(x?.injectedAt||x?.stagedAt||x?.createdAt||now);
+    return Math.min(6,Math.max(1,Math.floor((now-injected)/86400000)+1));
+  }
+  function cyclePrice(x){return Number(x?.price||x?.startingPrice||x?.internal?.startingPrice||1)}
+  function openItems(){return items.filter(x=>!x.sold&&x.method==='auction'&&isOpenMarket(x));}
+  function todayItems(){return items.filter(x=>!x.sold&&x.method==='auction'&&isAuctionToday(x));}
+
+  function cycleChannels(xs){
+    try{
+      return calculateChannelStructure(xs).map(c=>({
+        ...c,
+        name:String(c.name||'').replace(/\bElastic\b\s*·?\s*/gi,'').replace(/\bElastic\b/gi,'').replace(/\s+·\s+·/g,' · ').replace(/^\s*·\s*/,'').trim()
+      }));
+    }catch(_){return []}
+  }
+
+  function channelLabel(c){
+    const q=c?.criteria||{},parts=[];
+    if(q.startingMin!=null)parts.push(money(q.startingMin)+' Price');
+    if(q.conditions?.length)parts.push(q.conditions.join('/'));
+    if(q.eras?.length)parts.push(q.eras.join('/'));
+    return parts.join(' · ')||'All Pokémon';
+  }
+
+  function cycleItemRow(x){
+    const hi=Number(window.highestOpenOffer?window.highestOpenOffer(x):0)||0;
+    const mine=(state.offers||[]).filter(o=>o.item===x.id&&o.buyer==='You'&&o.status==='active').sort((a,b)=>Number(b.amount)-Number(a.amount))[0]?.amount||0;
+    const l=lifecycle(x);
+    return `<div class="ruMarketplaceItem" onclick="openMarketItem('${x.id}')"><div class="mini">${img(x)}</div><div class="ruMarketplaceItemMain"><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">Day ${l.day} · ${hi?`highest committed offer ${money(hi)}`:'no offer yet'}${mine?` · your offer ${money(mine)}`:''}</div><div class="tiny muted">Price ${money(cyclePrice(x))}</div></div><div class="ruItemAction"><span class="pill">${hi?money(hi):'OFFER'}</span></div></div>`;
+  }
+
+  window.explore=function(){
+    ensureCycle(state);
+    const xs=openItems(), channels=cycleChannels(xs), selected=state.openOfferChannel||'', source=selected?xs.filter(x=>{
+      const c=channels.find(c=>c.id===selected);return c?.inventoryIds?.includes(x.id);
+    }):xs;
+    return `<main><div class="ruExploreTop"><div><div class="eyebrow">RAPIDUP CYCLE</div><h1>Open Offers</h1><div class="tiny muted" style="margin-top:6px">Days 1–6 · committed competitive offers</div></div></div>
+      <div class="card" style="margin-bottom:18px"><div class="row"><div><div class="eyebrow">OPEN MARKET</div><h2 style="margin:6px 0">Discover the market.</h2><div class="tiny muted">Every item is in a RapidUp Cycle. Browse all available Pokémon or narrow discovery with descriptive channels.</div></div><span class="pill">${xs.length} items · ${(state.offers||[]).filter(o=>o.status==='active'&&xs.some(x=>x.id===o.item)).length} active offers</span></div></div>
+      <button class="ruViewAll" onclick="state.openOfferChannel='';render()"><span>VIEW ALL<small>${xs.length} item${xs.length===1?'':'s'} · unfiltered</small></span><span>→</span></button>
+      <div class="ruAuctionChannelGrid" style="margin-top:10px">${channels.map(c=>`<button class="ruAuctionChannel" onclick="state.openOfferChannel='${c.id}';render()"><span><b>${esc(channelLabel(c))}</b><small>${(c.inventoryIds||[]).filter(id=>xs.some(x=>x.id===id)).length} items</small></span><span class="pill">VIEW</span></button>`).join('')}</div>
+      <div class="ruItemList">${source.map(cycleItemRow).join('')||'<div class="empty">No items are currently in the Open Market.</div>'}</div></main>`;
+  };
+
+  window.renderAuctions=function(){
+    ensureCycle(state);
+    const xs=todayItems(),channels=cycleChannels(xs),selected=state.auctionChannelFilter||'',source=selected?xs.filter(x=>channels.find(c=>c.id===selected)?.inventoryIds?.includes(x.id)):xs;
+    return `<main><div class="ruExploreTop"><div><div class="eyebrow">RAPIDUP CYCLE · DAY 7</div><h1>Auctions</h1><div class="tiny muted" style="margin-top:6px">Only auctions ending today</div></div></div>
+      <div class="card" style="margin-bottom:18px"><div class="row"><div><div class="eyebrow">TODAY</div><h2 style="margin:6px 0">Day 7 auctions.</h2><div class="tiny muted">The Cycle is locked. Buyers compete publicly while proxy maximums remain private.</div></div><span class="pill">${xs.length} items</span></div></div>
+      <button class="ruViewAll" onclick="state.auctionChannelFilter='';render()"><span>VIEW ALL<small>${xs.length} auction${xs.length===1?'':'s'} ending today · unfiltered</small></span><span>→</span></button>
+      <div class="ruAuctionChannelGrid">${channels.map(c=>`<button class="ruAuctionChannel" onclick="state.auctionChannelFilter='${c.id}';render()"><span><b>${esc(channelLabel(c))}</b><small>${(c.inventoryIds||[]).filter(id=>xs.some(x=>x.id===id)).length} items</small></span><span class="pill">VIEW</span></button>`).join('')}</div>
+      <div class="ruItemList">${source.map(x=>`<div class="ruMarketplaceItem"><div class="mini">${img(x)}</div><div class="ruMarketplaceItemMain"><b>${esc(fullItemTitle(x))}</b><div class="tiny muted">${isLive(x)?`LIVE · current bid ${money(x.current)}`:`QUEUED · ${fmt(secondsLeft(x))} remaining`}</div><div class="tiny muted">Price ${money(cyclePrice(x))}</div></div><div class="ruItemAction">${isLive(x)?`<button class="primary" onclick="event.stopPropagation();openAuction('${x.id}')">JOIN</button>`:''}</div></div>`).join('')||'<div class="empty">No auctions are ending today.</div>'}</div></main>`;
+  };
+
+  window.methodModal=function(id){
+    const x=item(id);if(!x)return '';
+    return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">SELLING METHOD</div><h2>${esc(fullItemTitle(x))}</h2></div><button class="close" onclick="closeModal()">×</button></div>
+      <div class="methodBox current"><div class="eyebrow">METHOD</div><b>RAPIDUP CYCLE</b><p class="tiny muted">Every listing follows the seven-day RapidUp Cycle: six days of Open Market discovery followed by a locked Day 7 auction.</p></div>
+      <div class="notice" style="margin-top:13px"><b>Price</b><br>${money(cyclePrice(x))}. This is the seller's price target and the Day 7 auction threshold.</div></div>`;
+  };
+
+  window.stageEditModal=function(id){
+    const x=item(id);if(!x)return '';
+    const d=x.internal||{},locked=isLive(x);
+    return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB · INVENTORY</div><h2>Seller settings</h2><div class="tiny muted">${esc(fullItemTitle(x))}</div></div><button class="close" onclick="closeModal()">×</button></div>
+      <div class="sellerConfigGrid"><label><span class="eyebrow">Selling method</span><div class="input" style="font-weight:800">RapidUp Cycle</div></label><label><span class="eyebrow">Price</span><input id="editCyclePrice" class="input" type="number" min="1" step="1" value="${esc(cyclePrice(x))}" ${locked?'disabled':''}></label><label><span class="eyebrow">Presentation</span><select id="editPresentation" class="input" ${locked?'disabled':''}><option value="Standard" ${(d.presentation||x.presentation)==='Standard'?'selected':''}>Standard</option><option value="Premium" ${(d.presentation||x.presentation)==='Premium'?'selected':''}>Premium</option></select></label><label><span class="eyebrow">Condition</span><select id="editCondition" class="input" ${locked?'disabled':''}><option value="Raw" ${(d.condition||'Raw')==='Raw'?'selected':''}>Raw</option><option value="Graded" ${(d.condition||'Raw')==='Graded'?'selected':''}>Graded</option></select></label><label><span class="eyebrow">Language</span><select id="editLanguage" class="input" ${locked?'disabled':''}><option value="English" ${(d.language||x.lang)==='English'?'selected':''}>English</option><option value="Japanese" ${(d.language||x.lang)==='Japanese'?'selected':''}>Japanese</option><option value="Korean" ${(d.language||x.lang)==='Korean'?'selected':''}>Korean</option><option value="Chinese" ${(d.language||x.lang)==='Chinese'?'selected':''}>Chinese</option></select></label></div>
+      ${locked?'<div class="ruLockedNote" style="margin-top:14px"><b>Day 7 is locked.</b><br>The Cycle is live and seller changes are unavailable.</div>':''}
+      <div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">${locked?'Done':'Cancel'}</button>${locked?'':`<button class="primary" onclick="saveStageEdit('${id}')">Save Seller Settings</button>`}</div></div>`;
+  };
+
+  window.saveStageEdit=function(id){
+    const x=item(id);if(!x||x.sold)return;
+    if(isLive(x))return setToast('Day 7 is locked. Seller settings cannot be changed during the live auction.');
+    const price=Math.max(1,Number(document.getElementById('editCyclePrice')?.value)||1),condition=document.getElementById('editCondition')?.value||'Raw',language=document.getElementById('editLanguage')?.value||'English',presentation=document.getElementById('editPresentation')?.value||'Standard';
+    x.method='auction';x.type='RapidUp Cycle';x.price=price;x.startingPrice=price;x.current=Math.max(1,Number(x.current||price));x.auctionType='ELASTIC';x.presentation=presentation;x.lang=language;x.grade=condition==='Graded'?'PSA 10':'Raw';x.internal=x.internal||{};Object.assign(x.internal,{condition,language,presentation,startingPrice:price,auctionType:'ELASTIC'});x.status='Open Market';save();closeModal();activity(`${x.name} seller settings updated.`);render();
+  };
+
+  window.consignModal=function(){return `<div class="modal consignmentModal"><div class="modalHead"><div><div class="eyebrow">SELLER HUB</div><h2>Consignment Inventory Generator</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice">Identify the Pokémon card first. Every listing enters a RapidUp Cycle.</div><div class="consignGrid" style="margin-top:18px"><label class="consignField"><span class="eyebrow">Pokémon / Character</span><input id="consignPokemon" class="input" placeholder="Type or select Pokémon…" autocomplete="off" onfocus="openConsignmentSuggestions('pokemon')" oninput="consignmentPokemonChanged(this.value)"><div id="consignPokemonSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Set</span><input id="consignSet" class="input" placeholder="Type or select set…" autocomplete="off" onfocus="openConsignmentSuggestions('set')" oninput="consignmentSetChanged(this.value)"><div id="consignSetSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Card / Number</span><input id="consignCard" class="input" placeholder="Type card name or number…" autocomplete="off" onfocus="openConsignmentSuggestions('card')" oninput="consignmentCardChanged(this.value)"><div id="consignCardSuggestions" class="consignSuggestions" hidden></div></label><label class="consignField"><span class="eyebrow">Variant</span><input id="consignVariant" class="input" placeholder="Type or select variant…" autocomplete="off" onfocus="openConsignmentSuggestions('variant')" oninput="consignmentVariantChanged(this.value)"><div id="consignVariantSuggestions" class="consignSuggestions" hidden></div></label></div><div id="consignStatus" class="tiny muted" style="margin-top:12px">Start typing in any field to search the Pokémon TCG database.</div><div id="consignPreview" class="consignPreview"><div class="eyebrow">STANDARDIZED TITLE PREVIEW</div><div id="consignTitlePreview" class="big" style="font-size:25px;margin-top:7px">Select a card and variant.</div></div><div id="sellerConfig" class="sellerConfig" style="margin-top:16px;opacity:.48;pointer-events:none"><div class="sectionhead" style="margin:0 0 12px"><div><div class="eyebrow">SELLER-CONTROLLED ATTRIBUTES</div><h3 style="margin:5px 0 0">Configure listing</h3></div><span class="pill">Required before staging</span></div><div class="sellerConfigGrid"><label><span class="eyebrow">Selling method</span><div class="input" style="font-weight:800">RapidUp Cycle</div></label><label><span class="eyebrow">Price</span><input id="consignPrice" class="input" type="number" min="1" step="1" value="1" placeholder="Seller price" oninput="updateSellerConfigUI()"></label><label><span class="eyebrow">Presentation</span><select id="consignPresentation" class="input" onchange="updateSellerConfigUI()"><option value="Standard">Standard</option><option value="Premium">Premium</option></select></label><label><span class="eyebrow">Condition</span><select id="consignCondition" class="input" onchange="updateSellerConfigUI()"><option value="Raw">Raw</option><option value="Graded">Graded</option></select></label><label><span class="eyebrow">Language</span><select id="consignLanguage" class="input" onchange="updateSellerConfigUI()"><option value="English">English</option><option value="Japanese">Japanese</option><option value="Korean">Korean</option><option value="Chinese">Chinese</option></select></label><label id="consignGradeWrap" style="display:none"><span class="eyebrow">Grade</span><select id="consignGrade" class="input" onchange="updateSellerConfigUI()"><option value="PSA 10">PSA 10</option><option value="PSA 9">PSA 9</option><option value="CGC 10 GEM MINT">CGC 10 GEM MINT</option><option value="CGC 9.5">CGC 9.5</option><option value="BGS 9.5">BGS 9.5</option></select></label></div><div id="sellerConfigStatus" class="tiny muted" style="margin-top:10px">Select a card and variant to unlock seller settings.</div></div><div class="actions" style="margin-top:16px"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" id="consignSubmit" onclick="submitConsignment()" disabled>Create Listing</button></div></div>`};
+
+  window.updateSellerConfigUI=function(){
+    const condition=document.getElementById('consignCondition')?.value||'Raw',card=selectedConsignmentCard(),variant=consignmentCache.selectedVariant,price=Number(document.getElementById('consignPrice')?.value||0),gradeWrap=document.getElementById('consignGradeWrap');
+    if(gradeWrap)gradeWrap.style.display=condition==='Graded'?'':'none';
+    const valid=!!(card&&variant)&&Number.isFinite(price)&&price>=1,submit=document.getElementById('consignSubmit');if(submit)submit.disabled=!valid;
+    const box=document.getElementById('sellerConfig');if(box){box.style.opacity=card&&variant?'1':'.48';box.style.pointerEvents=card&&variant?'auto':'none';}
+    const status=document.getElementById('sellerConfigStatus');if(status)status.textContent=card&&variant?`RapidUp Cycle · Price ${money(price||0)}.`:'Select a card and variant to unlock seller settings.';
+  };
+
+  window.submitConsignment=function(){
+    const card=selectedConsignmentCard(),variant=consignmentCache.selectedVariant;if(!card||!variant)return setConsignmentStatus('Select a valid card and variant before staging.',true);
+    const presentation=document.getElementById('consignPresentation')?.value||'Standard',condition=document.getElementById('consignCondition')?.value||'Raw',language=document.getElementById('consignLanguage')?.value||'English',grade=condition==='Graded'?(document.getElementById('consignGrade')?.value||'PSA 10'):'Raw',price=Math.max(1,Number(document.getElementById('consignPrice')?.value)||1),year=card.releaseYear&&Number.isFinite(Number(card.releaseYear))?Number(card.releaseYear):'',title=buildConsignmentTitle({year,category:'Pokemon',setName:card.setName,variant,cardName:card.cardName,cardNumber:card.cardNumber,condition,grader:graderFromGrade(grade),grade}),now=Date.now();
+    const staged={id:`consign-${now}`,name:card.cardName,set:`${card.setName} #${card.cardNumber}`,fullName:title,year,era:getCardEra(year),category:'Pokemon',method:'auction',type:'RapidUp Cycle',channel:null,channelId:null,auctionType:'ELASTIC',startingPrice:price,current:price,price,market:0,grade,lang:language,variant,presentation,sold:false,staged:true,status:'Open Market',endsAt:0,bidCount:0,img:card.images?.large||card.images?.small||IMG.cards,injectedAt:now,auctionStartAt:auctionStartFor(now),auctionEndAt:auctionEndFor(now),internal:{category:'Pokemon',year,era:getCardEra(year),condition,language,variant,presentation,auctionType:'ELASTIC',startingPrice:price},auction:{coef:.4,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.4},consignment:{setId:card.setId,setName:card.setName,releaseYear:card.releaseYear,pokemon:card.pokemon,cardId:card.id,apiCardId:card.id,cardNumber:card.cardNumber,cardName:card.cardName,selectedVariant:variant,externalSource:'Pokemon TCG API'}};
+    items.push(staged);save();closeModal();state.sellerTab='inventory';state.toast=`Staged: ${title} · RapidUp Cycle · Price ${money(price)}`;render();setTimeout(()=>{state.toast='';render()},2600);
+  };
+
+  window.sellerOverview=function(){const inventory=items.filter(x=>!x.sold),open=inventory.filter(x=>isOpenMarket(x)),today=inventory.filter(x=>isAuctionToday(x));return `<div class="metricStrip"><div class="metric">Listings<b>${inventory.length}</b></div><div class="metric">Open Market<b>${open.length}</b></div><div class="metric">Today's auctions<b>${today.length}</b></div><div class="metric">Sold<b>${items.filter(x=>x.sold).length}</b></div></div><div class="card"><h2>RapidUp Cycle</h2><p class="muted">Every listing receives six days of Open Market price discovery followed by a locked Day 7 auction. Sellers can accept or counter committed offers and calibrate Price through Day 6.</p></div>`};
+
+  window.sellerInventory=function(){
+    const list=items.filter(x=>!x.sold);
+    if(!list.length)return '<div class="empty"><b>No inventory staged.</b><div class="emptyAction"><button class="primary" onclick="openModal(\'consign\')">Create Listing</button></div></div>';
+    const rows=list.map(x=>{
+      const l=x.method==='auction'?lifecycle(x):null,hi=x.method==='auction'?highestOpenOffer(x):0,failed=x.method==='auction'&&x.status==='Auction failed';
+      const calibrate=x.method==='auction'&&l?.phase==='open'?`<button class="primary" onclick="setAuctionStartPrice('${x.id}')">Calibrate Price</button>`:'';
+      const demand=x.method==='auction'&&l?.phase==='open'&&hi?`<button class="secondary" onclick="openModal('openMarket','${x.id}')">View Demand</button>`:'';
+      const recovery=failed?`<button class="primary" onclick="openModal('auctionRecovery','${x.id}')">Recovery</button>`:'';
+      return `<div class="listrow"><div style="display:flex;gap:11px;align-items:center"><div class="mini">${img(x)}</div><div><b>${esc(x.name)}</b><div class="tiny muted">RapidUp Cycle · ${l?.phase==='open'?`Day ${l.day}`:l?.phase==='auction'?'Day 7 · Live':'Auction failed'}</div><div class="tiny muted">Price ${money(cyclePrice(x))}${hi?` · highest offer ${money(hi)}`:''}</div></div></div><div class="actions">${calibrate}${recovery}<button class="secondary" onclick="openModal('stageEdit','${x.id}')">Seller Settings</button>${demand}</div></div>`;
+    }).join('');
+    return `<div class="list">${rows}</div>`;
+  };
+
+  window.sellerOffers=function(){
+    const xs=items.filter(x=>!x.sold&&x.method==='auction'&&isOpenMarket(x));
+    if(!xs.length)return '<div class="sectionhead"><div><h2>Open Market demand</h2><div class="tiny muted">No active Open Market demand.</div></div></div>';
+    return `<div class="sectionhead"><div><h2>Open Market demand</h2><div class="tiny muted">Committed offers remain competitive through Day 6. Sellers can accept or counter and calibrate Price while the market is open.</div></div></div>${xs.map(x=>{
+      const os=activeOffers(x.id),hi=highestOpenOffer(x),counter=Number(x.sellerCounter||0);
+      const offers=os.map((o,i)=>`<div class="offerRow"><div><b>${money(o.amount)}</b><div class="tiny muted">Committed · Offer ${i+1}</div></div><div class="actions"><button class="primary" onclick="acceptOffer('${o.id}')">Accept</button><button class="secondary" onclick="ignoreOffer('${o.id}')">Reject</button></div></div>`).join('');
+      const actions=`<div class="actions" style="margin-top:13px"><button class="primary" onclick="counterAll('${x.id}')">Counter</button><button class="secondary" onclick="openModal('stageEdit','${x.id}')">Seller Settings</button></div>`;
+      return `<div class="offerCard" style="margin-bottom:13px"><div class="row"><div><div class="eyebrow">RAPIDUP CYCLE</div><h3 style="margin:5px 0">${esc(fullItemTitle(x))}</h3></div><span class="pill">${os.length} active offer${os.length===1?'':'s'}</span></div><div class="offerGrid"><div class="offerStat"><span class="tiny muted">Highest offer</span><b>${hi?money(hi):'—'}</b></div><div class="offerStat"><span class="tiny muted">Price</span><b>${money(cyclePrice(x))}</b></div><div class="offerStat"><span class="tiny muted">Seller counter</span><b>${counter?money(counter):'—'}</b></div><div class="offerStat"><span class="tiny muted">Day</span><b>${lifecycle(x).day} / 6</b></div></div><div class="offerList">${offers}</div>${actions}</div>`;
+    }).join('')}`;
+  };
+
+  window.sellerAnalytics=function(){const active=items.filter(x=>!x.sold),open=active.filter(x=>isOpenMarket(x)),failed=active.filter(x=>x.status==='Auction failed');return `<div class="metricStrip"><div class="metric">Open Market items<b>${open.length}</b></div><div class="metric">Today's auctions<b>${active.filter(x=>isAuctionToday(x)).length}</b></div><div class="metric">Failed auctions<b>${failed.length}</b></div><div class="metric">Listings<b>${active.length}</b></div></div><div class="card"><h2>RapidUp Cycle calibration</h2><p class="muted">Price is the seller's target. Sellers can refine Price during Days 1–6 while observing committed market demand.</p></div>`};
+
+  window.auctionInfoModal=function(id){const x=item(id);if(!x)return '';return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">RAPIDUP CYCLE · DAY 7</div><h2>Proxy bidding</h2></div><button class="close" onclick="closeModal()">×</button></div><p><b>Current bid is public. Maximum proxies are private.</b></p><p>The seller's Price was set before Day 7. The Cycle is locked. Buyers see the current competitive bid while each buyer's maximum proxy remains hidden.</p><div class="notice"><b>Locked Day 7</b><br>The auction runs to its finite terminal boundary. Seller settings cannot be changed during the live auction.</div></div>`};
+
+  window.settingsModal=function(){return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Account & Settings</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="list"><div class="listrow"><span>Operating mode</span><b>${state.userMode.toUpperCase()}</b></div><div class="listrow"><span>Marketplace lifecycle</span><b>RAPIDUP CYCLE</b></div><div class="listrow"><span>Open Market</span><b>DAYS 1–6</b></div><div class="listrow"><span>Day 7</span><b>LOCKED AUCTION</b></div><div class="listrow"><span>Buyer demand privacy</span><b>PROXY MAXIMUMS PROTECTED</b></div></div></div>`};
+
+  const oldHeader=window.header;
+  window.header=function(){
+    let h=oldHeader();
+    h=h.replace(/<a[^>]*href="#buy"[^>]*>Buy Now<\/a>/i,'');
+    h=h.replace(/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/g,'grid-template-columns:repeat(2,minmax(0,1fr))');
+    h=h.replace(/<nav aria-label="Marketplace">[\s\S]*?<\/nav>/,`<nav class="rapidup-market-tabs" aria-label="Marketplace"><a class="${state.page==='explore'?'active':''}" href="#offers" onclick="route('explore');return false">Open Offers</a><a class="${state.page==='auctions'||state.page==='auction'?'active':''}" href="#auctions" onclick="route('auctions');return false">Auctions</a></nav>`);
+    return h;
+  };
+
+  const oldRoute=window.route;
+  window.route=function(page){if(page==='buy'||page==='item')page='explore';if(page==='index')page='explore';return oldRoute(page);};
+
+  const oldRender=window.render;
+  window.render=function(){
+    if(state.page==='explore'||state.page==='auctions'){
+      ensureCycle(state);const body=state.page==='explore'?window.explore():window.renderAuctions();document.body.classList.toggle('auction-mode',false);document.getElementById('app').innerHTML=header()+body+modals()+renderCartDrawer()+(state.toast?`<div class="toast">${esc(state.toast)}</div>`:'');return;
+    }
+    oldRender();
+  };
+
+  // Replace any synthetic v32 fixture with exactly 25 real Pokémon card records.
+  const SEED='ru-test-fixture-v34-uniform-real-pokemon';
+  if(state.ruTestFixture!==SEED){
+    for(let i=items.length-1;i>=0;i--)if(String(items[i].id||'').startsWith('ru-test-'))items.splice(i,1);
+    const cards=[
+      ['base1-4','Charizard','Base Set','4',1999,350],['base1-2','Blastoise','Base Set','2',1999,180],['base1-15','Venusaur','Base Set','15',1999,140],['base1-58','Pikachu','Base Set','58',1999,35],['base1-6','Gyarados','Base Set','6',1999,45],
+      ['base1-10','Mewtwo','Base Set','10',1999,70],['jungle-3','Flareon','Jungle','3',1999,40],['jungle-4','Jolteon','Jungle','4',1999,50],['jungle-8','Pidgeot','Jungle','8',1999,18],['jungle-9','Pinsir','Jungle','9',1999,15],
+      ['jungle-11','Snorlax','Jungle','11',1999,35],['jungle-12','Vaporeon','Jungle','12',1999,38],['fossil-5','Gengar','Fossil','5',1999,55],['fossil-15','Lapras','Fossil','15',1999,28],['fossil-4','Dragonite','Fossil','4',1999,65],
+      ['neo1-14','Meganium','Neo Genesis','14',2000,30],['neo1-13','Lugia','Neo Genesis','13',2000,120],['neo1-9','Typhlosion','Neo Genesis','17',2000,75],['swsh12pt5-160','Charizard','Crown Zenith','160',2023,90],['swsh9-109','Charizard VSTAR','Brilliant Stars','109',2022,55],
+      ['swsh7-215','Umbreon VMAX','Evolving Skies','215',2021,400],['swsh7-194','Rayquaza VMAX','Evolving Skies','194',2021,180],['swsh12-186','Lugia V','Silver Tempest','186',2022,95],['sv3-125','Charizard ex','Obsidian Flames','125',2023,65],['sv8-238','Pikachu ex','Surging Sparks','238',2024,110]
+    ];
+    const now=Date.now();
+    cards.forEach((c,i)=>{
+      const [id,name,set,number,year,price]=c,condition=i%4===0?'Graded':'Raw',full=`${name} — ${set} #${number}`;
+      items.push({id:`ru-real-${i+1}-${id}`,name,set:`${set} #${number}`,fullName:full,year,era:getCardEra(year),category:'Pokemon',method:'auction',type:'RapidUp Cycle',channel:null,channelId:null,auctionType:'ELASTIC',startingPrice:price,current:price,price,market:price*1.5,grade:condition==='Graded'?'PSA 10':'Raw',lang:'English',variant:'Standard',presentation:'Standard',sold:false,staged:true,status:'Open Market',endsAt:0,bidCount:0,img:`https://images.pokemontcg.io/${id.split('-').slice(0,-1).join('-')}/${number}.png`,injectedAt:now,auctionStartAt:auctionStartFor(now),auctionEndAt:auctionEndFor(now),internal:{category:'Pokemon',year,era:getCardEra(year),condition,language:'English',variant:'Standard',presentation:'Standard',auctionType:'ELASTIC',startingPrice:price},auction:{coef:.4,cycleFloor:5,lastReupAt:null,lastTrigger:null,reups:0,decayActive:false,usedIntegers:[],cycleStartInteger:null,nextCoefficient:.4}});
+    });
+    state.ruTestFixture=SEED;state.sellerTab='overview';state.openOfferChannel='';state.auctionChannelFilter='';save();
+  }
+
+  render();tick();
+})();
+</script>
+
+
 </body>
 </html>
