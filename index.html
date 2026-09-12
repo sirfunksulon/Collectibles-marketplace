@@ -145,6 +145,20 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .related-scroll .item-title{font-size:12px;padding:10px 12px 4px}
   .related-scroll .item-image{width:58px;height:74px;margin:0 0 0 14px}
 }
+
+/* Final conservative item-page correction */
+.detail-visual{position:relative}
+.detail-visual .item-title-heart{position:absolute;top:12px;right:12px;z-index:5;width:48px;height:48px;margin:0;padding:0;background:rgba(255,255,255,.92);border-radius:50%}
+.detail-visual .item-title-heart svg{width:40px;height:40px}
+.item-page-heart{display:none!important}
+@media(max-width:620px){
+  main:has(.detail-visual){padding-bottom:28px}
+  .detail-visual .item-title-heart{top:10px;right:10px;width:46px;height:46px}
+  .detail-visual .item-title-heart svg{width:38px;height:38px}
+  .related-scroll .item-card{min-height:240px;grid-template-rows:auto 92px 1fr auto}
+  .related-scroll .item-image{width:62px;height:86px;margin:0 0 0 14px}
+  .footer{padding-bottom:18px}
+}
 </style>
 </head>
 <body>
@@ -298,7 +312,7 @@ function itemPage(){
   const messageButton=!isOwner?'<button class="ghost" onclick="openModal(\'message\',\''+x.id+'\')">Message Seller</button>':'';
   const heart='<button class="item-title-heart '+(watched?'watched':'')+'" aria-label="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" title="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" onclick="toggleWatch(\''+x.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg></button>';
   const relatedHtml=related.length?'<div class="related-scroll">'+related.map(itemCard).join('')+'</div>':'<div class="empty">No other listings of this card are currently available.</div>';
-  return '<main><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button><div class="detail" style="margin-top:8px"><div class="detail-visual"><img src="'+esc(x.img||'')+'" alt="'+esc(x.fullName||x.name)+'" onclick="openImageViewer(\''+x.id+'\')"></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
+  return '<main><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button><div class="detail" style="margin-top:8px"><div class="detail-visual">'+heart+'<img src="'+esc(x.img||'')+'" alt="'+esc(x.fullName||x.name)+'" onclick="openImageViewer(\''+x.id+'\')"></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
 }
 function openImageViewer(id){const x=items.find(v=>v.id===id);if(!x)return;state.modal={type:'imageViewer',data:id};render()}
 function imageViewerModal(id){const x=items.find(v=>v.id===id);if(!x)return '';return `<div class="image-viewer" onclick="closeModal()"><button class="image-viewer-close" aria-label="Close image" onclick="event.stopPropagation();closeModal()">×</button><img src="${esc(x.img||'')}" alt="${esc(x.fullName||x.name)}"></div>`}
