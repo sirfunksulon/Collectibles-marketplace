@@ -40,25 +40,26 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
 @media(max-width:520px){.assistant-grid{grid-template-columns:1fr}.message{max-width:92%}}
 
 /* Refined item-page balance */
-.item-primary-stats{position:relative;margin-top:18px;margin-bottom:18px;padding-top:0}
-.item-primary-stats .bid-status{position:absolute;left:12px;top:-12px;z-index:2;margin:0}
+.item-primary-stats{position:relative;margin-top:28px;margin-bottom:18px;padding-top:0;overflow:visible}
+.item-primary-stats .bid-status{position:absolute;left:18px;top:-13px;z-index:3;margin:0;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;padding:5px 12px 6px;box-shadow:none}
 .item-primary-stats .item-stat{min-height:112px;padding:28px 16px 16px}
 .item-primary-stats .item-stat:first-child{padding-left:16px}
 .item-primary-stats .bid-status.winning{background:#e9f7ef;color:#19734b}
 .item-primary-stats .bid-status.outbid{background:#fcefee;color:#a44743}
 .item-details{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;margin-top:24px;padding-top:20px}
-.item-details>div{min-width:0}
+.item-details>div{min-width:0;display:grid;gap:6px;align-content:start}
 .item-details>div+div{border-left:1px solid var(--line);padding-left:28px}
+.item-details .item-seller-link,.item-details b{font-size:16px;line-height:1.2;font-weight:850}
 .related-section{margin-top:42px}
 .related-section .sectionhead{display:block;margin-bottom:16px}
 .related-section .sectionhead h2{font-size:clamp(20px,2.7vw,28px);line-height:.98;letter-spacing:-.05em;margin:0;font-weight:850}
 .related-scroll{gap:12px;padding-left:0}
-.related-scroll .item-card{flex-basis:250px;min-height:0}
-.related-scroll .item-body{padding:14px 14px 8px}
-.related-scroll .item-title{font-size:clamp(20px,2.7vw,28px);line-height:.98;letter-spacing:-.05em;font-weight:850}
-.related-scroll .item-image{width:72px;height:90px;flex-basis:90px;margin:8px auto 8px}
-.related-scroll .item-meta{padding:0 14px 12px;margin-top:0}
-.related-scroll .item-body>.tiny{padding:0 14px 12px}
+.related-scroll .item-card{flex-basis:250px;min-height:0;display:grid;grid-template-rows:auto 112px auto;background:#fff}
+.related-scroll .item-body{display:contents}
+.related-scroll .item-title{grid-row:1;font-size:clamp(20px,2.7vw,28px);line-height:.98;letter-spacing:-.05em;font-weight:850;padding:14px 14px 8px}
+.related-scroll .item-image{grid-row:2;width:78px;height:100px;flex-basis:auto;align-self:center;justify-self:center;margin:0;display:grid;place-items:center}
+.related-scroll .item-meta{grid-row:3;padding:8px 14px 12px;margin:0}
+.related-scroll .item-body>.tiny{grid-row:4;padding:0 14px 12px}
 .offer-confirmation{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
 .offer-confirmation p{margin:0;line-height:1.4}
 .offer-confirmation-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
