@@ -205,6 +205,39 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   font-family:"Avenir Next","Helvetica Neue",Arial,ui-sans-serif,system-ui,sans-serif;
 }
 .related-scroll .item-title{font-size:13px;line-height:1.08;font-weight:850;}
+
+/* Final polish pass — item page */
+.detail-visual{position:relative;}
+@media(max-width:620px){
+  /* Preserve the strong primary image while reclaiming a little vertical space. */
+  .detail-visual{min-height:150px !important;}
+  .detail-visual img{width:auto !important;height:auto !important;max-width:58% !important;max-height:205px !important;}
+
+  /* Give the heart a quiet, intentional home inside the image area. */
+  .detail-visual > .item-title-heart{right:8px !important;bottom:8px !important;width:44px !important;height:44px !important;background:rgba(255,255,255,.94) !important;}
+  .detail-visual > .item-title-heart svg{width:36px !important;height:36px !important;}
+
+  /* Compact the information rhythm without shrinking the important numbers. */
+  .item-title-row{margin:8px 0 10px !important;}
+  .item-primary-stats{margin-top:14px !important;margin-bottom:10px !important;}
+  .item-primary-stats .item-stat{min-height:78px !important;padding-top:10px !important;padding-bottom:8px !important;}
+  .item-primary-stats .item-stat b{font-size:26px !important;}
+  .item-action-grid{margin-top:12px !important;}
+  .item-details{margin-top:14px !important;padding-top:14px !important;}
+
+  /* Similar listing: same visual idea, but no unnecessary dead height. */
+  .related-section{margin-top:26px !important;}
+  .related-scroll{padding-bottom:4px !important;}
+  .related-scroll .item-card{flex-basis:220px !important;min-height:212px !important;grid-template-rows:auto 84px 1fr auto !important;}
+  .related-scroll .item-title{font-size:12px !important;line-height:1.08 !important;padding:10px 12px 3px !important;}
+  .related-scroll .item-image{width:58px !important;height:82px !important;margin:0 0 0 14px !important;}
+  .related-scroll .item-meta{padding:0 12px 2px !important;}
+  .related-scroll .item-body>.tiny{padding:0 12px 9px !important;margin:0 !important;}
+
+  /* Pull the footer up on the item page without changing other pages. */
+  main:has(.detail-visual){padding-bottom:8px !important;}
+  main:has(.detail-visual) + .footer{padding-top:0 !important;padding-bottom:8px !important;}
+}
 </style>
 </head>
 <body>
