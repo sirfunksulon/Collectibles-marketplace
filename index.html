@@ -41,7 +41,7 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
 
 /* Refined item-page balance */
 .item-primary-stats{position:relative;margin-top:28px;margin-bottom:18px;padding-top:0;overflow:visible}
-.item-primary-stats .bid-status{position:absolute;left:18px;top:-13px;z-index:3;margin:0;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;padding:5px 12px 6px;box-shadow:none}
+.item-primary-stats .bid-status{position:absolute;left:-1px;top:-13px;z-index:3;margin:0;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;padding:5px 12px 6px;box-shadow:none}
 .item-primary-stats .item-stat{min-height:112px;padding:28px 16px 16px}
 .item-primary-stats .item-stat:first-child{padding-left:16px}
 .item-primary-stats .bid-status.winning{background:#e9f7ef;color:#19734b}
@@ -49,11 +49,11 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
 .item-details{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;margin-top:24px;padding-top:20px}
 .item-details>div{min-width:0;display:grid;gap:6px;align-content:start}
 .item-details>div+div{border-left:1px solid var(--line);padding-left:28px}
-.item-details .item-seller-link,.item-details b{font-size:16px;line-height:1.2;font-weight:850}
+.item-details .item-seller-link,.item-details b{font-size:16px;line-height:1.2;font-weight:850}.item-details .item-seller-link{text-align:left}
 .related-section{margin-top:42px}
 .related-section .sectionhead{display:block;margin-bottom:16px}
 .related-section .sectionhead h2{font-size:clamp(20px,2.7vw,28px);line-height:.98;letter-spacing:-.05em;margin:0;font-weight:850}
-.related-scroll{gap:12px;padding-left:0}
+.related-scroll{gap:12px;padding-left:0;transform:translateY(-12px);margin-bottom:-12px}
 .related-scroll .item-card{flex-basis:250px;min-height:0;display:grid;grid-template-rows:auto 112px auto;background:#fff}
 .related-scroll .item-body{display:contents}
 .related-scroll .item-title{grid-row:1;font-size:clamp(20px,2.7vw,28px);line-height:.98;letter-spacing:-.05em;font-weight:850;padding:14px 14px 8px}
@@ -84,6 +84,7 @@ const API_BASE='https://api.pokemontcg.io/v2/cards';
 const API_PROXY='/api/pokemon';
 const API_PAGE_SIZE=40;
 let items=[];
+let toastTimer=null;
 let state=loadState();
 let consignmentCache={results:[],pokemon:'',set:'',card:'',variant:'',token:0,loading:false};
 
@@ -133,7 +134,7 @@ function formatRemaining(ms){
 function notify(text,type='CONCIERGE',item=null,targetUserId=state.currentUserId){state.notifications.unshift({id:'n'+Date.now()+Math.random(),text,type,item,userId:targetUserId,created:Date.now(),read:false});save()}
 function notifyWatchers(text,type,itemId){for(const u of state.users){if(u.id===state.currentUserId)continue;const list=Array.isArray(u.watchlist)?u.watchlist:[];if(list.includes(itemId))notify(text,type,itemId,u.id)}}
 function activity(text,item=null){state.activity.unshift({text,item:item||null,userId:state.currentUserId,created:Date.now()});state.activity=state.activity.slice(0,50);save()}
-function toast(text){state.toast=text;render();setTimeout(()=>{state.toast='';render()},2200)}
+function toast(text){if(toastTimer)clearTimeout(toastTimer);state.toast=text;render();toastTimer=setTimeout(()=>{state.toast='';toastTimer=null;render()},1800)}
 function route(page){state.page=page||'market';state.modal=null;state.menu=false;render()}
 function loginAs(id){if(!state.users.some(u=>u.id===id))return;state.currentUserId=id;save();state.modal=null;state.menu=false;toast('Switched to '+userLabel()+'.')}
 function createMockAccount(){const email=(document.getElementById('accountEmail')?.value||'').trim().toLowerCase(),name=(document.getElementById('accountName')?.value||'').trim(),password=document.getElementById('accountPassword')?.value||'';if(!email||!email.includes('@'))return toast('Enter a valid email.');if(!password)return toast('Enter a password.');if(state.users.some(u=>u.email===email))return toast('That email is already in use.');const u={id:'u'+Date.now()+Math.random().toString(36).slice(2),email,name:name||email.split('@')[0],role:'buyer',password};state.users.push(u);state.currentUserId=u.id;save();state.modal=null;toast('Mock account created.')}
