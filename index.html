@@ -163,6 +163,33 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .related-scroll .item-image{width:62px;height:86px;margin:0 0 0 14px}
   .footer{padding-bottom:18px}
 }
+/* Explicit final item-page styling */
+.detail,.detail button,.detail b,.detail h1,.detail span,.related-section,.related-section button,.related-section b,.related-section span,.related-section .item-title,.related-section .price,.related-section .tiny{
+  font-family:"Avenir Next","Helvetica Neue",Arial,ui-sans-serif,system-ui,sans-serif;
+}
+.detail-visual{position:relative;}
+.detail-visual > .item-title-heart{
+  position:absolute !important;
+  right:10px !important;
+  bottom:10px !important;
+  top:auto !important;
+  z-index:5;
+  width:46px !important;
+  height:46px !important;
+  margin:0 !important;
+  padding:0 !important;
+  background:rgba(255,255,255,.92) !important;
+  border-radius:50%;
+}
+.detail-visual > .item-title-heart svg{width:38px !important;height:38px !important;}
+.item-page-heart{display:none !important;}
+@media(max-width:620px){
+  .detail-visual > .item-title-heart{right:10px !important;bottom:10px !important;}
+  .related-scroll .item-image{width:62px !important;height:88px !important;}
+  .related-scroll .item-image img{width:100% !important;height:100% !important;object-fit:contain !important;}
+  main:has(.detail-visual){padding-bottom:12px;}
+  .footer{padding-bottom:10px;}
+}
 </style>
 </head>
 <body>
