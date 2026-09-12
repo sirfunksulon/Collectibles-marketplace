@@ -111,6 +111,40 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .related-scroll .item-meta{padding:0 12px 3px}
   .related-scroll .item-body>.tiny{padding:0 12px 11px}
 }
+
+/* Final item-page refinement */
+.item-page-main{position:relative}
+.item-page-heart{position:absolute;top:-2px;right:0;z-index:4}
+.item-page-heart .item-title-heart{position:static;width:48px;height:48px;margin:0;padding:0}
+.item-page-heart .item-title-heart svg{width:40px;height:40px}
+.item-title-row{display:block;padding-right:0;margin:10px 0 14px}
+.item-title-row h1{width:100%;margin:0}
+.item-primary-stats{margin-top:20px;margin-bottom:14px}
+.item-primary-stats .item-stat{min-height:82px;padding:12px 14px 10px}
+.item-primary-stats .item-stat:first-child{padding-left:14px}
+.item-primary-stats .item-stat+.item-stat{padding-left:18px}
+.item-primary-stats .item-stat b{font-size:28px;line-height:1;margin-top:6px}
+.item-primary-stats .bid-status{position:static;display:inline-flex;margin-top:8px;border:0;border-radius:9px;padding:5px 10px;box-shadow:none;align-self:flex-start}
+.related-section{margin-top:32px}
+.related-scroll .item-card{min-height:232px;grid-template-rows:auto 78px 1fr auto}
+.related-scroll .item-image{width:58px;height:76px;margin:0 0 0 14px}
+.related-scroll .item-meta{padding:0 12px 2px}
+.related-scroll .item-body>.tiny{padding:0 12px 10px;margin:0!important}
+@media(max-width:620px){
+  .item-page-heart{top:-2px;right:0}
+  .item-page-heart .item-title-heart{width:46px;height:46px}
+  .item-page-heart .item-title-heart svg{width:39px;height:39px}
+  .item-title-row{padding-right:0;margin:10px 0 12px}
+  .item-primary-stats{margin-top:18px;margin-bottom:12px}
+  .item-primary-stats .item-stat{min-height:82px;padding:11px 12px 9px}
+  .item-primary-stats .item-stat:first-child{padding-left:12px}
+  .item-primary-stats .item-stat+.item-stat{padding-left:16px}
+  .item-primary-stats .item-stat b{font-size:27px}
+  .related-section{margin-top:30px}
+  .related-scroll .item-card{flex-basis:220px;min-height:232px;grid-template-rows:auto 76px 1fr auto}
+  .related-scroll .item-title{font-size:12px;padding:10px 12px 4px}
+  .related-scroll .item-image{width:58px;height:74px;margin:0 0 0 14px}
+}
 </style>
 </head>
 <body>
@@ -264,7 +298,7 @@ function itemPage(){
   const messageButton=!isOwner?'<button class="ghost" onclick="openModal(\'message\',\''+x.id+'\')">Message Seller</button>':'';
   const heart='<button class="item-title-heart '+(watched?'watched':'')+'" aria-label="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" title="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" onclick="toggleWatch(\''+x.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg></button>';
   const relatedHtml=related.length?'<div class="related-scroll">'+related.map(itemCard).join('')+'</div>':'<div class="empty">No other listings of this card are currently available.</div>';
-  return '<main><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button><div class="detail" style="margin-top:8px"><div class="detail-visual"><img src="'+esc(x.img||'')+'" alt="'+esc(x.fullName||x.name)+'" onclick="openImageViewer(\''+x.id+'\')"></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1>'+heart+'</div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
+  return '<main><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button><div class="detail" style="margin-top:8px"><div class="detail-visual"><img src="'+esc(x.img||'')+'" alt="'+esc(x.fullName||x.name)+'" onclick="openImageViewer(\''+x.id+'\')"></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
 }
 function openImageViewer(id){const x=items.find(v=>v.id===id);if(!x)return;state.modal={type:'imageViewer',data:id};render()}
 function imageViewerModal(id){const x=items.find(v=>v.id===id);if(!x)return '';return `<div class="image-viewer" onclick="closeModal()"><button class="image-viewer-close" aria-label="Close image" onclick="event.stopPropagation();closeModal()">×</button><img src="${esc(x.img||'')}" alt="${esc(x.fullName||x.name)}"></div>`}
