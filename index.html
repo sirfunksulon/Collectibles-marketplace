@@ -74,6 +74,44 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
 .related-scroll .item-card{overflow:hidden}
 .related-scroll .item-image img{object-fit:contain}
 @media(max-width:620px){.detail-visual{min-height:165px}.detail-visual img{width:58%;max-height:205px}.item-title-row{margin:2px 0 14px}.item-primary-stats{margin-top:8px}.item-stat{padding-right:14px}.item-stat+.item-stat{padding-left:18px}.item-stat b{font-size:28px}.item-action-grid{margin-top:16px}.item-details{margin-top:18px;padding-top:16px}.related-section{margin-top:28px}.related-scroll{padding-bottom:6px}.related-scroll .item-card{flex-basis:220px;min-height:270px;grid-template-rows:auto 78px 1fr auto}.related-scroll .item-image{width:58px;height:76px;margin:4px 0 0 22px}.related-scroll .item-title{font-size:12px;padding:9px 12px 0}.related-scroll .item-meta{padding:0 12px}.related-scroll .item-body>.tiny{margin:4px 12px 10px!important}}
+
+/* Final item-page proportionality / mobile preview refinement */
+.item-title-row{position:relative;display:block;padding-right:54px;margin:2px 0 14px}
+.item-title-row h1{width:100%;margin:0}
+.item-title-heart{position:absolute;right:0;top:-2px;width:42px;height:42px;margin:0;padding:0}
+.item-title-heart svg{width:36px;height:36px}
+.item-primary-stats{margin-top:6px;margin-bottom:14px}
+.item-primary-stats .item-stat{min-height:88px;padding:20px 14px 10px}
+.item-primary-stats .item-stat:first-child{padding-left:14px}
+.item-primary-stats .item-stat+ .item-stat{padding-left:20px}
+.item-primary-stats .item-stat b{font-size:27px;line-height:1;margin-top:6px}
+.item-primary-stats .eyebrow{font-size:10px}
+.item-primary-stats .bid-status{margin-top:7px}
+.item-action-grid{margin-top:12px}
+.item-details{margin-top:14px;padding-top:15px}
+.related-section{margin-top:32px}
+.related-section .sectionhead{margin-bottom:20px}
+.related-scroll{transform:none;margin-bottom:0;padding-bottom:8px}
+.related-scroll .item-card{flex-basis:220px;min-height:242px;grid-template-rows:auto 72px 1fr auto}
+.related-scroll .item-title{font-size:13px;line-height:1.03;padding:10px 12px 4px}
+.related-scroll .item-image{width:56px;height:70px;margin:2px 0 0 20px}
+.related-scroll .item-meta{align-self:end;padding:0 12px 3px;margin:0!important}
+.related-scroll .item-body>.tiny{padding:0 12px 12px;margin:0!important;align-self:start}
+@media(max-width:620px){
+  .item-title-row{padding-right:48px;margin:0 0 12px}
+  .item-title-heart{width:40px;height:40px;top:-1px}
+  .item-title-heart svg{width:35px;height:35px}
+  .item-primary-stats .item-stat{min-height:88px;padding:18px 12px 9px}
+  .item-primary-stats .item-stat:first-child{padding-left:12px}
+  .item-primary-stats .item-stat+ .item-stat{padding-left:18px}
+  .item-primary-stats .item-stat b{font-size:26px}
+  .item-details{margin-top:14px;padding-top:14px}
+  .related-section{margin-top:30px}
+  .related-section .sectionhead{margin-bottom:18px}
+  .related-scroll .item-card{flex-basis:220px;min-height:242px;grid-template-rows:auto 70px 1fr auto}
+  .related-scroll .item-title{font-size:13px;padding:10px 12px 4px}
+  .related-scroll .item-image{width:54px;height:68px;margin:2px 0 0 20px}
+}
 </style>
 </head>
 <body>
