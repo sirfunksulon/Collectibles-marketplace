@@ -805,10 +805,10 @@ function itemPage(){
   const messageButton=!isOwner?'<button class="ghost" onclick="openModal(\'message\',\''+x.id+'\')">Message Seller</button>':'';
   const heart='<button class="item-title-heart '+(watched?'watched':'')+'" aria-label="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" title="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" onclick="toggleWatch(\''+x.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg></button>';
   const photoNav=photos.length>1?('<button type="button" class="detail-photo-nav prev" aria-label="Previous photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex-1+photos.length)%photos.length)+')">‹</button><button type="button" class="detail-photo-nav next" aria-label="Next photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex+1)%photos.length)+')">›</button><div class="detail-photo-count">'+(photoIndex+1)+' / '+photos.length+'</div>'):' ';
-  const carouselPhotos=photos.length>1?photos.concat(photos,photos,photos,photos):photos;
   const savedVirtual=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?Number(state.itemPhotoVirtualIndex):null;
   const virtualPhotoIndex=photos.length>1?(savedVirtual!==null?savedVirtual:photos.length*2+photoIndex):0;
-  const photoSlides=carouselPhotos.map((src,i)=>{const actual=photos.length?i%photos.length:0;return '<div class="detail-photo-slide" data-index="'+actual+'"><img src="'+esc(src)+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+actual+')"></div>'}).join('');
+  const slotIndexes=photos.length>1?[((photoIndex-1+photos.length)%photos.length),photoIndex,((photoIndex+1)%photos.length)]:[0];
+  const photoSlides=slotIndexes.map((actual)=>{const src=photos[actual]||'';return '<div class="detail-photo-slide" data-index="'+actual+'"><img src="'+esc(src)+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+actual+')"></div>'}).join('');
   const relatedHtml=related.length?'<div class="related-scroll">'+related.map(itemCard).join('')+'</div>':'<div class="empty">No other listings of this card are currently available.</div>';
   return '<main><div class="item-page-top"><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button>'+heart+'</div><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'" data-virtual-index="'+virtualPhotoIndex+'"><div class="detail-photo-track">'+photoSlides+'</div>'+photoNav+'</div></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
 }
@@ -828,44 +828,55 @@ function sizeItemCarouselSlides(el){
     slide.style.width=width+'px';slide.style.flexBasis=width+'px';slide.style.minWidth='0';
   });
 }
-function carouselTransform(el,virtualIndex,animate=true,dragPx=0){
+function carouselActualIndex(value,n){return ((Math.round(value)%n)+n)%n}
+function carouselTransform(el,virtualIndex,animate=true){
   const track=el?.querySelector('.detail-photo-track');if(!el||!track)return;
-  const slides=[...track.querySelectorAll('.detail-photo-slide')],n=Number(el.dataset.photoCount||0);if(!n)return;
+  const n=Number(el.dataset.photoCount||0);if(!n)return;
+  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x);if(!x||!photos.length)return;
   const width=Math.max(190,Math.min((el.clientWidth||360)*.58,340));
-  const gap=3;
-  slides.forEach((slide,i)=>{
-    let d=i-virtualIndex;
-    if(d>n/2)d-=n;
-    if(d<-n/2)d+=n;
-    if(Math.abs(d)>1.04){
-      slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');
-      slide.style.setProperty('opacity','0','important');
-      slide.style.visibility='hidden';slide.style.pointerEvents='none';slide.style.zIndex='0';
-      return;
-    }
-    slide.style.visibility='visible';slide.style.pointerEvents='auto';
-    const ad=Math.abs(d),sign=d<0?-1:1;
-    const angle=Math.max(-44,Math.min(44,d*44));
+  const slides=[...track.querySelectorAll('.detail-photo-slide')];
+  const baseIndex=Math.floor(virtualIndex);
+  const fraction=virtualIndex-baseIndex;
+  const positions=[-1,0,1];
+  slides.forEach((slide,slot)=>{
+    const actual=((baseIndex+positions[slot])%n+n)%n;
+    const relative=positions[slot]-fraction;
+    const ad=Math.abs(relative);
+    const sign=relative<0?-1:1;
+    const angle=Math.max(-42,Math.min(42,relative*42));
     const rad=Math.abs(angle)*Math.PI/180;
     const projectedHalf=(width*.5)*Math.cos(rad);
     const centerHalf=width*.5;
+    const gap=3;
     const offset=ad*(centerHalf+projectedHalf+gap);
-    const depth=ad<.001?55:-72;
-    const x=sign*offset+(dragPx||0);
-    const base=`translate3d(calc(-50% + ${x.toFixed(2)}px),-50%,${depth}px) scale(1) rotateY(${angle.toFixed(2)}deg)`;
+    const depth=ad<.001?48:-24-Math.min(ad,1)*12;
+    const tx=sign*offset;
+    const scale=1;
+    const opacity=Math.max(.78,1-Math.max(0,ad-1)*.12);
+    const src=photos[actual];
+    const img=slide.querySelector('img');
+    if(img){
+      if(img.getAttribute('src')!==src)img.src=src;
+      img.alt=`${x.fullName||x.name} — Photo ${actual+1}`;
+      img.style.visibility='visible';
+    }
+    slide.dataset.photoIndex=actual;
+    slide.onclick=()=>openImageViewer(state.activeItem,actual);
     slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');
-    if(ad<.001){slide.classList.add('is-center');slide.style.zIndex='10';slide.style.setProperty('opacity','1','important')}
-    else if(d<0){slide.classList.add('is-left');slide.style.zIndex='8';slide.style.setProperty('opacity','1','important')}
-    else{slide.classList.add('is-right');slide.style.zIndex='8';slide.style.setProperty('opacity','1','important')}
-    slide.style.setProperty('transform',base,'important');slide.style.setProperty('filter','none','important');
+    if(ad<.5)slide.classList.add('is-center');
+    else if(relative<0)slide.classList.add('is-left');
+    else slide.classList.add('is-right');
+    slide.style.visibility='visible';slide.style.pointerEvents='auto';slide.style.opacity=String(opacity);slide.style.zIndex=String(ad<.5?10:8);
+    slide.style.transition=animate?'transform .34s cubic-bezier(.22,.61,.36,1),opacity .24s ease':'none';
+    slide.style.transform=`translate3d(calc(-50% + ${tx.toFixed(2)}px),-50%,${depth.toFixed(2)}px) scale(${scale}) rotateY(${angle.toFixed(2)}deg)`;
   });
   const count=el.querySelector('.detail-photo-count');
-  if(count){const actual=((Math.round(virtualIndex)%n)+n)%n;count.textContent=`${actual+1} / ${n}`}
+  if(count){const actual=carouselActualIndex(virtualIndex,n);count.textContent=`${actual+1} / ${n}`}
 }
 function normalizeItemCarousel(animate=false){
   const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||!n)return;
   sizeItemCarouselSlides(el);
-  const actual=((Number(state.itemPhotoIndex)||0)%n+n)%n;
+  const actual=carouselActualIndex(Number(state.itemPhotoIndex)||0,n);
   const virtual=n*2+actual;
   state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=virtual;state.itemPhotoPositionItem=x.id;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:actual,virtual:virtual};
   el.dataset.index=actual;el.dataset.virtualIndex=virtual;el.dataset.photoCount=n;
@@ -874,10 +885,10 @@ function normalizeItemCarousel(animate=false){
 function queueCarouselNormalization(el){
   if(!el)return;
   const x=items.find(v=>v.id===state.activeItem),n=listingPhotos(x).length;if(n<=1)return;
-  const virtual=Number(el.dataset.virtualIndex||0),actual=((Math.round(virtual)%n)+n)%n;
-  if(virtual>=n&&virtual<4*n)return;
+  const virtual=Number(el.dataset.virtualIndex||0);
+  if(virtual>=n&&virtual<3*n)return;
   requestAnimationFrame(()=>{
-    const centered=n*2+actual;
+    const actual=carouselActualIndex(virtual,n),centered=n*2+actual;
     state.itemPhotoVirtualIndex=centered;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:centered};
     el.dataset.virtualIndex=centered;el.dataset.index=actual;carouselTransform(el,centered,false);
   });
@@ -886,13 +897,11 @@ function updateItemCarousel(index,animate=true){
   const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;
   const el=document.getElementById('detailPhotoCarousel');if(!el)return;
   const currentVirtual=Number(el.dataset.virtualIndex||n*2+(state.itemPhotoIndex||0));
-  const currentActual=((Math.round(currentVirtual)%n)+n)%n;
-  const i=((Number(index)||0)%n+n)%n;
-  let target=currentVirtual;
-  if(i!==currentActual){
-    const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;
-    target=forward<=backward?currentVirtual+forward:currentVirtual-backward;
-  }
+  const currentActual=carouselActualIndex(currentVirtual,n);
+  const i=carouselActualIndex(Number(index)||0,n);
+  if(i===currentActual){carouselTransform(el,currentVirtual,animate);return}
+  const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;
+  const target=forward<=backward?currentVirtual+forward:currentVirtual-backward;
   state.itemPhotoIndex=i;state.itemPhotoVirtualIndex=target;state.itemPhotoPositionItem=x.id;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:i,virtual:target};
   el.dataset.index=i;el.dataset.virtualIndex=target;el.dataset.photoCount=n;carouselTransform(el,target,animate);queueCarouselNormalization(el);
 }
@@ -903,29 +912,29 @@ function setupItemPhotoCarousel(){
   sizeItemCarouselSlides(el);normalizeItemCarousel(false);
   let startX=0,startY=0,lastX=0,lastTime=0,velocityX=0,startVirtual=Number(el.dataset.virtualIndex||0),dragging=false,moved=false,horizontal=false,raf=0,inertia=false;
   const stopMotion=()=>{if(raf){cancelAnimationFrame(raf);raf=0}inertia=false};
-  const renderDrag=(virtual)=>{
+  const renderDrag=virtual=>{
     const n=getPhotos().length;if(!n)return;
-    if(virtual<n||virtual>=n*3){const actual=((Math.round(virtual)%n)+n)%n;virtual=n*2+actual}
-    const actual=((Math.round(virtual)%n)+n)%n;
+    if(virtual<n||virtual>=n*3)virtual=n*2+((virtual%n)+n)%n;
+    const actual=carouselActualIndex(virtual,n);
     state.itemPhotoVirtualIndex=virtual;state.itemPhotoIndex=actual;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:virtual};
-    el.dataset.virtualIndex=virtual;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,virtual,false,0);
+    el.dataset.virtualIndex=virtual;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,virtual,false);
   };
-  const settle=(virtual)=>{
+  const settle=virtual=>{
     const n=getPhotos().length;if(!n)return;
-    const target=Math.round(virtual),actual=((target%n)+n)%n;
+    const target=Math.round(virtual),actual=carouselActualIndex(target,n);
     state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=target;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:target};
     el.dataset.virtualIndex=target;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,target,true);queueCarouselNormalization(el);
   };
   const animateInertia=(virtual,velocity)=>{
     stopMotion();inertia=true;
-    let v=velocity*1.35,current=virtual,last=performance.now();
+    let v=velocity*2.25,current=virtual,last=performance.now();
     const step=now=>{
       if(!inertia)return;
       const dt=Math.min(32,now-last);last=now;
-      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.56);
-      v*=Math.pow(.12,dt/1000);
+      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.42);
+      v*=Math.pow(.035,dt/1000);
       renderDrag(current);
-      if(Math.abs(v)<.018){inertia=false;settle(current);raf=0;return}
+      if(Math.abs(v)<.012){inertia=false;settle(current);raf=0;return}
       raf=requestAnimationFrame(step);
     };
     raf=requestAnimationFrame(step);
@@ -937,17 +946,17 @@ function setupItemPhotoCarousel(){
   el.addEventListener('touchmove',e=>{
     if(!dragging||e.touches.length!==1)return;
     const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY,now=performance.now();
-    if(!horizontal){if(Math.abs(dx)<6&&Math.abs(dy)<6)return;if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}
+    if(!horizontal){if(Math.abs(dx)<5&&Math.abs(dy)<5)return;if(Math.abs(dx)<=Math.abs(dy)*1.05){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}
     e.preventDefault();moved=true;
-    const dt=Math.max(6,now-lastTime);velocityX=(t.clientX-lastX)/dt;lastX=t.clientX;lastTime=now;
-    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.56);renderDrag(virtual);
+    const dt=Math.max(4,now-lastTime);velocityX=(t.clientX-lastX)/dt;lastX=t.clientX;lastTime=now;
+    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.42);renderDrag(virtual);
   },{passive:false});
-  el.addEventListener('touchend',e=>{
+  el.addEventListener('touchend',()=>{
     if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}
     dragging=false;horizontal=false;el.classList.remove('is-dragging');
     const current=Number(el.dataset.virtualIndex||startVirtual),speed=Math.abs(velocityX);
-    if(speed>.045)animateInertia(current,velocityX);else settle(current);
-    setTimeout(()=>{moved=false},160);
+    if(speed>.025)animateInertia(current,velocityX);else settle(current);
+    setTimeout(()=>{moved=false},180);
   },{passive:true});
   el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');settle(Number(el.dataset.virtualIndex||startVirtual))},{passive:true});
   el.addEventListener('click',e=>{if(moved){e.preventDefault();e.stopPropagation();moved=false}},{capture:true});
@@ -1159,4 +1168,19 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
 }
 /* Zoomed viewer: direct one-finger pan without transition lag. */
 .image-viewer-stage img{transition:none !important;}
+</style>
+
+<style>
+
+/* Authoritative carousel presentation: three live slots only, no ghost cards behind the revolving view. */
+.detail-photo-carousel{overflow:hidden!important;perspective:1100px!important;perspective-origin:50% 50%!important;touch-action:pan-y!important;isolation:isolate!important;}
+.detail-photo-track{position:relative!important;width:100%!important;height:100%!important;display:block!important;transform:none!important;transform-style:preserve-3d!important;}
+.detail-photo-slide{position:absolute!important;left:50%!important;top:50%!important;margin:0!important;width:58%!important;height:84%!important;min-width:0!important;flex:none!important;display:grid!important;place-items:center!important;overflow:hidden!important;border-radius:24px!important;background:#fff!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;backface-visibility:hidden!important;transform-origin:center center!important;will-change:transform!important;}
+.detail-photo-slide img{display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;opacity:1!important;visibility:visible!important;pointer-events:none!important;-webkit-user-drag:none!important;}
+.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none!important;}
+.detail-photo-slide.is-center{opacity:1!important;z-index:10!important;}
+.detail-photo-slide.is-left,.detail-photo-slide.is-right{opacity:1!important;z-index:8!important;}
+.detail-photo-slide.photo-load-error{visibility:visible!important;opacity:1!important;}
+@media(max-width:620px){.detail-photo-carousel{height:min(68vw,320px)!important;min-height:240px!important;border-radius:22px!important}.detail-photo-slide{width:58%!important;height:84%!important}}
+
 </style>
