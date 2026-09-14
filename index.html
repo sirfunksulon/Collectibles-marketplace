@@ -992,23 +992,23 @@ setInterval(tick,1000);render();tick();
 </html>
 
 <style>
-/* Final carousel geometry: same-height side photos, pulled forward and separated by only a few pixels. */
+/* Final carousel geometry: keep side photos full-height, push them outward so only their inner portion is visible. */
 .detail-photo-slide.is-left{
-  transform:translate3d(calc(-50% - 50.3%),-50%,42px) scale(1) rotateY(-42deg) !important;
-  opacity:.88 !important;
+  transform:translate3d(calc(-50% - 88%),-50%,-6px) scale(1) rotateY(-42deg) !important;
+  opacity:.84 !important;
   z-index:8 !important;
 }
 .detail-photo-slide.is-right{
-  transform:translate3d(calc(-50% + 50.3%),-50%,42px) scale(1) rotateY(42deg) !important;
-  opacity:.88 !important;
+  transform:translate3d(calc(-50% + 88%),-50%,-6px) scale(1) rotateY(42deg) !important;
+  opacity:.84 !important;
   z-index:8 !important;
 }
 @media(max-width:620px){
   .detail-photo-slide.is-left{
-    transform:translate3d(calc(-50% - 50.3%),-50%,40px) scale(1) rotateY(-42deg) !important;
+    transform:translate3d(calc(-50% - 88%),-50%,-4px) scale(1) rotateY(-42deg) !important;
   }
   .detail-photo-slide.is-right{
-    transform:translate3d(calc(-50% + 50.3%),-50%,40px) scale(1) rotateY(42deg) !important;
+    transform:translate3d(calc(-50% + 88%),-50%,-4px) scale(1) rotateY(42deg) !important;
   }
 }
 </style>
