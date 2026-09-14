@@ -846,15 +846,16 @@ function carouselTransform(el,virtualIndex,animate=false){
     const actual=Number(slide.dataset.index)||0;
     const relative=carouselRelativeDistance(actual,virtualIndex,n);
     const ad=Math.abs(relative);
-    const visible=ad<1.72;
+    /* Only the focused image and its immediate neighbors are visible. Everything else
+       stays mounted but completely outside the visual presentation, preventing ghost cards. */
+    const visible=ad<=1.05;
     const angle=Math.max(-42,Math.min(42,relative*42));
     const rad=Math.abs(angle)*Math.PI/180;
     const projectedHalf=(width*.5)*Math.cos(rad);
     const centerHalf=width*.5;
-    const gap=-7;
+    const gap=2;
     const tx=relative*(centerHalf+projectedHalf+gap);
     const depth=48-72*Math.min(ad,1);
-    const opacity=visible?1:0;
     const img=slide.querySelector('img');
     if(img){
       const src=photos[actual]||'';
@@ -868,9 +869,9 @@ function carouselTransform(el,virtualIndex,animate=false){
     else slide.classList.add('is-right');
     slide.style.visibility=visible?'visible':'hidden';
     slide.style.pointerEvents=visible?'auto':'none';
-    slide.style.opacity=String(opacity);
-    slide.style.zIndex=String(ad<.5?10:Math.max(1,9-Math.round(ad)));
-    slide.style.transition=animate?'transform .28s cubic-bezier(.22,.61,.36,1)':'none';
+    slide.style.opacity=visible?'1':'0';
+    slide.style.zIndex=String(ad<.5?10:8);
+    slide.style.transition=animate?'transform .22s cubic-bezier(.22,.61,.36,1)':'none';
     slide.style.setProperty('transform',`translate3d(calc(-50% + ${tx.toFixed(2)}px),-50%,${depth.toFixed(2)}px) scale(1) rotateY(${angle.toFixed(2)}deg)`,'important');
   });
   const count=el.querySelector('.detail-photo-count');
@@ -882,11 +883,8 @@ function normalizeItemCarousel(animate=false){
   const saved=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?state.itemPhotoVirtualIndex:null;
   const actual=carouselActualIndex(saved!==null?saved:Number(state.itemPhotoIndex)||0,n);
   const virtual=saved!==null?saved:n*2+actual;
-  state.itemPhotoIndex=actual;
-  state.itemPhotoVirtualIndex=virtual;
-  state.itemPhotoPositionItem=x.id;
-  state.itemPhotoPositions=state.itemPhotoPositions||{};
-  state.itemPhotoPositions[x.id]={index:actual,virtual:virtual};
+  state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=virtual;state.itemPhotoPositionItem=x.id;
+  state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:actual,virtual:virtual};
   el.dataset.index=actual;el.dataset.virtualIndex=virtual;el.dataset.photoCount=n;
   carouselTransform(el,virtual,animate);
 }
@@ -906,64 +904,74 @@ function updateItemCarousel(index,animate=true){
 }
 function selectItemPhoto(index){updateItemCarousel(index,true)}
 function selectAndOpenItemPhoto(index){
-  const el=document.getElementById('detailPhotoCarousel');
-  if(!el)return;
+  const el=document.getElementById('detailPhotoCarousel');if(!el)return;
   const n=Number(el.dataset.photoCount||0);if(!n)return;
   const current=carouselActualIndex(Number(el.dataset.virtualIndex||0),n);
   if(current===index){openImageViewer(state.activeItem,index);return}
   updateItemCarousel(index,true);
-  window.setTimeout(()=>openImageViewer(state.activeItem,index),300);
+  window.setTimeout(()=>openImageViewer(state.activeItem,index),230);
 }
 function setupItemPhotoCarousel(){
   const el=document.getElementById('detailPhotoCarousel');if(!el||el.dataset.bound==='1')return;el.dataset.bound='1';
   const getPhotos=()=>listingPhotos(items.find(v=>v.id===state.activeItem));
   sizeItemCarouselSlides(el);normalizeItemCarousel(false);
-  let startX=0,startY=0,lastX=0,lastTime=0,velocityX=0,startVirtual=Number(el.dataset.virtualIndex||0),dragging=false,moved=false,horizontal=false,raf=0,inertia=false;
+  let pointerId=null,startX=0,startY=0,lastX=0,lastTime=0,velocityX=0,startVirtual=Number(el.dataset.virtualIndex||0),dragging=false,moved=false,horizontal=false,raf=0,inertia=false;
   const stopMotion=()=>{if(raf){cancelAnimationFrame(raf);raf=0}inertia=false};
-  const renderDrag=virtual=>{
+  const renderPosition=virtual=>{
     const n=getPhotos().length;if(!n)return;
-    const actual=carouselActualIndex(Math.round(virtual),n);
-    state.itemPhotoVirtualIndex=virtual;state.itemPhotoIndex=actual;state.itemPhotoPositionItem=state.activeItem;
-    state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:virtual};
-    el.dataset.virtualIndex=virtual;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,virtual,false);
+    state.itemPhotoVirtualIndex=virtual;state.itemPhotoIndex=carouselActualIndex(Math.round(virtual),n);state.itemPhotoPositionItem=state.activeItem;
+    state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:state.itemPhotoIndex,virtual:virtual};
+    el.dataset.virtualIndex=virtual;el.dataset.index=state.itemPhotoIndex;el.dataset.photoCount=n;carouselTransform(el,virtual,false);
   };
-  const animateInertia=(virtual,velocity)=>{
-    stopMotion();inertia=true;
-    let v=velocity*.72,current=virtual,last=performance.now();
+  const animateInertia=(virtual,velocityPx)=>{
+    stopMotion();
+    const width=carouselSlideMetrics(el).width;
+    let v=(-velocityPx)/(width*1.25)*0.62;
+    let current=virtual,last=performance.now();
+    if(Math.abs(v)<.00005)return;
+    inertia=true;
     const step=now=>{
       if(!inertia)return;
       const dt=Math.min(32,now-last);last=now;
-      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.46);
-      v*=Math.pow(.20,dt/1000);
-      renderDrag(current);
-      if(Math.abs(v)<.006){inertia=false;raf=0;return}
+      current+=v*dt;
+      /* Gentle exponential drag: enough carry to feel like a fling without overshooting wildly. */
+      v*=Math.pow(.055,dt/1000);
+      renderPosition(current);
+      if(Math.abs(v)<.00004){inertia=false;raf=0;return}
       raf=requestAnimationFrame(step);
     };
     raf=requestAnimationFrame(step);
   };
-  el.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1)return;stopMotion();
-    const t=e.touches[0];startX=t.clientX;startY=t.clientY;lastX=startX;lastTime=performance.now();velocityX=0;startVirtual=Number(el.dataset.virtualIndex||0);dragging=true;moved=false;horizontal=false;el.classList.add('is-dragging');
-  },{passive:true});
-  el.addEventListener('touchmove',e=>{
-    if(!dragging||e.touches.length!==1)return;
-    const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY,now=performance.now();
-    if(!horizontal){if(Math.abs(dx)<5&&Math.abs(dy)<5)return;if(Math.abs(dx)<=Math.abs(dy)*1.05){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}
+  el.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    stopMotion();pointerId=e.pointerId;startX=lastX=e.clientX;startY=e.clientY;lastTime=performance.now();velocityX=0;startVirtual=Number(el.dataset.virtualIndex||0);dragging=true;moved=false;horizontal=false;el.setPointerCapture?.(pointerId);el.classList.add('is-dragging');
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!dragging||e.pointerId!==pointerId)return;
+    const dx=e.clientX-startX,dy=e.clientY-startY,now=performance.now();
+    if(!horizontal){
+      if(Math.abs(dx)<5&&Math.abs(dy)<5)return;
+      if(Math.abs(dx)<=Math.abs(dy)*1.12){dragging=false;el.classList.remove('is-dragging');return}
+      horizontal=true;
+    }
     e.preventDefault();moved=true;
-    const dt=Math.max(4,now-lastTime);velocityX=(t.clientX-lastX)/dt;lastX=t.clientX;lastTime=now;
-    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.46);renderDrag(virtual);
+    const dt=Math.max(4,now-lastTime);velocityX=(e.clientX-lastX)/dt;lastX=e.clientX;lastTime=now;
+    /* Deliberately less sensitive than the previous pass: about 1.25 card-width per full rotation. */
+    const virtual=startVirtual-dx/Math.max(1,carouselSlideMetrics(el).width*1.25);
+    renderPosition(virtual);
   },{passive:false});
-  el.addEventListener('touchend',()=>{
-    if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}
-    dragging=false;horizontal=false;el.classList.remove('is-dragging');
-    const current=Number(el.dataset.virtualIndex||startVirtual),speed=Math.abs(velocityX);
-    if(speed>.025)animateInertia(current,velocityX);else renderDrag(current);
-    setTimeout(()=>{moved=false},250);
-  },{passive:true});
-  el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');renderDrag(Number(el.dataset.virtualIndex||startVirtual))},{passive:true});
+  const finish=e=>{
+    if(!dragging||e.pointerId!==pointerId)return;
+    dragging=false;horizontal=false;el.classList.remove('is-dragging');try{el.releasePointerCapture?.(pointerId)}catch(_){ }
+    pointerId=null;
+    if(Math.abs(velocityX)>.045)animateInertia(Number(el.dataset.virtualIndex||startVirtual),velocityX);
+    else renderPosition(Number(el.dataset.virtualIndex||startVirtual));
+    window.setTimeout(()=>{moved=false},280);
+  };
+  el.addEventListener('pointerup',finish);
+  el.addEventListener('pointercancel',e=>{if(e.pointerId!==pointerId)return;stopMotion();dragging=false;horizontal=false;pointerId=null;el.classList.remove('is-dragging');renderPosition(Number(el.dataset.virtualIndex||startVirtual));},{passive:true});
   el.addEventListener('click',e=>{
-    const slide=e.target.closest('.detail-photo-slide');
-    if(!slide)return;
+    const slide=e.target.closest('.detail-photo-slide');if(!slide)return;
     const actual=Number(slide.dataset.index)||0;
     if(moved){e.preventDefault();e.stopPropagation();moved=false;return}
     e.preventDefault();e.stopPropagation();selectAndOpenItemPhoto(actual);
@@ -1195,4 +1203,13 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
 .detail-photo-slide.photo-load-error{visibility:visible!important;opacity:1!important;}
 @media(max-width:620px){.detail-photo-carousel{height:min(68vw,320px)!important;min-height:240px!important;border-radius:22px!important}.detail-photo-slide{width:58%!important;height:84%!important}}
 
+</style>
+
+<style>
+/* Authoritative smooth carousel interaction: geometry is controlled by JS. */
+.detail-photo-carousel{overflow:hidden!important;touch-action:pan-y!important;}
+.detail-photo-track{position:relative!important;width:100%!important;height:100%!important;display:block!important;transform:none!important;}
+.detail-photo-slide{position:absolute!important;left:50%!important;top:50%!important;width:58%!important;height:84%!important;margin:0!important;flex:none!important;transition:none!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;will-change:transform!important;backface-visibility:hidden!important;}
+.detail-photo-slide img{pointer-events:none!important;}
+.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none!important;}
 </style>
