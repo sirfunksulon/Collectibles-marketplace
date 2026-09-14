@@ -240,8 +240,7 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   main:has(.detail-visual) + .footer{padding-top:0 !important;padding-bottom:8px !important;}
 }
 
-.detail-photo-carousel{height:clamp(360px,42vw,520px);min-height:360px;border-radius:18px;touch-action:pan-y;cursor:grab}.detail-photo-carousel.is-dragging{cursor:grabbing}.detail-photo-track{height:100%;align-items:stretch}.detail-photo-slide{height:100%;min-height:0;padding:16px 8px}.detail-photo-slide img{width:82%;height:100%;max-height:none;object-fit:contain;pointer-events:auto}.detail-photo-nav{opacity:.78;transition:opacity .15s,transform .15s}.detail-photo-carousel:hover .detail-photo-nav{opacity:1}.detail-photo-nav:disabled{opacity:.18;pointer-events:none}.detail-photo-count{bottom:14px;font-variant-numeric:tabular-nums}.detail-photo-carousel:after{content:'Swipe to view photos';position:absolute;left:50%;top:12px;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(16,17,15,.48);pointer-events:none;opacity:1;transition:opacity .25s}.detail-photo-carousel.is-dragging:after{opacity:0}
-@media(max-width:620px){.detail-photo-carousel{height:min(72vw,430px);min-height:300px;border-radius:0}.detail-photo-slide{padding:8px 4px}.detail-photo-slide img{width:86%;}.detail-photo-nav{width:38px;height:38px;font-size:25px}.detail-photo-nav.prev{left:8px}.detail-photo-nav.next{right:8px}.detail-photo-count{bottom:9px}.detail-photo-carousel:after{top:8px;font-size:9px}}
+.detail-photo-carousel{height:clamp(320px,38vw,460px);min-height:320px;border-radius:18px;touch-action:pan-y;cursor:grab;overflow:hidden}.detail-photo-carousel.is-dragging{cursor:grabbing}.detail-photo-track{height:100%;align-items:stretch;will-change:transform}.detail-photo-slide{height:100%;min-height:0;flex:0 0 82%;width:82%;display:grid;place-items:center;padding:14px 7px;box-sizing:border-box}.detail-photo-slide img{width:100%;height:100%;max-height:none;object-fit:contain;pointer-events:auto;border-radius:4px}.detail-photo-nav{opacity:.78;transition:opacity .15s,transform .15s}.detail-photo-carousel:hover .detail-photo-nav{opacity:1}.detail-photo-count{bottom:14px;font-variant-numeric:tabular-nums}.detail-photo-carousel:after{display:none}@media(max-width:620px){.detail-photo-carousel{height:min(82vw,340px);min-height:260px;border-radius:0}.detail-photo-slide{padding:8px 5px}.detail-photo-slide img{width:100%;height:100%;object-fit:contain}.detail-photo-nav{width:38px;height:38px;font-size:25px}.detail-photo-nav.prev{left:8px}.detail-photo-nav.next{right:8px}.detail-photo-count{bottom:9px}}
 </style>
 </head>
 <body>
@@ -434,14 +433,18 @@ function itemPage(){
   }
   const messageButton=!isOwner?'<button class="ghost" onclick="openModal(\'message\',\''+x.id+'\')">Message Seller</button>':'';
   const heart='<button class="item-title-heart '+(watched?'watched':'')+'" aria-label="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" title="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" onclick="toggleWatch(\''+x.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg></button>';
-  const photoNav=photos.length>1?((photoIndex>0?'<button type="button" class="detail-photo-nav prev" aria-label="Previous photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex-1+photos.length)%photos.length)+')">‹</button>':'')+(photoIndex<photos.length-1?'<button type="button" class="detail-photo-nav next" aria-label="Next photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex+1)%photos.length)+')">›</button>':'')+'<div class="detail-photo-count">'+(photoIndex+1)+' / '+photos.length+'</div>'):' ';
-  const photoSlides=photos.map((src,i)=>'<div class="detail-photo-slide" data-index="'+i+'"><img src="'+esc(src)+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(i+1)+'" draggable="false" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+i+')"></div>').join('');
+  const photoNav=photos.length>1?('<button type="button" class="detail-photo-nav prev" aria-label="Previous photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex-1+photos.length)%photos.length)+')">‹</button><button type="button" class="detail-photo-nav next" aria-label="Next photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex+1)%photos.length)+')">›</button><div class="detail-photo-count">'+(photoIndex+1)+' / '+photos.length+'</div>'):' ';
+  const carouselPhotos=photos.length>1?photos.concat(photos,photos):photos;
+  const virtualPhotoIndex=photos.length>1?photos.length+photoIndex:0;
+  const photoSlides=carouselPhotos.map((src,i)=>{const actual=photos.length?i%photos.length:0;return '<div class="detail-photo-slide" data-index="'+actual+'"><img src="'+esc(src)+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+actual+')"></div>'}).join('');
   const relatedHtml=related.length?'<div class="related-scroll">'+related.map(itemCard).join('')+'</div>':'<div class="empty">No other listings of this card are currently available.</div>';
-  return '<main><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'"><div class="detail-photo-track" style="transform:translate3d(-'+(photoIndex*100)+'%,0,0)">'+photoSlides+'</div>'+photoNav+'</div></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
+  return '<main><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'" data-virtual-index="'+virtualPhotoIndex+'"><div class="detail-photo-track">'+photoSlides+'</div>'+photoNav+'</div></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
 }
 
 let itemCarouselStartX=0,itemCarouselStartY=0,itemCarouselDeltaX=0,itemCarouselDragging=false,itemCarouselStartIndex=0,itemCarouselMoved=false,itemCarouselHorizontal=false;
-function updateItemCarousel(index,animate=true){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;const i=Math.max(0,Math.min(n-1,Number(index)||0));state.itemPhotoIndex=i;const el=document.getElementById('detailPhotoCarousel'),track=el?.querySelector('.detail-photo-track');if(track){track.style.transition=animate?'transform .34s cubic-bezier(.22,.61,.36,1)':'none';track.style.transform=`translate3d(-${i*100}%,0,0)`}if(el)el.dataset.index=i;document.querySelectorAll('#detailPhotoCarousel .detail-photo-dot').forEach((d,k)=>d.classList.toggle('active',k===i));const count=document.querySelector('#detailPhotoCarousel .detail-photo-count');if(count)count.textContent=`${i+1} / ${n}`;document.querySelector('#detailPhotoCarousel .detail-photo-nav.prev')?.toggleAttribute('disabled',i===0);document.querySelector('#detailPhotoCarousel .detail-photo-nav.next')?.toggleAttribute('disabled',i===n-1)}
+function carouselTransform(el,virtualIndex,animate=true){const track=el?.querySelector('.detail-photo-track');if(!el||!track)return;const width=el.clientWidth||1,slideWidth=width*.82,centerOffset=(width-slideWidth)/2,offset=-(virtualIndex*slideWidth-centerOffset);track.style.transition=animate?'transform .34s cubic-bezier(.22,.61,.36,1)':'none';track.style.transform=`translate3d(${offset}px,0,0)`}
+function normalizeItemCarousel(animate=false){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||n<=1)return;const actual=Math.max(0,Math.min(n-1,Number(state.itemPhotoIndex)||0));const virtual=n+actual;el.dataset.index=actual;el.dataset.virtualIndex=virtual;carouselTransform(el,virtual,animate);const count=el.querySelector('.detail-photo-count');if(count)count.textContent=`${actual+1} / ${n}`}
+function updateItemCarousel(index,animate=true){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;const i=((Number(index)||0)%n+n)%n;state.itemPhotoIndex=i;const el=document.getElementById('detailPhotoCarousel');if(!el)return;if(n===1){el.dataset.index='0';carouselTransform(el,0,animate);return}const currentVirtual=Number(el.dataset.virtualIndex||n+i),base=n;let target=base+i;const currentActual=((currentVirtual-base)%n+n)%n;if(i!==currentActual){const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;if(forward<backward)target=currentVirtual+forward;else target=currentVirtual-backward}el.dataset.index=i;el.dataset.virtualIndex=target;carouselTransform(el,target,animate);const count=el.querySelector('.detail-photo-count');if(count)count.textContent=`${i+1} / ${n}`;setTimeout(()=>{if(state.itemPhotoIndex===i)normalizeItemCarousel(false)},370)}
 function selectItemPhoto(index){updateItemCarousel(index,true)}
 function setupItemPhotoCarousel(){
   const el=document.getElementById('detailPhotoCarousel');
@@ -449,52 +452,17 @@ function setupItemPhotoCarousel(){
   el.dataset.bound='1';
   const getPhotos=()=>listingPhotos(items.find(v=>v.id===state.activeItem));
   const track=()=>el.querySelector('.detail-photo-track');
-  el.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1)return;
-    const t=e.touches[0];
-    itemCarouselStartX=t.clientX;itemCarouselStartY=t.clientY;itemCarouselDeltaX=0;
-    itemCarouselDragging=true;itemCarouselMoved=false;itemCarouselHorizontal=false;
-    itemCarouselStartIndex=Number(el.dataset.index||state.itemPhotoIndex||0);
-    el.classList.add('is-dragging');
-  },{passive:true});
-  el.addEventListener('touchmove',e=>{
-    if(!itemCarouselDragging||e.touches.length!==1)return;
-    const t=e.touches[0],dx=t.clientX-itemCarouselStartX,dy=t.clientY-itemCarouselStartY;
-    itemCarouselDeltaX=dx;
-    if(!itemCarouselHorizontal){
-      if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
-      if(Math.abs(dx)<=Math.abs(dy)*1.08){itemCarouselDragging=false;el.classList.remove('is-dragging');return;}
-      itemCarouselHorizontal=true;
-    }
-    if(!itemCarouselHorizontal)return;
-    e.preventDefault();itemCarouselMoved=true;
-    const width=el.clientWidth||1,photos=getPhotos(),last=photos.length-1;
-    let offset=dx;
-    if((itemCarouselStartIndex===0&&dx>0)||(itemCarouselStartIndex===last&&dx<0))offset*=.22;
-    const base=-itemCarouselStartIndex*width,tr=track();
-    if(tr){tr.style.transition='none';tr.style.transform=`translate3d(${base+offset}px,0,0)`;}
-  },{passive:false});
-  el.addEventListener('touchend',e=>{
-    if(!itemCarouselHorizontal){itemCarouselDragging=false;el.classList.remove('is-dragging');return;}
-    itemCarouselDragging=false;el.classList.remove('is-dragging');
-    const photos=getPhotos(),width=el.clientWidth||1,t=e.changedTouches[0],dx=itemCarouselDeltaX,dy=(t?.clientY||itemCarouselStartY)-itemCarouselStartY;
-    const threshold=Math.max(42,width*.16);let next=itemCarouselStartIndex;
-    if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.12)next+=dx<0?1:-1;
-    next=Math.max(0,Math.min(photos.length-1,next));
-    updateItemCarousel(next,true);
-    setTimeout(()=>{itemCarouselMoved=false;},100);
-  },{passive:true});
-  el.addEventListener('touchcancel',()=>{
-    itemCarouselDragging=false;itemCarouselHorizontal=false;el.classList.remove('is-dragging');
-    updateItemCarousel(itemCarouselStartIndex,true);
-  },{passive:true});
-  el.addEventListener('click',e=>{
-    if(itemCarouselMoved){e.preventDefault();e.stopPropagation();itemCarouselMoved=false;}
-  },{capture:true});
+  normalizeItemCarousel(false);
+  let startX=0,startY=0,startVirtual=Number(el.dataset.virtualIndex||0),deltaX=0,horizontal=false,dragging=false,moved=false;
+  el.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];startX=t.clientX;startY=t.clientY;deltaX=0;horizontal=false;dragging=true;moved=false;startVirtual=Number(el.dataset.virtualIndex||0);el.classList.add('is-dragging')},{passive:true});
+  el.addEventListener('touchmove',e=>{if(!dragging||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY;deltaX=dx;if(!horizontal){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}if(!horizontal)return;e.preventDefault();moved=true;const width=el.clientWidth||1,slideWidth=width*.82,centerOffset=(width-slideWidth)/2,base=-(startVirtual*slideWidth-centerOffset);const tr=track();if(tr){tr.style.transition='none';tr.style.transform=`translate3d(${base+dx}px,0,0)`}}, {passive:false});
+  el.addEventListener('touchend',e=>{if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}dragging=false;horizontal=false;el.classList.remove('is-dragging');const photos=getPhotos(),n=photos.length,width=el.clientWidth||1,slideWidth=width*.82,t=e.changedTouches[0],dx=deltaX,dy=(t?.clientY||startY)-startY;let target=startVirtual;const threshold=Math.max(38,width*.12);if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.1)target+=dx<0?1:-1;const actual=((target-n)%n+n)%n;state.itemPhotoIndex=actual;const tr=track();if(tr){const centerOffset=(width-slideWidth)/2,trOffset=-(target*slideWidth-centerOffset);tr.style.transition='transform .34s cubic-bezier(.22,.61,.36,1)';tr.style.transform=`translate3d(${trOffset}px,0,0)`}el.dataset.virtualIndex=target;el.dataset.index=actual;const count=el.querySelector('.detail-photo-count');if(count)count.textContent=`${actual+1} / ${n}`;setTimeout(()=>normalizeItemCarousel(false),350);setTimeout(()=>{moved=false},80)},{passive:true});
+  el.addEventListener('touchcancel',()=>{dragging=false;horizontal=false;el.classList.remove('is-dragging');normalizeItemCarousel(false)},{passive:true});
+  el.addEventListener('click',e=>{if(moved){e.preventDefault();e.stopPropagation();moved=false}},{capture:true});
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
 }
 
-function activateAuctionConfirmModal(id){const x=items.find(v=>v.id===id);if(!x||x.ownerId!==state.currentUserId||x.sold||isBuyNow(x))return '<div class="modal"><div class="empty">This auction cannot be activated.</div></div>';return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACTIVATE AUCTION</div><h2>Ready to start the auction?</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="activate-confirm-copy">Activating the 24-hour auction commits the starting bid to the current highest offer. The auction cannot be deactivated, and the listing can no longer be edited.</div><div class="activate-confirm-copy">Are you sure you want to continue?</div><div class="activate-confirm-actions"><button class="secondary" type="button" onclick="closeModal()">No</button><button class="primary" type="button" onclick="sellerBeginResolution('${esc(id)}')">Yes</button></div></div>`}
+function activateAuctionConfirmModal(id){const x=items.find(v=>v.id===id);if(!x||x.ownerId!==state.currentUserId||x.sold||isBuyNow(x))return '<div class="modal"><div class="empty">This auction cannot be activated.</div></div>';return `<div class="modal activate-confirm-modal"><div class="activate-confirm-copy">Activating the 24-hour auction commits the starting bid to the current highest offer. The auction cannot be deactivated, and the listing can no longer be edited. Are you sure you want to continue?</div><div class="activate-confirm-actions"><button class="secondary" type="button" onclick="closeModal()">No</button><button class="primary" type="button" onclick="sellerBeginResolution('${esc(id)}')">Yes</button></div></div>`}
 let imageViewerIndex=0,imageViewerScale=1,imageViewerX=0,imageViewerY=0,imageViewerStartX=0,imageViewerStartY=0,imageViewerStartDistance=0,imageViewerStartPanX=0,imageViewerStartPanY=0,imageViewerPinching=false;
 function applyViewerTransform(){const img=document.getElementById('imageViewerImage');if(img)img.style.transform=`translate3d(${imageViewerX}px,${imageViewerY}px,0) scale(${imageViewerScale})`}
 function clampViewerPan(){const stage=document.querySelector('.image-viewer-stage'),img=document.getElementById('imageViewerImage');if(!stage||!img)return;const maxX=Math.max(0,(img.offsetWidth*imageViewerScale-stage.clientWidth)/2),maxY=Math.max(0,(img.offsetHeight*imageViewerScale-stage.clientHeight)/2);imageViewerX=Math.max(-maxX,Math.min(maxX,imageViewerX));imageViewerY=Math.max(-maxY,Math.min(maxY,imageViewerY))}
