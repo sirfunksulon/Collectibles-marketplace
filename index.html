@@ -553,24 +553,24 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   z-index:10 !important;
 }
 .detail-photo-slide.is-left{
-  transform:translate3d(calc(-50% - 34%),-50%,-18px) scale(.78) rotateY(28deg) !important;
+  transform:translate3d(calc(-50% - 34%),-50%,-18px) scale(.78) rotateY(-28deg) !important;
   opacity:.82 !important;
   filter:saturate(.94) !important;
   z-index:8 !important;
 }
 .detail-photo-slide.is-right{
-  transform:translate3d(calc(-50% + 34%),-50%,-18px) scale(.78) rotateY(-28deg) !important;
+  transform:translate3d(calc(-50% + 34%),-50%,-18px) scale(.78) rotateY(28deg) !important;
   opacity:.82 !important;
   filter:saturate(.94) !important;
   z-index:8 !important;
 }
 .detail-photo-slide.is-far-left{
-  transform:translate3d(calc(-50% - 61%),-50%,-105px) scale(.60) rotateY(38deg) !important;
+  transform:translate3d(calc(-50% - 61%),-50%,-105px) scale(.60) rotateY(-38deg) !important;
   opacity:.38 !important;
   z-index:5 !important;
 }
 .detail-photo-slide.is-far-right{
-  transform:translate3d(calc(-50% + 61%),-50%,-105px) scale(.60) rotateY(-38deg) !important;
+  transform:translate3d(calc(-50% + 61%),-50%,-105px) scale(.60) rotateY(38deg) !important;
   opacity:.38 !important;
   z-index:5 !important;
 }
@@ -582,10 +582,10 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .detail-photo-carousel{height:min(68vw,320px) !important;min-height:240px !important;border-radius:22px !important}
   .detail-photo-slide{width:58% !important;height:84% !important}
   .detail-photo-slide.is-center{transform:translate3d(-50%,-50%,38px) scale(1) rotateY(0deg) !important}
-  .detail-photo-slide.is-left{transform:translate3d(calc(-50% - 34%),-50%,-14px) scale(.78) rotateY(28deg) !important}
-  .detail-photo-slide.is-right{transform:translate3d(calc(-50% + 34%),-50%,-14px) scale(.78) rotateY(-28deg) !important}
-  .detail-photo-slide.is-far-left{transform:translate3d(calc(-50% - 61%),-50%,-90px) scale(.60) rotateY(38deg) !important}
-  .detail-photo-slide.is-far-right{transform:translate3d(calc(-50% + 61%),-50%,-90px) scale(.60) rotateY(-38deg) !important}
+  .detail-photo-slide.is-left{transform:translate3d(calc(-50% - 34%),-50%,-14px) scale(.78) rotateY(-28deg) !important}
+  .detail-photo-slide.is-right{transform:translate3d(calc(-50% + 34%),-50%,-14px) scale(.78) rotateY(28deg) !important}
+  .detail-photo-slide.is-far-left{transform:translate3d(calc(-50% - 61%),-50%,-90px) scale(.60) rotateY(-38deg) !important}
+  .detail-photo-slide.is-far-right{transform:translate3d(calc(-50% + 61%),-50%,-90px) scale(.60) rotateY(38deg) !important}
 }
 </style>
 </head>
@@ -806,7 +806,7 @@ function carouselTransform(el,virtualIndex,animate=true,dragPx=0){
     else if(d===-2)slide.classList.add('is-far-left');
     else if(d===2)slide.classList.add('is-far-right');
     else {slide.style.opacity='0';slide.style.zIndex='0';return}
-    const baseTransform=d===0?'translate3d(-50%,-50%,42px) scale(1) rotateY(0deg)':d===-1?'translate3d(calc(-50% - 34%),-50%,-18px) scale(.78) rotateY(28deg)':d===1?'translate3d(calc(-50% + 34%),-50%,-18px) scale(.78) rotateY(-28deg)':d===-2?'translate3d(calc(-50% - 61%),-50%,-105px) scale(.60) rotateY(38deg)':'translate3d(calc(-50% + 61%),-50%,-105px) scale(.60) rotateY(-38deg)';
+    const baseTransform=d===0?'translate3d(-50%,-50%,42px) scale(1) rotateY(0deg)':d===-1?'translate3d(calc(-50% - 34%),-50%,-18px) scale(.78) rotateY(-28deg)':d===1?'translate3d(calc(-50% + 34%),-50%,-18px) scale(.78) rotateY(28deg)':d===-2?'translate3d(calc(-50% - 61%),-50%,-105px) scale(.60) rotateY(-38deg)':'translate3d(calc(-50% + 61%),-50%,-105px) scale(.60) rotateY(38deg)';
     slide.style.transform=dragPx?`translateX(${dragPx}px) ${baseTransform}`:baseTransform;
   });
   const count=el.querySelector('.detail-photo-count');
@@ -824,7 +824,7 @@ function setupItemPhotoCarousel(){
   sizeItemCarouselSlides(el);normalizeItemCarousel(false);
   let startX=0,startY=0,startVirtual=Number(el.dataset.virtualIndex||0),deltaX=0,horizontal=false,dragging=false,moved=false;
   el.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];startX=t.clientX;startY=t.clientY;deltaX=0;horizontal=false;dragging=true;moved=false;startVirtual=Number(el.dataset.virtualIndex||0);el.classList.add('is-dragging')},{passive:true});
-  el.addEventListener('touchmove',e=>{if(!dragging||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY;deltaX=dx;if(!horizontal){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}if(!horizontal)return;e.preventDefault();moved=true;const tr=track();if(tr){tr.style.transition='none';const n=getPhotos().length;const slides=[...tr.querySelectorAll('.detail-photo-slide')];slides.forEach((slide,i)=>{let d=i-startVirtual;if(d>n/2)d-=n;if(d<-n/2)d+=n;let base=d===0?'translate3d(-50%,-50%,42px) scale(1) rotateY(0deg)':d===-1?'translate3d(calc(-50% - 34%),-50%,-18px) scale(.78) rotateY(28deg)':d===1?'translate3d(calc(-50% + 34%),-50%,-18px) scale(.78) rotateY(-28deg)':d===-2?'translate3d(calc(-50% - 61%),-50%,-105px) scale(.60) rotateY(38deg)':'translate3d(calc(-50% + 61%),-50%,-105px) scale(.60) rotateY(-38deg)';if(Math.abs(d)<=2)slide.style.transform=`translateX(${dx}px) ${base}`})}}, {passive:false});
+  el.addEventListener('touchmove',e=>{if(!dragging||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY;deltaX=dx;if(!horizontal){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}if(!horizontal)return;e.preventDefault();moved=true;const tr=track();if(tr){tr.style.transition='none';const n=getPhotos().length;const slides=[...tr.querySelectorAll('.detail-photo-slide')];slides.forEach((slide,i)=>{let d=i-startVirtual;if(d>n/2)d-=n;if(d<-n/2)d+=n;let base=d===0?'translate3d(-50%,-50%,42px) scale(1) rotateY(0deg)':d===-1?'translate3d(calc(-50% - 34%),-50%,-18px) scale(.78) rotateY(-28deg)':d===1?'translate3d(calc(-50% + 34%),-50%,-18px) scale(.78) rotateY(28deg)':d===-2?'translate3d(calc(-50% - 61%),-50%,-105px) scale(.60) rotateY(-38deg)':'translate3d(calc(-50% + 61%),-50%,-105px) scale(.60) rotateY(38deg)';if(Math.abs(d)<=2)slide.style.transform=`translateX(${dx}px) ${base}`})}}, {passive:false});
   el.addEventListener('touchend',e=>{if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}dragging=false;horizontal=false;el.classList.remove('is-dragging');const photos=getPhotos(),n=photos.length,t=e.changedTouches[0],dx=deltaX,dy=(t?.clientY||startY)-startY;let target=startVirtual;const threshold=Math.max(42,(el.clientWidth||360)*.13);if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.1)target+=dx<0?1:-1;const actual=((target%n)+n)%n;state.itemPhotoIndex=actual;el.dataset.virtualIndex=target;el.dataset.index=actual;carouselTransform(el,target,true);queueCarouselNormalization(el);setTimeout(()=>{moved=false},90)},{passive:true});
   el.addEventListener('touchcancel',()=>{dragging=false;horizontal=false;el.classList.remove('is-dragging');normalizeItemCarousel(false)},{passive:true});
   el.addEventListener('click',e=>{if(moved){e.preventDefault();e.stopPropagation();moved=false}},{capture:true});
