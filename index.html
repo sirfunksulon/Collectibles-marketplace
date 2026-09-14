@@ -810,50 +810,160 @@ function itemPage(){
 }
 
 let itemCarouselStartX=0,itemCarouselStartY=0,itemCarouselDeltaX=0,itemCarouselDragging=false,itemCarouselStartIndex=0,itemCarouselMoved=false,itemCarouselHorizontal=false;
-function carouselSlideMetrics(el){const available=el?.clientWidth||360,width=available*.58,step=available*.34;return {width,step,centerOffset:0}}
-function sizeItemCarouselSlides(el){if(!el)return;const available=el.clientWidth||360,width=Math.max(190,Math.min(available*.58,340));el.style.setProperty('--photo-slide-width',width+'px');el.querySelectorAll('.detail-photo-slide').forEach(slide=>{slide.style.width=width+'px';slide.style.flexBasis=width+'px';slide.style.minWidth='0';})}
+function carouselSlideMetrics(el){
+  const available=el?.clientWidth||360;
+  const width=Math.max(190,Math.min(available*.58,340));
+  return {width,gap:3,centerOffset:0};
+}
+function sizeItemCarouselSlides(el){
+  if(!el)return;
+  const available=el.clientWidth||360;
+  const width=Math.max(190,Math.min(available*.58,340));
+  el.style.setProperty('--photo-slide-width',width+'px');
+  el.querySelectorAll('.detail-photo-slide').forEach(slide=>{
+    slide.style.width=width+'px';
+    slide.style.flexBasis=width+'px';
+    slide.style.minWidth='0';
+  });
+}
 function carouselTransform(el,virtualIndex,animate=true,dragPx=0){
   const track=el?.querySelector('.detail-photo-track');if(!el||!track)return;
-  track.style.transition='none';
   const slides=[...track.querySelectorAll('.detail-photo-slide')],n=Number(el.dataset.photoCount||0);if(!n)return;
-  const step=(el.clientWidth||360)*.34;
+  const width=Math.max(190,Math.min((el.clientWidth||360)*.58,340));
+  const gap=3;
+  track.style.transition=animate?'transform .42s cubic-bezier(.22,.61,.36,1)':'none';
   slides.forEach((slide,i)=>{
     let d=i-virtualIndex;
     if(d>n/2)d-=n;
     if(d<-n/2)d+=n;
-    const ad=Math.abs(d);
+    if(Math.abs(d)>1.75){slide.style.opacity='0';slide.style.zIndex='0';slide.style.pointerEvents='none';return}
+    const ad=Math.abs(d),sign=d<0?-1:1;
+    const angle=Math.max(-42,Math.min(42,d*42));
+    const rad=Math.abs(angle)*Math.PI/180;
+    const projectedHalf=(width*.5)*Math.cos(rad);
+    const centerHalf=width*.5;
+    const offset=(ad*(centerHalf+projectedHalf+gap));
+    const depth=ad<.001?52:-26-Math.min(ad,1.75)*35;
+    const scale=1;
+    const x=sign*offset+(dragPx||0);
+    const z=depth;
+    const base=`translate3d(calc(-50% + ${x.toFixed(2)}px),-50%,${z.toFixed(2)}px) scale(${scale}) rotateY(${angle.toFixed(2)}deg)`;
     slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');
-    if(d===0)slide.classList.add('is-center');
-    else if(d===-1)slide.classList.add('is-left');
-    else if(d===1)slide.classList.add('is-right');
-    else if(d===-2)slide.classList.add('is-far-left');
-    else if(d===2)slide.classList.add('is-far-right');
-    else {slide.style.opacity='0';slide.style.zIndex='0';return}
-    const baseTransform=d===0?'translate3d(-50%,-50%,48px) scale(1) rotateY(0deg)':d===-1?'translate3d(calc(-50% - 50.3%),-50%,42px) scale(1) rotateY(-42deg)':d===1?'translate3d(calc(-50% + 50.3%),-50%,42px) scale(1) rotateY(42deg)':'translate3d(-50%,-50%,-180px) scale(.42) rotateY(0deg)';
-    slide.style.transform=dragPx?`translateX(${dragPx}px) ${baseTransform}`:baseTransform;
+    if(ad<.001){slide.classList.add('is-center');slide.style.opacity='1';slide.style.zIndex='10';slide.style.pointerEvents='auto'}
+    else if(d<0){slide.classList.add('is-left');slide.style.opacity='1';slide.style.zIndex='8';slide.style.pointerEvents='auto'}
+    else {slide.classList.add('is-right');slide.style.opacity='1';slide.style.zIndex='8';slide.style.pointerEvents='auto'}
+    slide.style.transform=base;
+    slide.style.filter='none';
   });
   const count=el.querySelector('.detail-photo-count');
-  if(count){const actual=((virtualIndex%n)+n)%n;count.textContent=`${actual+1} / ${n}`}
-  if(animate)requestAnimationFrame(()=>{track.style.transition='transform .42s cubic-bezier(.22,.61,.36,1)'});
+  if(count){const actual=((Math.round(virtualIndex)%n)+n)%n;count.textContent=`${actual+1} / ${n}`}
 }
-function decorateCarousel(el,virtualIndex,n){if(!el||!n)return;el.dataset.photoCount=n;const count=el.querySelector('.detail-photo-count');if(count){const actual=((virtualIndex%n)+n)%n;count.textContent=`${actual+1} / ${n}`}}
-function normalizeItemCarousel(animate=false){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||!n)return;sizeItemCarouselSlides(el);const actual=((Number(state.itemPhotoIndex)||0)%n+n)%n,virtual=n*2+actual;el.dataset.index=actual;el.dataset.virtualIndex=virtual;el.dataset.photoCount=n;carouselTransform(el,virtual,false);if(animate){const track=el.querySelector('.detail-photo-track');if(track){track.style.transition='transform .42s cubic-bezier(.22,.61,.36,1)';requestAnimationFrame(()=>track.style.transition='')}}}
-function queueCarouselNormalization(el){if(!el)return;const x=items.find(v=>v.id===state.activeItem),n=listingPhotos(x).length;if(n<=1)return;const virtual=Number(el.dataset.virtualIndex||0),actual=((virtual%n)+n)%n;if(virtual>=n&&virtual<4*n)return;requestAnimationFrame(()=>{const track=el.querySelector('.detail-photo-track');if(!track)return;const centered=n*2+actual;el.dataset.virtualIndex=centered;el.dataset.index=actual;carouselTransform(el,centered,false)})}
-function updateItemCarousel(index,animate=true){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;const el=document.getElementById('detailPhotoCarousel');if(!el)return;const currentVirtual=Number(el.dataset.virtualIndex||n*2+(state.itemPhotoIndex||0));const currentActual=((currentVirtual%n)+n)%n;const i=((Number(index)||0)%n+n)%n;let target=currentVirtual;if(i!==currentActual){const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;target=forward<=backward?currentVirtual+forward:currentVirtual-backward}state.itemPhotoIndex=i;el.dataset.index=i;el.dataset.virtualIndex=target;el.dataset.photoCount=n;carouselTransform(el,target,animate);queueCarouselNormalization(el)}
+function normalizeItemCarousel(animate=false){
+  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');
+  if(!el||!n)return;
+  sizeItemCarouselSlides(el);
+  const actual=((Number(state.itemPhotoIndex)||0)%n+n)%n,virtual=n*2+actual;
+  el.dataset.index=actual;el.dataset.virtualIndex=virtual;el.dataset.photoCount=n;
+  carouselTransform(el,virtual,animate);
+}
+function queueCarouselNormalization(el){
+  if(!el)return;
+  const x=items.find(v=>v.id===state.activeItem),n=listingPhotos(x).length;if(n<=1)return;
+  const virtual=Number(el.dataset.virtualIndex||0),actual=((virtual%n)+n)%n;
+  if(virtual>=n&&virtual<4*n)return;
+  requestAnimationFrame(()=>{
+    const track=el.querySelector('.detail-photo-track');if(!track)return;
+    const centered=n*2+actual;
+    el.dataset.virtualIndex=centered;el.dataset.index=actual;
+    carouselTransform(el,centered,false);
+  });
+}
+function updateItemCarousel(index,animate=true){
+  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;
+  const el=document.getElementById('detailPhotoCarousel');if(!el)return;
+  const currentVirtual=Number(el.dataset.virtualIndex||n*2+(state.itemPhotoIndex||0));
+  const currentActual=((currentVirtual%n)+n)%n;
+  const i=((Number(index)||0)%n+n)%n;
+  let target=currentVirtual;
+  if(i!==currentActual){
+    const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;
+    target=forward<=backward?currentVirtual+forward:currentVirtual-backward;
+  }
+  state.itemPhotoIndex=i;el.dataset.index=i;el.dataset.virtualIndex=target;el.dataset.photoCount=n;
+  carouselTransform(el,target,animate);queueCarouselNormalization(el);
+}
 function selectItemPhoto(index){updateItemCarousel(index,true)}
 function setupItemPhotoCarousel(){
   const el=document.getElementById('detailPhotoCarousel');if(!el||el.dataset.bound==='1')return;el.dataset.bound='1';
-  const getPhotos=()=>listingPhotos(items.find(v=>v.id===state.activeItem)),track=()=>el.querySelector('.detail-photo-track');
+  const getPhotos=()=>listingPhotos(items.find(v=>v.id===state.activeItem));
   sizeItemCarouselSlides(el);normalizeItemCarousel(false);
-  let startX=0,startY=0,startVirtual=Number(el.dataset.virtualIndex||0),deltaX=0,horizontal=false,dragging=false,moved=false;
-  el.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];startX=t.clientX;startY=t.clientY;deltaX=0;horizontal=false;dragging=true;moved=false;startVirtual=Number(el.dataset.virtualIndex||0);el.classList.add('is-dragging')},{passive:true});
-  el.addEventListener('touchmove',e=>{if(!dragging||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY;deltaX=dx;if(!horizontal){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}if(!horizontal)return;e.preventDefault();moved=true;const tr=track();if(tr){tr.style.transition='none';const n=getPhotos().length;const slides=[...tr.querySelectorAll('.detail-photo-slide')];slides.forEach((slide,i)=>{let d=i-startVirtual;if(d>n/2)d-=n;if(d<-n/2)d+=n;let base=d===0?'translate3d(-50%,-50%,48px) scale(1) rotateY(0deg)':d===-1?'translate3d(calc(-50% - 50.3%),-50%,42px) scale(1) rotateY(-42deg)':d===1?'translate3d(calc(-50% + 50.3%),-50%,42px) scale(1) rotateY(42deg)':'translate3d(-50%,-50%,-180px) scale(.42) rotateY(0deg)';if(Math.abs(d)<=2)slide.style.transform=`translateX(${dx}px) ${base}`})}}, {passive:false});
-  el.addEventListener('touchend',e=>{if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}dragging=false;horizontal=false;el.classList.remove('is-dragging');const photos=getPhotos(),n=photos.length,t=e.changedTouches[0],dx=deltaX,dy=(t?.clientY||startY)-startY;let target=startVirtual;const threshold=Math.max(42,(el.clientWidth||360)*.13);if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.1)target+=dx<0?1:-1;const actual=((target%n)+n)%n;state.itemPhotoIndex=actual;el.dataset.virtualIndex=target;el.dataset.index=actual;carouselTransform(el,target,true);queueCarouselNormalization(el);setTimeout(()=>{moved=false},90)},{passive:true});
-  el.addEventListener('touchcancel',()=>{dragging=false;horizontal=false;el.classList.remove('is-dragging');normalizeItemCarousel(false)},{passive:true});
+  let startX=0,startY=0,lastX=0,lastTime=0,velocityX=0,startVirtual=Number(el.dataset.virtualIndex||0),dragging=false,moved=false,horizontal=false,raf=0,inertia=false;
+  const stopMotion=()=>{if(raf){cancelAnimationFrame(raf);raf=0}inertia=false};
+  const renderDrag=(virtual,dx)=>{el.dataset.virtualIndex=virtual;carouselTransform(el,virtual,false,dx)};
+  const animateInertia=(virtual,velocity)=>{
+    stopMotion();
+    inertia=true;
+    let v=velocity;
+    let current=virtual;
+    let last=performance.now();
+    const step=(now)=>{
+      if(!inertia)return;
+      const dt=Math.min(32,now-last);last=now;
+      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.88);
+      v*=Math.pow(.0008,dt/1000);
+      renderDrag(current,0);
+      if(Math.abs(v)<.025){
+        inertia=false;
+        const target=Math.round(current);
+        const n=getPhotos().length;
+        const actual=((target%n)+n)%n;
+        state.itemPhotoIndex=actual;el.dataset.virtualIndex=target;el.dataset.index=actual;el.dataset.photoCount=n;
+        carouselTransform(el,target,true);queueCarouselNormalization(el);
+        raf=0;return;
+      }
+      raf=requestAnimationFrame(step);
+    };
+    raf=requestAnimationFrame(step);
+  };
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1)return;
+    stopMotion();
+    const t=e.touches[0];startX=t.clientX;startY=t.clientY;lastX=startX;lastTime=performance.now();velocityX=0;
+    startVirtual=Number(el.dataset.virtualIndex||0);dragging=true;moved=false;horizontal=false;el.classList.add('is-dragging');
+  },{passive:true});
+  el.addEventListener('touchmove',e=>{
+    if(!dragging||e.touches.length!==1)return;
+    const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY,now=performance.now();
+    if(!horizontal){
+      if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
+      if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}
+      horizontal=true;
+    }
+    e.preventDefault();moved=true;
+    const dt=Math.max(8,now-lastTime);velocityX=(t.clientX-lastX)/dt;lastX=t.clientX;lastTime=now;
+    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.88);
+    renderDrag(virtual,0);
+  },{passive:false});
+  el.addEventListener('touchend',e=>{
+    if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}
+    dragging=false;horizontal=false;el.classList.remove('is-dragging');
+    const photos=getPhotos(),n=photos.length,t=e.changedTouches[0],dx=t.clientX-startX;
+    const current=Number(el.dataset.virtualIndex||startVirtual);
+    const speed=Math.abs(velocityX);
+    if(speed>.12){animateInertia(current,velocityX)}
+    else{
+      const target=Math.round(current);
+      const actual=((target%n)+n)%n;state.itemPhotoIndex=actual;el.dataset.virtualIndex=target;el.dataset.index=actual;el.dataset.photoCount=n;
+      carouselTransform(el,target,true);queueCarouselNormalization(el);
+    }
+    setTimeout(()=>{moved=false},120);
+  },{passive:true});
+  el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');normalizeItemCarousel(false)},{passive:true});
   el.addEventListener('click',e=>{if(moved){e.preventDefault();e.stopPropagation();moved=false}},{capture:true});
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
   window.addEventListener('resize',()=>{if(document.getElementById('detailPhotoCarousel')===el)normalizeItemCarousel(false)},{passive:true});
 }
+
 
 function activateAuctionConfirmModal(id){const x=items.find(v=>v.id===id);if(!x||x.ownerId!==state.currentUserId||x.sold||isBuyNow(x))return '<div class="modal"><div class="empty">This auction cannot be activated.</div></div>';return `<div class="modal activate-confirm-modal"><div class="activate-confirm-copy">Activating the 24-hour auction commits the starting bid to the current highest offer. The auction cannot be deactivated, and the listing can no longer be edited. Are you sure you want to continue?</div><div class="activate-confirm-actions"><button class="secondary" type="button" onclick="closeModal()">No</button><button class="primary" type="button" onclick="sellerBeginResolution('${esc(id)}')">Yes</button></div></div>`}
 let imageViewerIndex=0,imageViewerScale=1,imageViewerX=0,imageViewerY=0,imageViewerStartX=0,imageViewerStartY=0,imageViewerStartDistance=0,imageViewerStartPanX=0,imageViewerStartPanY=0,imageViewerPinching=false;
@@ -1011,4 +1121,37 @@ setInterval(tick,1000);render();tick();
     transform:translate3d(calc(-50% + 88%),-50%,-4px) scale(1) rotateY(42deg) !important;
   }
 }
+
+
+/* Final lazy-Susan momentum presentation */
+.detail-photo-carousel{
+  perspective:1250px !important;
+  perspective-origin:50% 50% !important;
+  overflow:hidden !important;
+}
+.detail-photo-track{transform-style:preserve-3d !important;}
+.detail-photo-slide{
+  opacity:1 !important;
+  filter:none !important;
+  height:84% !important;
+  transform-origin:center center !important;
+  backface-visibility:hidden !important;
+  transition:transform .42s cubic-bezier(.22,.61,.36,1) !important;
+}
+.detail-photo-slide img{
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  object-fit:contain !important;
+  opacity:1 !important;
+}
+.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none !important;}
+@media(max-width:620px){
+  .detail-photo-carousel{height:min(68vw,320px) !important;min-height:240px !important;border-radius:22px !important;}
+  .detail-photo-slide{width:58% !important;height:84% !important;}
+  .detail-photo-slide img{width:100% !important;height:100% !important;object-fit:contain !important;}
+}
+/* Zoomed viewer: direct one-finger pan without transition lag. */
+.image-viewer-stage img{transition:none !important;}
 </style>
