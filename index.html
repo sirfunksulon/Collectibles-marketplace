@@ -475,6 +475,11 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .detail .item-action-grid{grid-template-columns:1fr 1fr !important;}
 }
 
+/* Final carousel visibility repair: percentage flex-basis on an indefinite max-content track can collapse. */
+.detail-photo-carousel{perspective:1100px !important;}
+.detail-photo-track{width:max-content !important;}
+.detail-photo-slide{flex:0 0 var(--photo-slide-width,260px) !important;width:var(--photo-slide-width,260px) !important;min-width:var(--photo-slide-width,260px) !important;transform-style:preserve-3d !important;}
+.detail-photo-slide img{display:block !important;width:auto !important;height:auto !important;max-width:88% !important;max-height:88% !important;min-width:1px !important;min-height:1px !important;visibility:visible !important;opacity:1 !important;}
 </style>
 </head>
 <body>
@@ -676,10 +681,11 @@ function itemPage(){
 }
 
 let itemCarouselStartX=0,itemCarouselStartY=0,itemCarouselDeltaX=0,itemCarouselDragging=false,itemCarouselStartIndex=0,itemCarouselMoved=false,itemCarouselHorizontal=false;
-function carouselSlideMetrics(el){const slide=el?.querySelector('.detail-photo-slide'),gap=14,width=slide?.getBoundingClientRect().width||Math.min((el?.clientWidth||360)*.72,360),step=width+gap;return {width,step,centerOffset:((el?.clientWidth||1)-width)/2}}
+function carouselSlideMetrics(el){const slide=el?.querySelector('.detail-photo-slide'),gap=14,available=el?.clientWidth||360,width=slide?.getBoundingClientRect().width||Math.min(available*.58,340),step=width+gap;return {width,step,centerOffset:(available-width)/2}}
+function sizeItemCarouselSlides(el){if(!el)return;const available=el.clientWidth||360;const width=Math.max(190,Math.min(available*.58,340));el.style.setProperty('--photo-slide-width',width+'px');el.querySelectorAll('.detail-photo-slide').forEach(slide=>{slide.style.width=width+'px';slide.style.flexBasis=width+'px';slide.style.minWidth=width+'px'})}
 function carouselTransform(el,virtualIndex,animate=true){const track=el?.querySelector('.detail-photo-track');if(!el||!track)return;const {step,centerOffset}=carouselSlideMetrics(el);track.style.transition=animate?'transform .38s cubic-bezier(.22,.61,.36,1)':'none';track.style.transform=`translate3d(${centerOffset-virtualIndex*step}px,0,0)`}
 function decorateCarousel(el,virtualIndex,n){if(!el||!n)return;el.querySelectorAll('.detail-photo-slide').forEach((slide,i)=>{slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');const d=i-virtualIndex;if(d===0)slide.classList.add('is-center');else if(d===-1)slide.classList.add('is-left');else if(d===1)slide.classList.add('is-right');else if(d===-2)slide.classList.add('is-far-left');else if(d===2)slide.classList.add('is-far-right')});const count=el.querySelector('.detail-photo-count');if(count){const actual=((virtualIndex%n)+n)%n;count.textContent=`${actual+1} / ${n}`}}
-function normalizeItemCarousel(animate=false){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||n<=1)return;const actual=Math.max(0,Math.min(n-1,Number(state.itemPhotoIndex)||0)),virtual=n+actual;el.dataset.index=actual;el.dataset.virtualIndex=virtual;carouselTransform(el,virtual,animate);decorateCarousel(el,virtual,n)}
+function normalizeItemCarousel(animate=false){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||n<=1)return;sizeItemCarouselSlides(el);const actual=Math.max(0,Math.min(n-1,Number(state.itemPhotoIndex)||0)),virtual=n+actual;el.dataset.index=actual;el.dataset.virtualIndex=virtual;carouselTransform(el,virtual,animate);decorateCarousel(el,virtual,n)}
 function updateItemCarousel(index,animate=true){const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;const i=((Number(index)||0)%n+n)%n;state.itemPhotoIndex=i;const el=document.getElementById('detailPhotoCarousel');if(!el)return;if(n===1){el.dataset.index='0';el.dataset.virtualIndex='0';carouselTransform(el,0,animate);decorateCarousel(el,0,1);return}const currentVirtual=Number(el.dataset.virtualIndex||n+i),base=n;let target=base+i;const currentActual=((currentVirtual-base)%n+n)%n;if(i!==currentActual){const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;if(forward<backward)target=currentVirtual+forward;else target=currentVirtual-backward}el.dataset.index=i;el.dataset.virtualIndex=target;carouselTransform(el,target,animate);decorateCarousel(el,target,n);setTimeout(()=>{if(state.itemPhotoIndex===i)normalizeItemCarousel(false)},390)}
 function selectItemPhoto(index){updateItemCarousel(index,true)}
 function setupItemPhotoCarousel(){
@@ -688,6 +694,7 @@ function setupItemPhotoCarousel(){
   el.dataset.bound='1';
   const getPhotos=()=>listingPhotos(items.find(v=>v.id===state.activeItem));
   const track=()=>el.querySelector('.detail-photo-track');
+  sizeItemCarouselSlides(el);
   normalizeItemCarousel(false);
   let startX=0,startY=0,startVirtual=Number(el.dataset.virtualIndex||0),deltaX=0,horizontal=false,dragging=false,moved=false;
   el.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];startX=t.clientX;startY=t.clientY;deltaX=0;horizontal=false;dragging=true;moved=false;startVirtual=Number(el.dataset.virtualIndex||0);el.classList.add('is-dragging')},{passive:true});
