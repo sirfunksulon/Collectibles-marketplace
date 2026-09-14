@@ -868,7 +868,7 @@ function carouselTransform(el,virtualIndex,animate=true){
     else slide.classList.add('is-right');
     slide.style.visibility='visible';slide.style.pointerEvents='auto';slide.style.opacity=String(opacity);slide.style.zIndex=String(ad<.5?10:8);
     slide.style.transition=animate?'transform .34s cubic-bezier(.22,.61,.36,1),opacity .24s ease':'none';
-    slide.style.transform=`translate3d(calc(-50% + ${tx.toFixed(2)}px),-50%,${depth.toFixed(2)}px) scale(${scale}) rotateY(${angle.toFixed(2)}deg)`;
+    slide.style.setProperty('transform',`translate3d(calc(-50% + ${tx.toFixed(2)}px),-50%,${depth.toFixed(2)}px) scale(${scale}) rotateY(${angle.toFixed(2)}deg)`,'important');
   });
   const count=el.querySelector('.detail-photo-count');
   if(count){const actual=carouselActualIndex(virtualIndex,n);count.textContent=`${actual+1} / ${n}`}
@@ -927,14 +927,28 @@ function setupItemPhotoCarousel(){
   };
   const animateInertia=(virtual,velocity)=>{
     stopMotion();inertia=true;
-    let v=velocity*3.6,current=virtual,last=performance.now();
+    // A fling should carry momentum naturally without forcing the carousel onto a card.
+    // Keep the response controlled so aggressive swipes do not become overly jumpy.
+    let v=velocity*1.9,current=virtual,last=performance.now();
     const step=now=>{
       if(!inertia)return;
       const dt=Math.min(32,now-last);last=now;
-      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.42);
-      v*=Math.pow(.14,dt/1000);
+      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.46);
+      v*=Math.pow(.22,dt/1000);
       renderDrag(current);
-      if(Math.abs(v)<.008){inertia=false;settle(current);raf=0;return}
+      if(Math.abs(v)<.008){
+        inertia=false;
+        // Preserve the exact resting presentation; only recenter the virtual index
+        // to keep the circular carousel numerically stable.
+        const n=getPhotos().length;
+        if(n>1){
+          const base=Math.floor(current),fraction=current-base,actual=carouselActualIndex(base,n),stable=n*2+actual+fraction;
+          current=stable;
+          renderDrag(current);
+        }
+        raf=0;
+        return;
+      }
       raf=requestAnimationFrame(step);
     };
     raf=requestAnimationFrame(step);
@@ -955,10 +969,11 @@ function setupItemPhotoCarousel(){
     if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}
     dragging=false;horizontal=false;el.classList.remove('is-dragging');
     const current=Number(el.dataset.virtualIndex||startVirtual),speed=Math.abs(velocityX);
-    if(speed>.025)animateInertia(current,velocityX);else settle(current);
+    if(speed>.025)animateInertia(current,velocityX);
+    else renderDrag(current);
     setTimeout(()=>{moved=false},180);
   },{passive:true});
-  el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');settle(Number(el.dataset.virtualIndex||startVirtual))},{passive:true});
+  el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');renderDrag(Number(el.dataset.virtualIndex||startVirtual))},{passive:true});
   el.addEventListener('click',e=>{if(moved){e.preventDefault();e.stopPropagation();moved=false}},{capture:true});
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
 }
@@ -1111,6 +1126,10 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
   .detail-photo-carousel{height:300px !important;border-radius:22px !important;}
   .detail-photo-slide{width:58% !important;height:84% !important;}
 }
+</style>
+<style>
+/* Carousel motion authority: the live slot transform is controlled by JS so adjacent images move with the gesture. */
+.detail-photo-slide.is-center,.detail-photo-slide.is-left,.detail-photo-slide.is-right{transform-origin:center center!important;}
 </style>
 </body>
 </html>
