@@ -876,8 +876,9 @@ function carouselTransform(el,virtualIndex,animate=true){
 function normalizeItemCarousel(animate=false){
   const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||!n)return;
   sizeItemCarouselSlides(el);
-  const actual=carouselActualIndex(Number(state.itemPhotoIndex)||0,n);
-  const virtual=n*2+actual;
+  const saved=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?Number(state.itemPhotoVirtualIndex):null;
+  const actual=carouselActualIndex(saved!==null?saved:Number(state.itemPhotoIndex)||0,n);
+  const virtual=saved!==null?saved:n*2+actual;
   state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=virtual;state.itemPhotoPositionItem=x.id;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:actual,virtual:virtual};
   el.dataset.index=actual;el.dataset.virtualIndex=virtual;el.dataset.photoCount=n;
   carouselTransform(el,virtual,animate);
@@ -914,7 +915,6 @@ function setupItemPhotoCarousel(){
   const stopMotion=()=>{if(raf){cancelAnimationFrame(raf);raf=0}inertia=false};
   const renderDrag=virtual=>{
     const n=getPhotos().length;if(!n)return;
-    if(virtual<n||virtual>=n*3)virtual=n*2+((virtual%n)+n)%n;
     const actual=carouselActualIndex(virtual,n);
     state.itemPhotoVirtualIndex=virtual;state.itemPhotoIndex=actual;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:virtual};
     el.dataset.virtualIndex=virtual;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,virtual,false);
@@ -927,14 +927,14 @@ function setupItemPhotoCarousel(){
   };
   const animateInertia=(virtual,velocity)=>{
     stopMotion();inertia=true;
-    let v=velocity*2.25,current=virtual,last=performance.now();
+    let v=velocity*3.6,current=virtual,last=performance.now();
     const step=now=>{
       if(!inertia)return;
       const dt=Math.min(32,now-last);last=now;
       current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.42);
-      v*=Math.pow(.035,dt/1000);
+      v*=Math.pow(.14,dt/1000);
       renderDrag(current);
-      if(Math.abs(v)<.012){inertia=false;settle(current);raf=0;return}
+      if(Math.abs(v)<.008){inertia=false;settle(current);raf=0;return}
       raf=requestAnimationFrame(step);
     };
     raf=requestAnimationFrame(step);
@@ -1060,7 +1060,7 @@ function sellerOverview(){const inv=sellerInventoryRows(),offers=inv.filter(x=>N
 <section id="seller-sales" class="seller-section"><div class="seller-section-title"><div><div class="eyebrow">SALES</div><h2>Completed Transactions</h2></div></div><div class="seller-table"><div class="seller-table-row head"><div>Item</div><div>Sale Price</div><div>Date</div><div>Status</div><div>Net</div></div>${sales.map(x=>`<div class="seller-table-row"><div class="seller-sale-name">${esc(x.name)}</div><div>${x.price}</div><div>${x.date}</div><div>${x.status}</div><div><b>${x.net}</b></div></div>`).join('')}</div></section>
 <section class="seller-section"><div class="seller-section-title"><div><div class="eyebrow">ASSISTANCE</div><h2>Seller Assistant</h2></div></div>${sellerAssistant()}</section><section id="seller-activity" class="seller-section"><div class="seller-section-title"><div><div class="eyebrow">ACTIVITY</div><h2>Recent Activity</h2></div></div><div class="seller-activity">${sellerActivityRows().map(x=>`<div class="seller-event"><div class="seller-event-mark"></div><div class="seller-event-text">${esc(x.text)}</div><div class="seller-event-time">${esc(x.time)}</div></div>`).join('')||'<div class="seller-empty">No activity yet.</div>'}</div></section></main>`}
 function filterSellerInventory(){const source=sellerInventoryRows(),q=(document.getElementById('sellerInventorySearch')?.value||'').toLowerCase().trim(),status=document.getElementById('sellerInventoryStatus')?.value||'all',sort=document.getElementById('sellerInventorySort')?.value||'recent';let rows=source.filter(x=>(!q||`${x.fullName||x.name}`.toLowerCase().includes(q))&&(status==='all'||String(x.status||'Active').toLowerCase()===status));if(sort==='offerHigh')rows.sort((a,b)=>Number(b.currentOffer||0)-Number(a.currentOffer||0));if(sort==='priceHigh')rows.sort((a,b)=>Number(b.price||0)-Number(a.price||0));if(sort==='priceLow')rows.sort((a,b)=>Number(a.price||0)-Number(b.price||0));const el=document.getElementById('sellerInventoryAllRows');if(el)el.innerHTML=rows.map(sellerItemRow).join('')||'<div class="seller-empty">No inventory matches these filters.</div>'}
-function toggleWatch(id){const u=currentUser();if(!u)return;u.watchlist=Array.isArray(u.watchlist)?u.watchlist:[];const i=u.watchlist.indexOf(id);if(i>=0){u.watchlist.splice(i,1)}else{u.watchlist.unshift(id);notify('Added to Watchlist.','WATCH',id,state.currentUserId)}state.watchlist=u.watchlist.slice();save();render()}
+function toggleWatch(id){const u=currentUser();if(!u)return;u.watchlist=Array.isArray(u.watchlist)?u.watchlist:[];const i=u.watchlist.indexOf(id);if(i>=0){u.watchlist.splice(i,1)}else{u.watchlist.unshift(id);notify('Added to Watchlist.','WATCH',id,state.currentUserId)}state.watchlist=u.watchlist.slice();save();if(state.page==='item'&&state.activeItem===id){const heart=document.querySelector('.item-title-heart');if(heart){const watched=u.watchlist.includes(id);heart.classList.toggle('watched',watched);heart.setAttribute('aria-label',watched?'Remove from Watchlist':'Add to Watchlist');heart.setAttribute('title',watched?'Remove from Watchlist':'Add to Watchlist')}}else render()}
 function openSeller(id){if(!id)return;state.activeSeller=id;state.page='sellerProfile';state.menu=false;render()}
 function sellerProfile(){const u=state.users.find(x=>x.id===state.activeSeller);if(!u)return market();const inv=items.filter(x=>!x.sold&&x.ownerId===u.id),reviews=state.reviews.filter(r=>r.sellerId===u.id),avg=reviews.length?reviews.reduce((n,r)=>n+Number(r.rating||0),0)/reviews.length:null;return `<main><button class="ghost" onclick="route('market')" style="font-size:28px;padding:0">←</button><div class="seller-profile-head"><div><div class="eyebrow">SELLER</div><div class="seller-profile-name">${esc(u.name)}</div><div class="seller-profile-meta"><span>${avg?avg.toFixed(1)+' ★':'New seller'}</span><span class="tiny muted">${reviews.length} review${reviews.length===1?'':'s'}</span><span class="tiny muted">${inv.length} active item${inv.length===1?'':'s'}</span></div></div><button class="secondary" onclick="openModal('messageSeller','${esc(u.id)}')">Message Seller</button></div><div class="profile-grid"><section><div class="profile-summary"><div class="eyebrow">INVENTORY</div><h2 style="margin:7px 0 0">Current listings</h2></div><div class="grid" style="margin-top:16px">${inv.map(itemCard).join('')||'<div class="empty">No active listings.</div>'}</div></section><aside><div class="profile-summary"><div class="eyebrow">REVIEWS</div><h2 style="margin:7px 0 0">Buyer feedback</h2></div>${reviews.slice().reverse().slice(0,8).map(r=>`<div class="review-item"><b>${'★'.repeat(Number(r.rating||0))}${'☆'.repeat(5-Number(r.rating||0))}</b><div class="tiny muted" style="margin-top:4px">${esc(r.categoryText||'Transaction')} · ${new Date(r.created).toLocaleDateString()}</div><div style="margin-top:6px">${esc(r.text||'')}</div></div>`).join('')||'<div class="tiny muted" style="margin-top:14px">No reviews yet.</div>'}</aside></div></main>`}
 function watchlistPage(){const xs=state.watchlist.map(id=>items.find(x=>x.id===id)).filter(x=>x&&!x.sold);return `<main><div class="market-head"><div><div class="eyebrow">WATCHLIST</div><h1>Saved Items</h1><div class="tiny muted page-intro">Concierge will surface meaningful activity on items you’re watching.</div></div></div>${xs.length?`<div class="grid">${xs.map(itemCard).join('')}</div>`:'<div class="empty"><b>Your Watchlist is empty.</b><br>Heart a listing to keep it close.</div>'}</main>`}
