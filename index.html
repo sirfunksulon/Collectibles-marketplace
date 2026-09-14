@@ -632,7 +632,7 @@ let toastTimer=null;
 let state=loadState();
 let consignmentCache={results:[],pokemon:'',set:'',card:'',variant:'',token:0,loading:false,photos:[]};
 
-function initialState(){return {page:'market',activeItem:null,activeSeller:null,activeThread:null,modal:null,menu:false,search:'',notifications:[],offers:[],proxyBids:{},activity:[],unread:0,toast:'',currentUserId:'user-demo-buyer',users:[],watchlist:[],messages:[],vault:[],reviews:[]}}
+function initialState(){return {page:'market',activeItem:null,activeSeller:null,activeThread:null,modal:null,menu:false,search:'',notifications:[],offers:[],proxyBids:{},activity:[],unread:0,toast:'',currentUserId:'user-demo-buyer',users:[],watchlist:[],messages:[],vault:[],reviews:[],itemPhotoPositions:{}}}
 function defaultUsers(){return [{id:'user-demo-buyer',email:'buyer@rapidup.test',name:'Demo Buyer',role:'member',password:'demo',watchlist:[]},{id:'user-demo-seller',email:'seller@rapidup.test',name:'Demo Seller',role:'member',password:'demo',watchlist:[]}]}
 function currentUser(){return state.users.find(u=>u.id===state.currentUserId)||null}
 function userLabel(){const u=currentUser();return u?.name||u?.email||'Guest'}
@@ -643,7 +643,7 @@ function loadState(){
     const raw=localStorage.getItem(STORAGE_KEY);
     if(!raw){items=[];fresh.users=defaultUsers();fresh.currentUserId=fresh.users[0].id;return fresh}
     const saved=JSON.parse(raw);items=Array.isArray(saved.itemState)?saved.itemState.filter(x=>!String(x?.id||'').startsWith('demo-')&&!x?.isStagedDemo).map(x=>{const y={...x,method:x.method,variant:normalizeVariant(x.variant||'Standard')||'Standard',fullName:listingName(x.year||x.consignment?.releaseYear||'',x.category||'Pokemon',x.consignment?.setName||String(x.set||'').replace(/\s+#.*$/,''),x.name||x.consignment?.cardName||'',normalizeVariant(x.variant||'Standard')||'Standard',x.consignment?.cardNumber||String(x.set||'').match(/#([^\s]+)/)?.[1]||'',x.grade||'')};if(y.method==='dormant-decay'){y.holdDays=Math.min(7,Math.max(1,Number(y.holdDays||1)));if(!Number(y.nextDecayAt)||Number(y.nextDecayAt)<Number(y.injectedAt||0)+DAY)y.nextDecayAt=Number(y.injectedAt||Date.now())+y.holdDays*DAY}return y}):[];
-    const users=Array.isArray(saved.users)&&saved.users.length?saved.users:defaultUsers(); users.forEach(u=>{u.role='member';u.watchlist=Array.isArray(u.watchlist)?u.watchlist:(u.id===saved.currentUserId&&Array.isArray(saved.watchlist)?saved.watchlist:[])});const notifications=Array.isArray(saved.notifications)?saved.notifications.map(n=>n&&n.userId?n:{...n,userId:'user-demo-seller'}):[];const activityRows=Array.isArray(saved.activity)?saved.activity.map(a=>a&&a.userId?a:{...a,userId:'user-demo-seller'}):[];return {...fresh,...saved,page:'market',modal:null,menu:false,users,currentUserId:saved.currentUserId||users[0].id,notifications,offers:Array.isArray(saved.offers)?saved.offers:[],proxyBids:saved.proxyBids||{},activity:activityRows,watchlist:Array.isArray(saved.watchlist)?saved.watchlist:[],messages:Array.isArray(saved.messages)?saved.messages:[],vault:Array.isArray(saved.vault)?saved.vault:[],reviews:Array.isArray(saved.reviews)?saved.reviews:[],watchlist:(users.find(u=>u.id===(saved.currentUserId||users[0].id))?.watchlist)||[]};
+    const users=Array.isArray(saved.users)&&saved.users.length?saved.users:defaultUsers(); users.forEach(u=>{u.role='member';u.watchlist=Array.isArray(u.watchlist)?u.watchlist:(u.id===saved.currentUserId&&Array.isArray(saved.watchlist)?saved.watchlist:[])});const notifications=Array.isArray(saved.notifications)?saved.notifications.map(n=>n&&n.userId?n:{...n,userId:'user-demo-seller'}):[];const activityRows=Array.isArray(saved.activity)?saved.activity.map(a=>a&&a.userId?a:{...a,userId:'user-demo-seller'}):[];return {...fresh,...saved,page:'market',modal:null,menu:false,users,currentUserId:saved.currentUserId||users[0].id,notifications,offers:Array.isArray(saved.offers)?saved.offers:[],proxyBids:saved.proxyBids||{},activity:activityRows,watchlist:Array.isArray(saved.watchlist)?saved.watchlist:[],messages:Array.isArray(saved.messages)?saved.messages:[],vault:Array.isArray(saved.vault)?saved.vault:[],reviews:Array.isArray(saved.reviews)?saved.reviews:[],itemPhotoPositions:saved.itemPhotoPositions&&typeof saved.itemPhotoPositions==='object'?saved.itemPhotoPositions:{},watchlist:(users.find(u=>u.id===(saved.currentUserId||users[0].id))?.watchlist)||[]};
   }catch(e){console.warn('RapidUp state reset',e);items=[];return initialState()}
 }
 function save(){state.unread=state.notifications.filter(n=>!n.read).length;try{localStorage.setItem(STORAGE_KEY,JSON.stringify({...state,itemState:items}))}catch(e){}}
@@ -725,13 +725,16 @@ function listingName(year,category,setName,name,variant,number,grade){const clea
 function submitConsignment(){const card=consignmentCache.results.find(x=>x.id===consignmentCache.card);const price=Math.max(1,Number(document.getElementById('consignPrice')?.value||1));const decay=Math.max(1,Number(document.getElementById('consignDecay')?.value||1));const holdDays=Math.min(7,Math.max(1,Number(document.getElementById('consignHold')?.value||1)));if(!card||!consignmentCache.variant)return toast('Select a card first.');const now=Date.now(),year=card.releaseYear||'',condition=document.getElementById('consignCondition')?.value||'Raw',grade=condition==='Graded'?'PSA 10':'',variant=normalizeVariant(consignmentCache.variant)||'Standard',photos=(consignmentCache.photos||[]).slice(0,10),primaryImage=photos[0]||card.images?.large||card.images?.small||'',fullName=listingName(year,'Pokemon',card.setName,card.name,variant,card.number,grade),method=listingMode==='buy-now'?'buy-now':listingStrategy==='decaying'?'dormant-decay':'dormant-static',item={id:'item-'+now+Math.random(),name:card.name,set:`${card.setName} #${card.number}`,fullName,year,era:year>=2014?'Modern':year>=2003?'Mid Era':year>=1996?'Classic':'Unknown',category:'Pokemon',ownerId:state.currentUserId,method,type:method==='buy-now'?'Buy Now':'RapidUp Dormant Auction',price,currentOffer:0,status:method==='buy-now'?'Buy Now':'Dormant',sold:false,injectedAt:now,cycleStartedAt:now,nextDecayAt:method==='dormant-decay'?now+holdDays*DAY:0,decayAmount:method==='dormant-decay'?decay:0,holdDays:method==='dormant-decay'?holdDays:0,img:primaryImage,photos,variant,grade:grade||'Raw',lang:document.getElementById('consignLanguage')?.value||'English',presentation:'RapidUp Standard',internal:{condition:document.getElementById('consignCondition')?.value||'Raw',language:document.getElementById('consignLanguage')?.value||'English',presentation:'RapidUp Standard'},consignment:{cardId:card.id,setId:card.setId,setName:card.setName,cardNumber:card.number,cardName:card.name,releaseYear:card.releaseYear,variant}};items.push(item);save();state.modal=null;notify(`Your ${card.name} listing is live.`,'LISTING',item.id);activity(`Listed ${item.fullName} at ${money(price)} · ${listingModeLabel(item)}.`,item.id);render()}
 function accountModal(){const u=currentUser();return '<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>'+ (u?'Signed in':'Sign in') +'</h2></div><button class="close" onclick="closeModal()">×</button></div>'+(u?'<div class="notice"><b>'+esc(u.name)+'</b><br>'+esc(u.email)+'<br><span class="tiny muted">'+'Marketplace account'+' · stored locally on this device.</span></div><div class="step"><b>Switch prototype user</b><div class="list" style="margin-top:10px">'+state.users.map(x=>'<button class="listrow" type="button" onclick="loginAs(&quot;'+esc(x.id)+'&quot;)"><span><b>'+esc(x.name)+'</b><br><span class="tiny muted">'+esc(x.email)+'</span></span><span>'+(x.id===state.currentUserId?'CURRENT':'→')+'</span></button>').join('')+'</div></div><div class="actions"><button class="secondary" onclick="logoutMock()">Log Out</button><button class="primary" onclick="closeModal();openModal(&quot;accountCreate&quot;)">Create Another Account</button></div>':'<div class="notice"><b>Prototype account</b><br>Create a local account or sign in to one of your staged users. Nothing is sent to a server.</div><label style="display:block;margin-top:13px"><span class="eyebrow">Email</span><input id="loginEmail" class="input" type="email" placeholder="you@example.com"></label><label style="display:block;margin-top:13px"><span class="eyebrow">Password</span><input id="loginPassword" class="input" type="password" placeholder="Password"></label><div class="actions"><button class="secondary" onclick="closeModal();openModal(&quot;accountCreate&quot;)">Create Account</button><button class="primary" onclick="loginMock()">Log In</button></div>')+'</div>'}
 function accountCreateModal(){return '<div class="modal"><div class="modalHead"><div><div class="eyebrow">ACCOUNT</div><h2>Create account</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="notice"><b>Prototype only</b><br>This creates a local staged user so you can switch between accounts and test marketplace interactions.</div><label style="display:block;margin-top:13px"><span class="eyebrow">Name</span><input id="accountName" class="input" placeholder="Display name"></label><label style="display:block;margin-top:13px"><span class="eyebrow">Email</span><input id="accountEmail" class="input" type="email" placeholder="you@example.com"></label><label style="display:block;margin-top:13px"><span class="eyebrow">Password</span><input id="accountPassword" class="input" type="password" placeholder="Prototype password"></label><div class="actions"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" onclick="createMockAccount()">Create Account</button></div></div>'}
-function openItem(id){state.activeItem=id;state.itemPhotoIndex=0;state.page='item';render()}
+function openItem(id){state.activeItem=id;const pos=state.itemPhotoPositions?.[id];state.itemPhotoIndex=Number.isInteger(pos?.index)?pos.index:0;state.itemPhotoVirtualIndex=Number.isFinite(pos?.virtual)?pos.virtual:null;state.itemPhotoPositionItem=id;state.page='item';render()}
 function openModal(type,data=null){state.modal={type,data};state.menu=false;render();if(type==='consign')setTimeout(initConsignmentGenerator,0)}
 function closeModal(){state.modal=null;render()}
 function openMenu(){state.menu=!state.menu;render()}
 function menuDrawer(){const u=currentUser();return `<div class="menu-overlay" onclick="state.menu=false;render()"><aside class="menu-drawer" onclick="event.stopPropagation()"><div class="menu-head"><div><div class="eyebrow">RAPIDUP</div><h2>Menu</h2></div><button class="close" onclick="state.menu=false;render()">×</button></div><div class="menu-links"><button type="button" onclick="openModal('account')">Account<span>→</span></button><button type="button" onclick="route('concierge')">Concierge<span>→</span></button><button type="button" onclick="route('watchlist')">Watchlist<span>→</span></button><button type="button" onclick="route('orders')">Orders<span>→</span></button>${u?'<button type="button" onclick="route(\'seller\')">Seller Hub<span>→</span></button>':''}</div></aside></div>`}
+let conciergeRotationStartedAt=Date.now();
+function conciergeRotationAngle(){return ((Date.now()-conciergeRotationStartedAt)/8000*360)%360}
 function header(){
-  return `<header class="topbar"><div class="header"><div class="brand"><button class="ghost" style="padding:0;border:0" aria-label="RapidUp home" onclick="route('market')"><img class="logo" src="${LOGO}" alt="RapidUp Collectibles Marketplace"></button></div><button class="icon concierge-icon header-concierge" aria-label="Concierge" onclick="openModal('concierge')"><img class="concierge-star" src="${PAREIDOLIC_STAR}" alt="">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length?`<span class="badge">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length}</span>`:''}</button><div class="header-actions"><button class="icon" aria-label="Search" onclick="openModal('search')">⌕</button><button class="icon" aria-label="Menu" onclick="openMenu()">☰</button></div></div></header>`;
+  const conciergeAngle=conciergeRotationAngle();
+  return `<header class="topbar"><div class="header"><div class="brand"><button class="ghost" style="padding:0;border:0" aria-label="RapidUp home" onclick="route('market')"><img class="logo" src="${LOGO}" alt="RapidUp Collectibles Marketplace"></button></div><button class="icon concierge-icon header-concierge" aria-label="Concierge" onclick="openModal('concierge')"><img class="concierge-star" style="--concierge-angle:${conciergeAngle}deg" src="${PAREIDOLIC_STAR}" alt="">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length?`<span class="badge">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length}</span>`:''}</button><div class="header-actions"><button class="icon" aria-label="Search" onclick="openModal('search')">⌕</button><button class="icon" aria-label="Menu" onclick="openMenu()">☰</button></div></div></header>`;
 }
 function channels(){const live=items.filter(x=>!x.sold),by=new Map();live.forEach(x=>{const c=x.category||'Collectibles';if(!by.has(c))by.set(c,[]);by.get(c).push(x)});const out=[];by.forEach((xs,cat)=>{const target=Math.max(6,Math.ceil(xs.length*.12)),groups=new Map();xs.forEach(x=>{const key=[x.era||'',x.language||'',x.internal?.condition||x.condition||''].filter(Boolean).join(' · ');if(key){if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}});const viable=[...groups.entries()].filter(([,g])=>g.length>=target);if(viable.length>=2){viable.sort((a,b)=>b[1].length-a[1].length).forEach(([name,g])=>out.push({name:[name,cat].filter(Boolean).join(' ').trim(),items:g}));const used=new Set(viable.flatMap(([,g])=>g.map(x=>x.id))),rem=xs.filter(x=>!used.has(x.id));if(rem.length>=target)out.push({name:cat,items:rem})}else out.push({name:cat,items:xs})});return out.sort((a,b)=>b.items.length-a.items.length)}
 function itemCard(x){const resolving=isResolving(x),current=Number(x.currentOffer||0),remaining=resolving?resolutionEnd(x)-Date.now():0,buyNow=isBuyNow(x),label=buyNow?'PRICE':resolving?'CURRENT BID':'HIGHEST OFFER',value=buyNow?x.price:current,sub=buyNow?'Buy Now':resolving?`Closing in ${formatRemaining(remaining)}`:'Dormant Auction';return `<article class="item-card" onclick="openItem('${esc(x.id)}')"><div class="item-image"><img src="${esc(x.img||'')}" alt="${esc(x.fullName||x.name)}"></div><div class="item-body"><div class="item-title">${esc(x.fullName||x.name)}</div><div class="item-meta"><span><span class="eyebrow">${label}</span><div class="price">${buyNow||current?money(value):'—'}</div></span><span style="text-align:right"><span class="eyebrow">${resolving?'':buyNow?'':'STARTING PRICE'}</span><div class="current">${resolving?'':buyNow?'':money(x.price)}</div></span></div><div class="tiny muted" style="margin-top:5px">${esc(sub)}</div></div></article>`}
@@ -803,7 +806,8 @@ function itemPage(){
   const heart='<button class="item-title-heart '+(watched?'watched':'')+'" aria-label="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" title="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" onclick="toggleWatch(\''+x.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg></button>';
   const photoNav=photos.length>1?('<button type="button" class="detail-photo-nav prev" aria-label="Previous photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex-1+photos.length)%photos.length)+')">‹</button><button type="button" class="detail-photo-nav next" aria-label="Next photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex+1)%photos.length)+')">›</button><div class="detail-photo-count">'+(photoIndex+1)+' / '+photos.length+'</div>'):' ';
   const carouselPhotos=photos.length>1?photos.concat(photos,photos,photos,photos):photos;
-  const virtualPhotoIndex=photos.length>1?photos.length*2+photoIndex:0;
+  const savedVirtual=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?Number(state.itemPhotoVirtualIndex):null;
+  const virtualPhotoIndex=photos.length>1?(savedVirtual!==null?savedVirtual:photos.length*2+photoIndex):0;
   const photoSlides=carouselPhotos.map((src,i)=>{const actual=photos.length?i%photos.length:0;return '<div class="detail-photo-slide" data-index="'+actual+'"><img src="'+esc(src)+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+actual+')"></div>'}).join('');
   const relatedHtml=related.length?'<div class="related-scroll">'+related.map(itemCard).join('')+'</div>':'<div class="empty">No other listings of this card are currently available.</div>';
   return '<main><div class="item-page-top"><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button>'+heart+'</div><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'" data-virtual-index="'+virtualPhotoIndex+'"><div class="detail-photo-track">'+photoSlides+'</div>'+photoNav+'</div></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
@@ -821,9 +825,7 @@ function sizeItemCarouselSlides(el){
   const width=Math.max(190,Math.min(available*.58,340));
   el.style.setProperty('--photo-slide-width',width+'px');
   el.querySelectorAll('.detail-photo-slide').forEach(slide=>{
-    slide.style.width=width+'px';
-    slide.style.flexBasis=width+'px';
-    slide.style.minWidth='0';
+    slide.style.width=width+'px';slide.style.flexBasis=width+'px';slide.style.minWidth='0';
   });
 }
 function carouselTransform(el,virtualIndex,animate=true,dragPx=0){
@@ -831,66 +833,68 @@ function carouselTransform(el,virtualIndex,animate=true,dragPx=0){
   const slides=[...track.querySelectorAll('.detail-photo-slide')],n=Number(el.dataset.photoCount||0);if(!n)return;
   const width=Math.max(190,Math.min((el.clientWidth||360)*.58,340));
   const gap=3;
-  track.style.transition=animate?'transform .42s cubic-bezier(.22,.61,.36,1)':'none';
   slides.forEach((slide,i)=>{
     let d=i-virtualIndex;
     if(d>n/2)d-=n;
     if(d<-n/2)d+=n;
-    if(Math.abs(d)>1.75){slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');slide.style.setProperty('opacity','0','important');slide.style.zIndex='0';slide.style.pointerEvents='none';return}
+    if(Math.abs(d)>1.04){
+      slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');
+      slide.style.setProperty('opacity','0','important');
+      slide.style.visibility='hidden';slide.style.pointerEvents='none';slide.style.zIndex='0';
+      return;
+    }
+    slide.style.visibility='visible';slide.style.pointerEvents='auto';
     const ad=Math.abs(d),sign=d<0?-1:1;
-    const angle=Math.max(-42,Math.min(42,d*42));
+    const angle=Math.max(-44,Math.min(44,d*44));
     const rad=Math.abs(angle)*Math.PI/180;
     const projectedHalf=(width*.5)*Math.cos(rad);
     const centerHalf=width*.5;
-    const offset=(ad*(centerHalf+projectedHalf+gap));
-    const depth=ad<.001?52:-26-Math.min(ad,1.75)*35;
-    const scale=1;
+    const offset=ad*(centerHalf+projectedHalf+gap);
+    const depth=ad<.001?55:-72;
     const x=sign*offset+(dragPx||0);
-    const z=depth;
-    const base=`translate3d(calc(-50% + ${x.toFixed(2)}px),-50%,${z.toFixed(2)}px) scale(${scale}) rotateY(${angle.toFixed(2)}deg)`;
+    const base=`translate3d(calc(-50% + ${x.toFixed(2)}px),-50%,${depth}px) scale(1) rotateY(${angle.toFixed(2)}deg)`;
     slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');
-    if(ad<.001){slide.classList.add('is-center');slide.style.setProperty('opacity','1','important');slide.style.zIndex='10';slide.style.pointerEvents='auto'}
-    else if(d<0){slide.classList.add('is-left');slide.style.setProperty('opacity','1','important');slide.style.zIndex='8';slide.style.pointerEvents='auto'}
-    else {slide.classList.add('is-right');slide.style.setProperty('opacity','1','important');slide.style.zIndex='8';slide.style.pointerEvents='auto'}
-    slide.style.setProperty('transform',base,'important');
-    slide.style.setProperty('filter','none','important');
+    if(ad<.001){slide.classList.add('is-center');slide.style.zIndex='10';slide.style.setProperty('opacity','1','important')}
+    else if(d<0){slide.classList.add('is-left');slide.style.zIndex='8';slide.style.setProperty('opacity','1','important')}
+    else{slide.classList.add('is-right');slide.style.zIndex='8';slide.style.setProperty('opacity','1','important')}
+    slide.style.setProperty('transform',base,'important');slide.style.setProperty('filter','none','important');
   });
   const count=el.querySelector('.detail-photo-count');
   if(count){const actual=((Math.round(virtualIndex)%n)+n)%n;count.textContent=`${actual+1} / ${n}`}
 }
 function normalizeItemCarousel(animate=false){
-  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');
-  if(!el||!n)return;
+  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||!n)return;
   sizeItemCarouselSlides(el);
-  const actual=((Number(state.itemPhotoIndex)||0)%n+n)%n,virtual=n*2+actual;
+  const actual=((Number(state.itemPhotoIndex)||0)%n+n)%n;
+  const virtual=n*2+actual;
+  state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=virtual;state.itemPhotoPositionItem=x.id;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:actual,virtual:virtual};
   el.dataset.index=actual;el.dataset.virtualIndex=virtual;el.dataset.photoCount=n;
   carouselTransform(el,virtual,animate);
 }
 function queueCarouselNormalization(el){
   if(!el)return;
   const x=items.find(v=>v.id===state.activeItem),n=listingPhotos(x).length;if(n<=1)return;
-  const virtual=Number(el.dataset.virtualIndex||0),actual=((virtual%n)+n)%n;
+  const virtual=Number(el.dataset.virtualIndex||0),actual=((Math.round(virtual)%n)+n)%n;
   if(virtual>=n&&virtual<4*n)return;
   requestAnimationFrame(()=>{
-    const track=el.querySelector('.detail-photo-track');if(!track)return;
     const centered=n*2+actual;
-    el.dataset.virtualIndex=centered;el.dataset.index=actual;
-    carouselTransform(el,centered,false);
+    state.itemPhotoVirtualIndex=centered;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:centered};
+    el.dataset.virtualIndex=centered;el.dataset.index=actual;carouselTransform(el,centered,false);
   });
 }
 function updateItemCarousel(index,animate=true){
   const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;
   const el=document.getElementById('detailPhotoCarousel');if(!el)return;
   const currentVirtual=Number(el.dataset.virtualIndex||n*2+(state.itemPhotoIndex||0));
-  const currentActual=((currentVirtual%n)+n)%n;
+  const currentActual=((Math.round(currentVirtual)%n)+n)%n;
   const i=((Number(index)||0)%n+n)%n;
   let target=currentVirtual;
   if(i!==currentActual){
     const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;
     target=forward<=backward?currentVirtual+forward:currentVirtual-backward;
   }
-  state.itemPhotoIndex=i;el.dataset.index=i;el.dataset.virtualIndex=target;el.dataset.photoCount=n;
-  carouselTransform(el,target,animate);queueCarouselNormalization(el);
+  state.itemPhotoIndex=i;state.itemPhotoVirtualIndex=target;state.itemPhotoPositionItem=x.id;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:i,virtual:target};
+  el.dataset.index=i;el.dataset.virtualIndex=target;el.dataset.photoCount=n;carouselTransform(el,target,animate);queueCarouselNormalization(el);
 }
 function selectItemPhoto(index){updateItemCarousel(index,true)}
 function setupItemPhotoCarousel(){
@@ -899,81 +903,56 @@ function setupItemPhotoCarousel(){
   sizeItemCarouselSlides(el);normalizeItemCarousel(false);
   let startX=0,startY=0,lastX=0,lastTime=0,velocityX=0,startVirtual=Number(el.dataset.virtualIndex||0),dragging=false,moved=false,horizontal=false,raf=0,inertia=false;
   const stopMotion=()=>{if(raf){cancelAnimationFrame(raf);raf=0}inertia=false};
-  const renderDrag=(virtual,dx)=>{el.dataset.virtualIndex=virtual;carouselTransform(el,virtual,false,dx)};
+  const renderDrag=(virtual)=>{
+    const n=getPhotos().length;if(!n)return;
+    if(virtual<n||virtual>=n*3){const actual=((Math.round(virtual)%n)+n)%n;virtual=n*2+actual}
+    const actual=((Math.round(virtual)%n)+n)%n;
+    state.itemPhotoVirtualIndex=virtual;state.itemPhotoIndex=actual;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:virtual};
+    el.dataset.virtualIndex=virtual;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,virtual,false,0);
+  };
+  const settle=(virtual)=>{
+    const n=getPhotos().length;if(!n)return;
+    const target=Math.round(virtual),actual=((target%n)+n)%n;
+    state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=target;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:target};
+    el.dataset.virtualIndex=target;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,target,true);queueCarouselNormalization(el);
+  };
   const animateInertia=(virtual,velocity)=>{
-    stopMotion();
-    inertia=true;
-    let v=velocity;
-    let current=virtual;
-    let last=performance.now();
-    const step=(now)=>{
+    stopMotion();inertia=true;
+    let v=velocity*1.35,current=virtual,last=performance.now();
+    const step=now=>{
       if(!inertia)return;
       const dt=Math.min(32,now-last);last=now;
-      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.88);
-      v*=Math.pow(.0008,dt/1000);
-      renderDrag(current,0);
-      if(Math.abs(v)<.025){
-        inertia=false;
-        const target=Math.round(current);
-        const n=getPhotos().length;
-        const actual=((target%n)+n)%n;
-        state.itemPhotoIndex=actual;el.dataset.virtualIndex=target;el.dataset.index=actual;el.dataset.photoCount=n;
-        carouselTransform(el,target,true);queueCarouselNormalization(el);
-        raf=0;return;
-      }
+      current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.56);
+      v*=Math.pow(.12,dt/1000);
+      renderDrag(current);
+      if(Math.abs(v)<.018){inertia=false;settle(current);raf=0;return}
       raf=requestAnimationFrame(step);
     };
     raf=requestAnimationFrame(step);
   };
   el.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1)return;
-    stopMotion();
-    const t=e.touches[0];startX=t.clientX;startY=t.clientY;lastX=startX;lastTime=performance.now();velocityX=0;
-    startVirtual=Number(el.dataset.virtualIndex||0);dragging=true;moved=false;horizontal=false;el.classList.add('is-dragging');
+    if(e.touches.length!==1)return;stopMotion();
+    const t=e.touches[0];startX=t.clientX;startY=t.clientY;lastX=startX;lastTime=performance.now();velocityX=0;startVirtual=Number(el.dataset.virtualIndex||0);dragging=true;moved=false;horizontal=false;el.classList.add('is-dragging');
   },{passive:true});
   el.addEventListener('touchmove',e=>{
     if(!dragging||e.touches.length!==1)return;
     const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY,now=performance.now();
-    if(!horizontal){
-      if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
-      if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}
-      horizontal=true;
-    }
+    if(!horizontal){if(Math.abs(dx)<6&&Math.abs(dy)<6)return;if(Math.abs(dx)<=Math.abs(dy)*1.08){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}
     e.preventDefault();moved=true;
-    const dt=Math.max(8,now-lastTime);velocityX=(t.clientX-lastX)/dt;lastX=t.clientX;lastTime=now;
-    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.88);
-    renderDrag(virtual,0);
+    const dt=Math.max(6,now-lastTime);velocityX=(t.clientX-lastX)/dt;lastX=t.clientX;lastTime=now;
+    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.56);renderDrag(virtual);
   },{passive:false});
   el.addEventListener('touchend',e=>{
     if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}
     dragging=false;horizontal=false;el.classList.remove('is-dragging');
-    const photos=getPhotos(),n=photos.length,t=e.changedTouches[0],dx=t.clientX-startX;
-    const current=Number(el.dataset.virtualIndex||startVirtual);
-    const speed=Math.abs(velocityX);
-    if(speed>.12){animateInertia(current,velocityX)}
-    else{
-      const target=Math.round(current);
-      const actual=((target%n)+n)%n;state.itemPhotoIndex=actual;el.dataset.virtualIndex=target;el.dataset.index=actual;el.dataset.photoCount=n;
-      carouselTransform(el,target,true);queueCarouselNormalization(el);
-    }
-    setTimeout(()=>{moved=false},120);
+    const current=Number(el.dataset.virtualIndex||startVirtual),speed=Math.abs(velocityX);
+    if(speed>.045)animateInertia(current,velocityX);else settle(current);
+    setTimeout(()=>{moved=false},160);
   },{passive:true});
-  el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');normalizeItemCarousel(false)},{passive:true});
+  el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');settle(Number(el.dataset.virtualIndex||startVirtual))},{passive:true});
   el.addEventListener('click',e=>{if(moved){e.preventDefault();e.stopPropagation();moved=false}},{capture:true});
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
-  window.addEventListener('resize',()=>{if(document.getElementById('detailPhotoCarousel')===el)normalizeItemCarousel(false)},{passive:true});
 }
-
-
-function activateAuctionConfirmModal(id){const x=items.find(v=>v.id===id);if(!x||x.ownerId!==state.currentUserId||x.sold||isBuyNow(x))return '<div class="modal"><div class="empty">This auction cannot be activated.</div></div>';return `<div class="modal activate-confirm-modal"><div class="activate-confirm-copy">Activating the 24-hour auction commits the starting bid to the current highest offer. The auction cannot be deactivated, and the listing can no longer be edited. Are you sure you want to continue?</div><div class="activate-confirm-actions"><button class="secondary" type="button" onclick="closeModal()">No</button><button class="primary" type="button" onclick="sellerBeginResolution('${esc(id)}')">Yes</button></div></div>`}
-let imageViewerIndex=0,imageViewerScale=1,imageViewerX=0,imageViewerY=0,imageViewerStartX=0,imageViewerStartY=0,imageViewerStartDistance=0,imageViewerStartPanX=0,imageViewerStartPanY=0,imageViewerPinching=false;
-function applyViewerTransform(){const img=document.getElementById('imageViewerImage');if(img)img.style.transform=`translate3d(${imageViewerX}px,${imageViewerY}px,0) scale(${imageViewerScale})`}
-function clampViewerPan(){const stage=document.querySelector('.image-viewer-stage'),img=document.getElementById('imageViewerImage');if(!stage||!img)return;const maxX=Math.max(0,(img.offsetWidth*imageViewerScale-stage.clientWidth)/2),maxY=Math.max(0,(img.offsetHeight*imageViewerScale-stage.clientHeight)/2);imageViewerX=Math.max(-maxX,Math.min(maxX,imageViewerX));imageViewerY=Math.max(-maxY,Math.min(maxY,imageViewerY))}
-function resetViewerTransform(){imageViewerScale=1;imageViewerX=0;imageViewerY=0}
-function openImageViewer(id,index=0){const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;imageViewerIndex=Math.max(0,Math.min(photos.length-1,Number(index)||0));resetViewerTransform();state.modal={type:'imageViewer',data:id};render()}
-function changeViewerImage(delta){const x=items.find(v=>v.id===state.modal?.data),photos=listingPhotos(x);if(!photos.length)return;const next=imageViewerIndex+delta;if(next<0||next>=photos.length)return;imageViewerIndex=next;resetViewerTransform();render()}
-function setViewerZoom(scale,focusX=null,focusY=null){const next=Math.max(1,Math.min(4,Number(scale)||1));if(next===imageViewerScale){applyViewerTransform();return}if(next===1){resetViewerTransform();applyViewerTransform();return}if(focusX!==null&&focusY!==null){const ratio=next/imageViewerScale;imageViewerX=focusX-(focusX-imageViewerX)*ratio;imageViewerY=focusY-(focusY-imageViewerY)*ratio}imageViewerScale=next;clampViewerPan();applyViewerTransform()}
-function viewerTouchDistance(touches){if(!touches||touches.length<2)return 0;const a=touches[0],b=touches[1];return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
 function setupImageViewerGestures(){const stage=document.querySelector('.image-viewer-stage');if(!stage)return;stage.addEventListener('touchstart',e=>{if(e.touches.length>=2){imageViewerPinching=true;imageViewerStartDistance=viewerTouchDistance(e.touches);imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY;return}const t=e.changedTouches[0];imageViewerStartX=t.clientX;imageViewerStartY=t.clientY;imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY},{passive:true});stage.addEventListener('touchmove',e=>{if(e.touches.length>=2&&imageViewerStartDistance){const d=viewerTouchDistance(e.touches);if(d){const rect=stage.getBoundingClientRect(),focusX=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left-rect.width/2,focusY=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top-rect.height/2;setViewerZoom(imageViewerScale*(d/imageViewerStartDistance),focusX,focusY);imageViewerStartDistance=d}return}if(imageViewerScale>1){const t=e.touches[0];imageViewerX=imageViewerStartPanX+(t.clientX-imageViewerStartX);imageViewerY=imageViewerStartPanY+(t.clientY-imageViewerStartY);clampViewerPan();applyViewerTransform()}},{passive:true});stage.addEventListener('touchend',e=>{if(imageViewerPinching&&e.touches.length<2){imageViewerPinching=false;imageViewerStartDistance=0;return}if(imageViewerScale>1)return;const t=e.changedTouches[0],dx=t.clientX-imageViewerStartX,dy=t.clientY-imageViewerStartY;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.25)changeViewerImage(dx<0?1:-1)},{passive:true});stage.addEventListener('dblclick',e=>{if(e.target.id==='imageViewerImage')setViewerZoom(imageViewerScale>1?1:2.25,0,0)});stage.addEventListener('wheel',e=>{e.preventDefault();const rect=stage.getBoundingClientRect(),fx=e.clientX-rect.left-rect.width/2,fy=e.clientY-rect.top-rect.height/2;setViewerZoom(imageViewerScale+(e.deltaY<0?.25:-.25),fx,fy)},{passive:false})}
 function imageViewerModal(id){const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return '';const src=photos[Math.max(0,Math.min(photos.length-1,imageViewerIndex))];return `<div class="image-viewer" onclick="closeModal()"><div class="image-viewer-stage" onclick="event.stopPropagation()"><button class="image-viewer-close" aria-label="Close image" onclick="event.stopPropagation();closeModal()">×</button>${photos.length>1&&imageViewerIndex>0?'<button class="image-viewer-control image-viewer-prev" aria-label="Previous photo" onclick="changeViewerImage(-1)">‹</button>':''}${photos.length>1&&imageViewerIndex<photos.length-1?'<button class="image-viewer-control image-viewer-next" aria-label="Next photo" onclick="changeViewerImage(1)">›</button>':''}<button class="image-viewer-control image-viewer-zoom" aria-label="Zoom image" onclick="setViewerZoom(imageViewerScale>1?1:2.25)">⌕</button><img id="imageViewerImage" src="${esc(src)}" alt="${esc(x.fullName||x.name)}" style="transform:translate3d(${imageViewerX}px,${imageViewerY}px,0) scale(${imageViewerScale})"><div class="image-viewer-count">${imageViewerIndex+1} / ${photos.length}</div></div></div>`}
 
@@ -1096,8 +1075,34 @@ function modal(){if(!state.modal)return '';const m=state.modal;if(m.type==='sear
 function overlay(body){return `<div class="modalOverlay" onclick="if(event.target===this)closeModal()">${body}</div>`}
 function render(){const cu=currentUser();state.watchlist=Array.isArray(cu?.watchlist)?cu.watchlist.slice():[];if(state.page==='seller'&&!currentUser())state.page='market';let body=state.page==='item'?itemPage():state.page==='seller'?sellerOverview():state.page==='sellerProfile'?sellerProfile():state.page==='inbox'?inboxPage():state.page==='watchlist'?watchlistPage():state.page==='orders'?ordersPage():state.page==='channels'?renderLandingPage('channels'):state.page==='closing'?renderLandingPage('closing'):state.page==='buy'?renderLandingPage('buy'):state.page==='new'?renderLandingPage('new'):state.page==='channelPage'?channelPage():state.page==='browse'?browsePage():market();document.getElementById('app').innerHTML=header()+body+footer()+modal()+(state.menu?menuDrawer():'');if(state.page==='item'){setupItemSwipe();setupItemPhotoCarousel();}if(state.modal?.type==='imageViewer')setupImageViewerGestures();if(state.modal?.type==='search')setTimeout(renderSearchResults,0)}
 window.addEventListener('click',e=>{if(!e.target.closest('.suggestions'))document.querySelectorAll('.suggestions-box').forEach(x=>x.hidden=true)});
-setInterval(tick,1000);render();tick();
+function animateConcierge(){const angle=conciergeRotationAngle();document.querySelectorAll('.concierge-star').forEach(el=>el.style.setProperty('--concierge-angle',angle+'deg'));requestAnimationFrame(animateConcierge)}
+setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
 </script>
+
+<style>
+/* Continuity pass: only the focused card and its immediate neighbors are rendered. */
+.detail-photo-carousel{overflow:hidden !important;perspective:1250px !important;perspective-origin:50% 50% !important;}
+.detail-photo-slide{opacity:0 !important;transition:transform .18s linear,opacity .12s linear !important;}
+.detail-photo-slide.is-center,.detail-photo-slide.is-left,.detail-photo-slide.is-right{opacity:1 !important;}
+.detail-photo-slide.is-far-left,.detail-photo-slide.is-far-right{opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}
+.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none !important;}
+</style>
+
+<style>
+/* Final carousel motion pass: only the focused photo and its two immediate neighbors exist visually. */
+.detail-photo-carousel{perspective:1250px !important;perspective-origin:50% 50% !important;overflow:hidden !important;touch-action:pan-y !important;}
+.detail-photo-track{position:relative !important;width:100% !important;height:100% !important;display:block !important;transform:none !important;}
+.detail-photo-slide{position:absolute !important;left:50% !important;top:50% !important;margin:0 !important;height:84% !important;flex:none !important;transition:transform .22s cubic-bezier(.22,.61,.36,1),opacity .16s ease !important;will-change:transform,opacity !important;}
+.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none !important;}
+.detail-photo-slide.is-center{opacity:1 !important;}
+.detail-photo-slide.is-left,.detail-photo-slide.is-right{opacity:1 !important;}
+.detail-photo-slide.is-far-left,.detail-photo-slide.is-far-right{opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}
+.concierge-star{animation:none !important;transform:rotate(var(--concierge-angle,0deg)) !important;}
+@media(max-width:620px){
+  .detail-photo-carousel{height:300px !important;border-radius:22px !important;}
+  .detail-photo-slide{width:58% !important;height:84% !important;}
+}
+</style>
 </body>
 </html>
 
