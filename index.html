@@ -588,18 +588,18 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .detail-photo-slide.is-far-right{transform:translate3d(calc(-50% + 61%),-50%,-90px) scale(.60) rotateY(38deg) !important}
 }
 
-/* Final lazy-Susan refinement: tighter spacing, stronger outward rotation, adjacent cards only. */
+/* Final lazy-Susan refinement: adjacent cards sit at the focused card's outer edge with no overlap. */
 .detail-photo-carousel{perspective:1050px !important;perspective-origin:50% 50% !important;overflow:hidden !important;}
 .detail-photo-slide.is-center{transform:translate3d(-50%,-50%,48px) scale(1) rotateY(0deg) !important;opacity:1 !important;z-index:10 !important;}
-.detail-photo-slide.is-left{transform:translate3d(calc(-50% - 51%),-50%,-28px) scale(.72) rotateY(-42deg) !important;opacity:.82 !important;z-index:8 !important;}
-.detail-photo-slide.is-right{transform:translate3d(calc(-50% + 51%),-50%,-28px) scale(.72) rotateY(42deg) !important;opacity:.82 !important;z-index:8 !important;}
+.detail-photo-slide.is-left{transform:translate3d(calc(-50% - 86%),-50%,-28px) scale(.72) rotateY(-42deg) !important;opacity:.82 !important;z-index:8 !important;}
+.detail-photo-slide.is-right{transform:translate3d(calc(-50% + 86%),-50%,-28px) scale(.72) rotateY(42deg) !important;opacity:.82 !important;z-index:8 !important;}
 .detail-photo-slide.is-far-left,.detail-photo-slide.is-far-right{opacity:0 !important;pointer-events:none !important;z-index:1 !important;}
 @media(max-width:620px){
   .detail-photo-carousel{height:min(68vw,320px) !important;min-height:240px !important;border-radius:22px !important;}
   .detail-photo-slide{width:58% !important;height:84% !important;}
   .detail-photo-slide.is-center{transform:translate3d(-50%,-50%,44px) scale(1) rotateY(0deg) !important;}
-  .detail-photo-slide.is-left{transform:translate3d(calc(-50% - 51%),-50%,-24px) scale(.72) rotateY(-42deg) !important;}
-  .detail-photo-slide.is-right{transform:translate3d(calc(-50% + 51%),-50%,-24px) scale(.72) rotateY(42deg) !important;}
+  .detail-photo-slide.is-left{transform:translate3d(calc(-50% - 86%),-50%,-24px) scale(.72) rotateY(-42deg) !important;}
+  .detail-photo-slide.is-right{transform:translate3d(calc(-50% + 86%),-50%,-24px) scale(.72) rotateY(42deg) !important;}
 }
 
 </style>
