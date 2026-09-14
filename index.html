@@ -808,7 +808,7 @@ function itemPage(){
   const savedVirtual=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?Number(state.itemPhotoVirtualIndex):null;
   const virtualPhotoIndex=photos.length>1?(savedVirtual!==null?savedVirtual:photos.length*2+photoIndex):0;
   const slotIndexes=photos.length>1?[((photoIndex-1+photos.length)%photos.length),photoIndex,((photoIndex+1)%photos.length)]:[0];
-  const photoSlides=slotIndexes.map((actual)=>{const src=photos[actual]||'';return '<div class="detail-photo-slide" data-index="'+actual+'"><img src="'+esc(src)+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+actual+')"></div>'}).join('');
+  const photoSlides=photos.map((src,actual)=>'<div class="detail-photo-slide" data-index="'+actual+'"><img src="'+esc(src||'')+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+actual+')"></div>').join('');
   const relatedHtml=related.length?'<div class="related-scroll">'+related.map(itemCard).join('')+'</div>':'<div class="empty">No other listings of this card are currently available.</div>';
   return '<main><div class="item-page-top"><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button>'+heart+'</div><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'" data-virtual-index="'+virtualPhotoIndex+'"><div class="detail-photo-track">'+photoSlides+'</div>'+photoNav+'</div></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
 }
@@ -821,78 +821,74 @@ function carouselSlideMetrics(el){
 }
 function sizeItemCarouselSlides(el){
   if(!el)return;
-  const available=el.clientWidth||360;
-  const width=Math.max(190,Math.min(available*.58,340));
+  const {width}=carouselSlideMetrics(el);
   el.style.setProperty('--photo-slide-width',width+'px');
   el.querySelectorAll('.detail-photo-slide').forEach(slide=>{
-    slide.style.width=width+'px';slide.style.flexBasis=width+'px';slide.style.minWidth='0';
+    slide.style.width=width+'px';
+    slide.style.flexBasis=width+'px';
+    slide.style.minWidth='0';
   });
 }
 function carouselActualIndex(value,n){return ((Math.round(value)%n)+n)%n}
-function carouselTransform(el,virtualIndex,animate=true){
+function carouselRelativeDistance(actual,virtual,n){
+  let relative=actual-virtual;
+  while(relative>n/2)relative-=n;
+  while(relative<-n/2)relative+=n;
+  return relative;
+}
+function carouselTransform(el,virtualIndex,animate=false){
   const track=el?.querySelector('.detail-photo-track');if(!el||!track)return;
   const n=Number(el.dataset.photoCount||0);if(!n)return;
   const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x);if(!x||!photos.length)return;
-  const width=Math.max(190,Math.min((el.clientWidth||360)*.58,340));
+  const width=carouselSlideMetrics(el).width;
   const slides=[...track.querySelectorAll('.detail-photo-slide')];
-  const baseIndex=Math.floor(virtualIndex);
-  const fraction=virtualIndex-baseIndex;
-  const positions=[-1,0,1];
-  slides.forEach((slide,slot)=>{
-    const actual=((baseIndex+positions[slot])%n+n)%n;
-    const relative=positions[slot]-fraction;
+  slides.forEach(slide=>{
+    const actual=Number(slide.dataset.index)||0;
+    const relative=carouselRelativeDistance(actual,virtualIndex,n);
     const ad=Math.abs(relative);
-    const sign=relative<0?-1:1;
+    const visible=ad<1.72;
     const angle=Math.max(-42,Math.min(42,relative*42));
     const rad=Math.abs(angle)*Math.PI/180;
     const projectedHalf=(width*.5)*Math.cos(rad);
     const centerHalf=width*.5;
     const gap=3;
-    const offset=ad*(centerHalf+projectedHalf+gap);
-    const depth=ad<.001?48:-24-Math.min(ad,1)*12;
-    const tx=sign*offset;
-    const scale=1;
-    const opacity=Math.max(.78,1-Math.max(0,ad-1)*.12);
-    const src=photos[actual];
+    const tx=relative*(centerHalf+projectedHalf+gap);
+    const depth=48-72*Math.min(ad,1);
+    const opacity=visible?1:0;
     const img=slide.querySelector('img');
     if(img){
+      const src=photos[actual]||'';
       if(img.getAttribute('src')!==src)img.src=src;
       img.alt=`${x.fullName||x.name} — Photo ${actual+1}`;
-      img.style.visibility='visible';
+      img.style.visibility=src?'visible':'hidden';
     }
-    slide.dataset.photoIndex=actual;
-    slide.onclick=()=>openImageViewer(state.activeItem,actual);
     slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');
     if(ad<.5)slide.classList.add('is-center');
     else if(relative<0)slide.classList.add('is-left');
     else slide.classList.add('is-right');
-    slide.style.visibility='visible';slide.style.pointerEvents='auto';slide.style.opacity=String(opacity);slide.style.zIndex=String(ad<.5?10:8);
-    slide.style.transition=animate?'transform .34s cubic-bezier(.22,.61,.36,1),opacity .24s ease':'none';
-    slide.style.setProperty('transform',`translate3d(calc(-50% + ${tx.toFixed(2)}px),-50%,${depth.toFixed(2)}px) scale(${scale}) rotateY(${angle.toFixed(2)}deg)`,'important');
+    slide.style.visibility=visible?'visible':'hidden';
+    slide.style.pointerEvents=visible?'auto':'none';
+    slide.style.opacity=String(opacity);
+    slide.style.zIndex=String(ad<.5?10:Math.max(1,9-Math.round(ad)));
+    slide.style.transition=animate?'transform .28s cubic-bezier(.22,.61,.36,1)':'none';
+    slide.style.setProperty('transform',`translate3d(calc(-50% + ${tx.toFixed(2)}px),-50%,${depth.toFixed(2)}px) scale(1) rotateY(${angle.toFixed(2)}deg)`,'important');
   });
   const count=el.querySelector('.detail-photo-count');
-  if(count){const actual=carouselActualIndex(virtualIndex,n);count.textContent=`${actual+1} / ${n}`}
+  if(count){const actual=carouselActualIndex(Math.round(virtualIndex),n);count.textContent=`${actual+1} / ${n}`}
 }
 function normalizeItemCarousel(animate=false){
   const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||!n)return;
   sizeItemCarouselSlides(el);
-  const saved=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?Number(state.itemPhotoVirtualIndex):null;
+  const saved=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?state.itemPhotoVirtualIndex:null;
   const actual=carouselActualIndex(saved!==null?saved:Number(state.itemPhotoIndex)||0,n);
   const virtual=saved!==null?saved:n*2+actual;
-  state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=virtual;state.itemPhotoPositionItem=x.id;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:actual,virtual:virtual};
+  state.itemPhotoIndex=actual;
+  state.itemPhotoVirtualIndex=virtual;
+  state.itemPhotoPositionItem=x.id;
+  state.itemPhotoPositions=state.itemPhotoPositions||{};
+  state.itemPhotoPositions[x.id]={index:actual,virtual:virtual};
   el.dataset.index=actual;el.dataset.virtualIndex=virtual;el.dataset.photoCount=n;
   carouselTransform(el,virtual,animate);
-}
-function queueCarouselNormalization(el){
-  if(!el)return;
-  const x=items.find(v=>v.id===state.activeItem),n=listingPhotos(x).length;if(n<=1)return;
-  const virtual=Number(el.dataset.virtualIndex||0);
-  if(virtual>=n&&virtual<3*n)return;
-  requestAnimationFrame(()=>{
-    const actual=carouselActualIndex(virtual,n),centered=n*2+actual;
-    state.itemPhotoVirtualIndex=centered;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:centered};
-    el.dataset.virtualIndex=centered;el.dataset.index=actual;carouselTransform(el,centered,false);
-  });
 }
 function updateItemCarousel(index,animate=true){
   const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;
@@ -903,10 +899,21 @@ function updateItemCarousel(index,animate=true){
   if(i===currentActual){carouselTransform(el,currentVirtual,animate);return}
   const forward=(i-currentActual+n)%n,backward=(currentActual-i+n)%n;
   const target=forward<=backward?currentVirtual+forward:currentVirtual-backward;
-  state.itemPhotoIndex=i;state.itemPhotoVirtualIndex=target;state.itemPhotoPositionItem=x.id;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:i,virtual:target};
-  el.dataset.index=i;el.dataset.virtualIndex=target;el.dataset.photoCount=n;carouselTransform(el,target,animate);queueCarouselNormalization(el);
+  state.itemPhotoIndex=i;state.itemPhotoVirtualIndex=target;state.itemPhotoPositionItem=x.id;
+  state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[x.id]={index:i,virtual:target};
+  el.dataset.index=i;el.dataset.virtualIndex=target;el.dataset.photoCount=n;
+  carouselTransform(el,target,animate);
 }
 function selectItemPhoto(index){updateItemCarousel(index,true)}
+function selectAndOpenItemPhoto(index){
+  const el=document.getElementById('detailPhotoCarousel');
+  if(!el)return;
+  const n=Number(el.dataset.photoCount||0);if(!n)return;
+  const current=carouselActualIndex(Number(el.dataset.virtualIndex||0),n);
+  if(current===index){openImageViewer(state.activeItem,index);return}
+  updateItemCarousel(index,true);
+  window.setTimeout(()=>openImageViewer(state.activeItem,index),300);
+}
 function setupItemPhotoCarousel(){
   const el=document.getElementById('detailPhotoCarousel');if(!el||el.dataset.bound==='1')return;el.dataset.bound='1';
   const getPhotos=()=>listingPhotos(items.find(v=>v.id===state.activeItem));
@@ -915,40 +922,21 @@ function setupItemPhotoCarousel(){
   const stopMotion=()=>{if(raf){cancelAnimationFrame(raf);raf=0}inertia=false};
   const renderDrag=virtual=>{
     const n=getPhotos().length;if(!n)return;
-    const actual=carouselActualIndex(virtual,n);
-    state.itemPhotoVirtualIndex=virtual;state.itemPhotoIndex=actual;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:virtual};
+    const actual=carouselActualIndex(Math.round(virtual),n);
+    state.itemPhotoVirtualIndex=virtual;state.itemPhotoIndex=actual;state.itemPhotoPositionItem=state.activeItem;
+    state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:virtual};
     el.dataset.virtualIndex=virtual;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,virtual,false);
-  };
-  const settle=virtual=>{
-    const n=getPhotos().length;if(!n)return;
-    const target=Math.round(virtual),actual=carouselActualIndex(target,n);
-    state.itemPhotoIndex=actual;state.itemPhotoVirtualIndex=target;state.itemPhotoPositionItem=state.activeItem;state.itemPhotoPositions=state.itemPhotoPositions||{};state.itemPhotoPositions[state.activeItem]={index:actual,virtual:target};
-    el.dataset.virtualIndex=target;el.dataset.index=actual;el.dataset.photoCount=n;carouselTransform(el,target,true);queueCarouselNormalization(el);
   };
   const animateInertia=(virtual,velocity)=>{
     stopMotion();inertia=true;
-    // A fling should carry momentum naturally without forcing the carousel onto a card.
-    // Keep the response controlled so aggressive swipes do not become overly jumpy.
-    let v=velocity*1.9,current=virtual,last=performance.now();
+    let v=velocity*.72,current=virtual,last=performance.now();
     const step=now=>{
       if(!inertia)return;
       const dt=Math.min(32,now-last);last=now;
       current+=(-v*dt)/Math.max(1,(el.clientWidth||360)*.46);
-      v*=Math.pow(.22,dt/1000);
+      v*=Math.pow(.20,dt/1000);
       renderDrag(current);
-      if(Math.abs(v)<.008){
-        inertia=false;
-        // Preserve the exact resting presentation; only recenter the virtual index
-        // to keep the circular carousel numerically stable.
-        const n=getPhotos().length;
-        if(n>1){
-          const base=Math.floor(current),fraction=current-base,actual=carouselActualIndex(base,n),stable=n*2+actual+fraction;
-          current=stable;
-          renderDrag(current);
-        }
-        raf=0;
-        return;
-      }
+      if(Math.abs(v)<.006){inertia=false;raf=0;return}
       raf=requestAnimationFrame(step);
     };
     raf=requestAnimationFrame(step);
@@ -963,18 +951,23 @@ function setupItemPhotoCarousel(){
     if(!horizontal){if(Math.abs(dx)<5&&Math.abs(dy)<5)return;if(Math.abs(dx)<=Math.abs(dy)*1.05){dragging=false;el.classList.remove('is-dragging');return}horizontal=true}
     e.preventDefault();moved=true;
     const dt=Math.max(4,now-lastTime);velocityX=(t.clientX-lastX)/dt;lastX=t.clientX;lastTime=now;
-    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.42);renderDrag(virtual);
+    const virtual=startVirtual-dx/Math.max(1,(el.clientWidth||360)*.46);renderDrag(virtual);
   },{passive:false});
   el.addEventListener('touchend',()=>{
     if(!horizontal){dragging=false;el.classList.remove('is-dragging');return}
     dragging=false;horizontal=false;el.classList.remove('is-dragging');
     const current=Number(el.dataset.virtualIndex||startVirtual),speed=Math.abs(velocityX);
-    if(speed>.025)animateInertia(current,velocityX);
-    else renderDrag(current);
-    setTimeout(()=>{moved=false},180);
+    if(speed>.025)animateInertia(current,velocityX);else renderDrag(current);
+    setTimeout(()=>{moved=false},250);
   },{passive:true});
   el.addEventListener('touchcancel',()=>{stopMotion();dragging=false;horizontal=false;el.classList.remove('is-dragging');renderDrag(Number(el.dataset.virtualIndex||startVirtual))},{passive:true});
-  el.addEventListener('click',e=>{if(moved){e.preventDefault();e.stopPropagation();moved=false}},{capture:true});
+  el.addEventListener('click',e=>{
+    const slide=e.target.closest('.detail-photo-slide');
+    if(!slide)return;
+    const actual=Number(slide.dataset.index)||0;
+    if(moved){e.preventDefault();e.stopPropagation();moved=false;return}
+    e.preventDefault();e.stopPropagation();selectAndOpenItemPhoto(actual);
+  },{capture:true});
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
 }
 function setupImageViewerGestures(){const stage=document.querySelector('.image-viewer-stage');if(!stage)return;stage.addEventListener('touchstart',e=>{if(e.touches.length>=2){imageViewerPinching=true;imageViewerStartDistance=viewerTouchDistance(e.touches);imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY;return}const t=e.changedTouches[0];imageViewerStartX=t.clientX;imageViewerStartY=t.clientY;imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY},{passive:true});stage.addEventListener('touchmove',e=>{if(e.touches.length>=2&&imageViewerStartDistance){const d=viewerTouchDistance(e.touches);if(d){const rect=stage.getBoundingClientRect(),focusX=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left-rect.width/2,focusY=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top-rect.height/2;setViewerZoom(imageViewerScale*(d/imageViewerStartDistance),focusX,focusY);imageViewerStartDistance=d}return}if(imageViewerScale>1){const t=e.touches[0];imageViewerX=imageViewerStartPanX+(t.clientX-imageViewerStartX);imageViewerY=imageViewerStartPanY+(t.clientY-imageViewerStartY);clampViewerPan();applyViewerTransform()}},{passive:true});stage.addEventListener('touchend',e=>{if(imageViewerPinching&&e.touches.length<2){imageViewerPinching=false;imageViewerStartDistance=0;return}if(imageViewerScale>1)return;const t=e.changedTouches[0],dx=t.clientX-imageViewerStartX,dy=t.clientY-imageViewerStartY;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.25)changeViewerImage(dx<0?1:-1)},{passive:true});stage.addEventListener('dblclick',e=>{if(e.target.id==='imageViewerImage')setViewerZoom(imageViewerScale>1?1:2.25,0,0)});stage.addEventListener('wheel',e=>{e.preventDefault();const rect=stage.getBoundingClientRect(),fx=e.clientX-rect.left-rect.width/2,fy=e.clientY-rect.top-rect.height/2;setViewerZoom(imageViewerScale+(e.deltaY<0?.25:-.25),fx,fy)},{passive:false})}
