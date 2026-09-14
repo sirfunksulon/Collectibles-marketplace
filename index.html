@@ -836,7 +836,7 @@ function carouselTransform(el,virtualIndex,animate=true,dragPx=0){
     let d=i-virtualIndex;
     if(d>n/2)d-=n;
     if(d<-n/2)d+=n;
-    if(Math.abs(d)>1.75){slide.style.opacity='0';slide.style.zIndex='0';slide.style.pointerEvents='none';return}
+    if(Math.abs(d)>1.75){slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');slide.style.setProperty('opacity','0','important');slide.style.zIndex='0';slide.style.pointerEvents='none';return}
     const ad=Math.abs(d),sign=d<0?-1:1;
     const angle=Math.max(-42,Math.min(42,d*42));
     const rad=Math.abs(angle)*Math.PI/180;
@@ -849,11 +849,11 @@ function carouselTransform(el,virtualIndex,animate=true,dragPx=0){
     const z=depth;
     const base=`translate3d(calc(-50% + ${x.toFixed(2)}px),-50%,${z.toFixed(2)}px) scale(${scale}) rotateY(${angle.toFixed(2)}deg)`;
     slide.classList.remove('is-center','is-left','is-right','is-far-left','is-far-right');
-    if(ad<.001){slide.classList.add('is-center');slide.style.opacity='1';slide.style.zIndex='10';slide.style.pointerEvents='auto'}
-    else if(d<0){slide.classList.add('is-left');slide.style.opacity='1';slide.style.zIndex='8';slide.style.pointerEvents='auto'}
-    else {slide.classList.add('is-right');slide.style.opacity='1';slide.style.zIndex='8';slide.style.pointerEvents='auto'}
-    slide.style.transform=base;
-    slide.style.filter='none';
+    if(ad<.001){slide.classList.add('is-center');slide.style.setProperty('opacity','1','important');slide.style.zIndex='10';slide.style.pointerEvents='auto'}
+    else if(d<0){slide.classList.add('is-left');slide.style.setProperty('opacity','1','important');slide.style.zIndex='8';slide.style.pointerEvents='auto'}
+    else {slide.classList.add('is-right');slide.style.setProperty('opacity','1','important');slide.style.zIndex='8';slide.style.pointerEvents='auto'}
+    slide.style.setProperty('transform',base,'important');
+    slide.style.setProperty('filter','none','important');
   });
   const count=el.querySelector('.detail-photo-count');
   if(count){const actual=((Math.round(virtualIndex)%n)+n)%n;count.textContent=`${actual+1} / ${n}`}
