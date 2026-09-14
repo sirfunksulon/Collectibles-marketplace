@@ -602,6 +602,14 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .detail-photo-slide.is-right{transform:translate3d(calc(-50% + 86%),-50%,-24px) scale(.72) rotateY(42deg) !important;}
 }
 
+
+/* Final carousel positioning refinement: bring adjacent photos forward to meet the focused photo edge while preserving outward rotation. */
+.detail-photo-slide.is-left{transform:translate3d(calc(-50% - 70%),-50%,-28px) scale(.72) rotateY(-42deg) !important;}
+.detail-photo-slide.is-right{transform:translate3d(calc(-50% + 70%),-50%,-28px) scale(.72) rotateY(42deg) !important;}
+@media(max-width:620px){
+  .detail-photo-slide.is-left{transform:translate3d(calc(-50% - 70%),-50%,-24px) scale(.72) rotateY(-42deg) !important;}
+  .detail-photo-slide.is-right{transform:translate3d(calc(-50% + 70%),-50%,-24px) scale(.72) rotateY(42deg) !important;}
+}
 </style>
 </head>
 <body>
