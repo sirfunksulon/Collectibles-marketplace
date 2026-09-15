@@ -918,7 +918,7 @@ function itemPage(){
   if(isOwner&&!x.sold&&!resolving){actions+='<button class="secondary" onclick="openListingEdit(\''+x.id+'\')">Edit Listing</button>';if(!buyNowListing&&current)actions+='<button class="primary" onclick="openModal(\'activateConfirm\',\''+x.id+'\')">Activate Auction</button>';}
   const messageButton=!isOwner?'<button class="ghost" onclick="openModal(\'message\',\''+x.id+'\')">Message Seller</button>':'';
   const heart='<button class="item-title-heart '+(watched?'watched':'')+'" aria-label="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" title="'+(watched?'Remove from Watchlist':'Add to Watchlist')+'" onclick="toggleWatch(\''+x.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg></button>';
-  const photoNav=photos.length>1?('<button type="button" class="detail-photo-nav prev" aria-label="Previous photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex-1+photos.length)%photos.length)+')">‹</button><button type="button" class="detail-photo-nav next" aria-label="Next photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex+1)%photos.length)+')">›</button><div class="detail-photo-count">'+(photoIndex+1)+' / '+photos.length+'</div>'):' ';
+  const photoNav=photos.length>1?('<button type="button" class="detail-photo-nav prev" aria-label="Previous photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex-1+photos.length)%photos.length)+')">‹</button><button type="button" class="detail-photo-nav next" aria-label="Next photo" onclick="event.stopPropagation();selectItemPhoto('+((photoIndex+1)%photos.length)+')">›</button><div class="detail-photo-count">'+(photoIndex+1)+' / '+photos.length+'</div><div class="detail-photo-swipe-hint">Swipe for more photos</div>'):' ';
   const savedVirtual=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?Number(state.itemPhotoVirtualIndex):null;
   const virtualPhotoIndex=photos.length>1?(savedVirtual!==null?savedVirtual:photos.length*2+photoIndex):0;
   const photoSlides=photos.map((src,actual)=>'<div class="detail-photo-slide" data-index="'+actual+'" role="button" tabindex="0" aria-label="Open photo '+(actual+1)+'"><img src="'+esc(src||'')+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')"></div>').join('');
@@ -1034,8 +1034,10 @@ function selectAndOpenItemPhoto(index){
   window.setTimeout(()=>openImageViewer(state.activeItem,index),230);
 }
 function setupItemPhotoCarousel(){
-  const el=document.getElementById('detailPhotoCarousel');if(!el||el.dataset.bound==='1')return;el.dataset.bound='1';
+  const el=document.getElementById('detailPhotoCarousel');if(!el||el.dataset.bound==='1')return;
   const getPhotos=()=>listingPhotos(items.find(v=>v.id===state.activeItem));
+  if(getPhotos().length<=1){el.dataset.bound='single';return;}
+  el.dataset.bound='1';
   sizeItemCarouselSlides(el);normalizeItemCarousel(false);
   let pointerId=null,startX=0,startY=0,lastX=0,lastTime=0,velocityX=0,startVirtual=Number(el.dataset.virtualIndex||0),dragging=false,moved=false,horizontal=false,raf=0,inertia=false;
   const stopMotion=()=>{if(raf){cancelAnimationFrame(raf);raf=0}inertia=false};
@@ -1232,6 +1234,8 @@ function setupImageViewerGestures(){
       moved=true;e.preventDefault();return;
     }
     if(imageViewerPinching||!tracking)return;
+    const currentPhotos=listingPhotos(items.find(v=>v.id===state.modal?.data));
+    if(currentPhotos.length<=1){tracking=false;return;}
     const dx=e.clientX-startX,dy=e.clientY-startY;
     if(imageViewerScale>1){
       if(Math.abs(dx)<2&&Math.abs(dy)<2)return;
@@ -1255,6 +1259,8 @@ function setupImageViewerGestures(){
       tracking=false;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;return;
     }
     if(!tracking&&!imageViewerSwipeDragging)return;
+    const currentPhotos=listingPhotos(items.find(v=>v.id===state.modal?.data));
+    if(currentPhotos.length<=1){tracking=false;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;return;}
     const dx=e.clientX-startX,dy=e.clientY-startY;
     if(imageViewerScale>1){
       tracking=false;stage.dataset.lastPanX='';stage.dataset.lastPanY='';
@@ -1551,6 +1557,21 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);s
 #imageViewerImage{will-change:transform!important;cursor:zoom-in!important}
 .image-viewer-control{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border-color:rgba(0,0,0,.14)!important;box-shadow:0 4px 14px rgba(0,0,0,.08)!important}
 .image-viewer-count{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border:1px solid rgba(0,0,0,.12)!important}
+</style>
+
+<style id="rapidup-item-photo-final-refinement">
+/* Final item-view refinement: keep followed control adjacent to heart without overlap. */
+.item-page-top{min-width:0;}
+.item-view-top-actions{min-width:0;max-width:calc(100% - 38px);overflow:visible;}
+.item-view-top-actions .item-listing-followed{min-width:0;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;}
+.item-view-top-actions .item-title-heart{flex:0 0 46px;}
+
+/* Photo affordance: subtle swipe cue for multi-photo listings only. */
+.detail-photo-swipe-hint{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);z-index:6;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.82);color:#666;font-size:10px;font-weight:800;letter-spacing:.02em;white-space:nowrap;pointer-events:none;}
+@media(max-width:620px){
+  .item-view-top-actions .item-listing-followed{padding:8px 9px;font-size:10px;}
+  .detail-photo-swipe-hint{bottom:7px;font-size:9px;padding:3px 8px;}
+}
 </style>
 </body>
 </html>
