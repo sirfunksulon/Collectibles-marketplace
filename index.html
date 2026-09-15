@@ -862,7 +862,7 @@ function itemPage(){
   const description=x.description?'<div class="listing-description">'+esc(x.description)+'</div>':'';
   const terminalHint=resolving?overtimeHintMarkup(x,remaining):'';
   const secondary=secondaryLabel?'<div class="item-stat"><span class="eyebrow">'+secondaryLabel+'</span><b class="'+(resolving?'resolve':'')+'" id="detailTimer">'+(resolving?secondaryValue:money(secondaryValue))+'</b>'+terminalHint+'</div>':'';
-  const bidStatus=mine?'<div class="bid-status '+statusClass+'">'+statusWord+'</div>':'';
+  const bidStatus=mine&&!isOwner?'<div class="bid-status '+statusClass+'">'+statusWord+'</div>':'';
   let actions='';
   if(buyNowListing&&!x.sold&&!isOwner)actions='<button class="primary" onclick="openModal(\'checkout\',\''+x.id+'\')">Buy Now · '+money(x.price)+'</button>';
   if(!buyNowListing&&!x.sold&&!resolving&&!isOwner)actions+='<button class="primary" onclick="openModal(\'offer\',\''+x.id+'\')">Make an Offer</button>';
