@@ -808,7 +808,7 @@ function itemPage(){
   const savedVirtual=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?Number(state.itemPhotoVirtualIndex):null;
   const virtualPhotoIndex=photos.length>1?(savedVirtual!==null?savedVirtual:photos.length*2+photoIndex):0;
   const slotIndexes=photos.length>1?[((photoIndex-1+photos.length)%photos.length),photoIndex,((photoIndex+1)%photos.length)]:[0];
-  const photoSlides=photos.map((src,actual)=>'<div class="detail-photo-slide" data-index="'+actual+'"><img src="'+esc(src||'')+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')" onclick="event.stopPropagation();openImageViewer(\''+x.id+'\','+actual+')"></div>').join('');
+  const photoSlides=photos.map((src,actual)=>'<div class="detail-photo-slide" data-index="'+actual+'" role="button" tabindex="0" aria-label="Open photo '+(actual+1)+'"><img src="'+esc(src||'')+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')"></div>').join('');
   const relatedHtml=related.length?'<div class="related-scroll">'+related.map(itemCard).join('')+'</div>':'<div class="empty">No other listings of this card are currently available.</div>';
   return '<main><div class="item-page-top"><button class="ghost" aria-label="Back" onclick="route(\'market\')" style="font-size:28px;padding:0;line-height:1">←</button>'+heart+'</div><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'" data-virtual-index="'+virtualPhotoIndex+'"><div class="detail-photo-track">'+photoSlides+'</div>'+photoNav+'</div></div><div><div class="item-title-row"><h1>'+esc(x.fullName||x.name)+'</h1></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div><section class="section related-section"><div class="sectionhead"><h2>Similar listings</h2></div>'+relatedHtml+'</section></main>';
 }
@@ -853,8 +853,11 @@ function carouselTransform(el,virtualIndex,animate=false){
     const rad=Math.abs(angle)*Math.PI/180;
     const projectedHalf=(width*.5)*Math.cos(rad);
     const centerHalf=width*.5;
-    const gap=2;
-    const tx=relative*(centerHalf+projectedHalf+gap);
+    /* Keep the rotating faces visually tight to the focused face.  The side card
+       is allowed to disappear behind the center card rather than being pushed
+       outward to expose its whole width. */
+    const gap=1;
+    const tx=relative*(centerHalf+projectedHalf-gap);
     const depth=48-72*Math.min(ad,1);
     const img=slide.querySelector('img');
     if(img){
@@ -971,11 +974,16 @@ function setupItemPhotoCarousel(){
   el.addEventListener('pointerup',finish);
   el.addEventListener('pointercancel',e=>{if(e.pointerId!==pointerId)return;stopMotion();dragging=false;horizontal=false;pointerId=null;el.classList.remove('is-dragging');renderPosition(Number(el.dataset.virtualIndex||startVirtual));},{passive:true});
   el.addEventListener('click',e=>{
-    const slide=e.target.closest('.detail-photo-slide');if(!slide)return;
+    const slide=e.target.closest('.detail-photo-slide');if(!slide||!el.contains(slide))return;
     const actual=Number(slide.dataset.index)||0;
     if(moved){e.preventDefault();e.stopPropagation();moved=false;return}
     e.preventDefault();e.stopPropagation();selectAndOpenItemPhoto(actual);
   },{capture:true});
+  el.addEventListener('keydown',e=>{
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    const slide=e.target.closest('.detail-photo-slide');if(!slide)return;
+    e.preventDefault();selectAndOpenItemPhoto(Number(slide.dataset.index)||0);
+  });
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
 }
 function setupImageViewerGestures(){const stage=document.querySelector('.image-viewer-stage');if(!stage)return;stage.addEventListener('touchstart',e=>{if(e.touches.length>=2){imageViewerPinching=true;imageViewerStartDistance=viewerTouchDistance(e.touches);imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY;return}const t=e.changedTouches[0];imageViewerStartX=t.clientX;imageViewerStartY=t.clientY;imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY},{passive:true});stage.addEventListener('touchmove',e=>{if(e.touches.length>=2&&imageViewerStartDistance){const d=viewerTouchDistance(e.touches);if(d){const rect=stage.getBoundingClientRect(),focusX=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left-rect.width/2,focusY=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top-rect.height/2;setViewerZoom(imageViewerScale*(d/imageViewerStartDistance),focusX,focusY);imageViewerStartDistance=d}return}if(imageViewerScale>1){const t=e.touches[0];imageViewerX=imageViewerStartPanX+(t.clientX-imageViewerStartX);imageViewerY=imageViewerStartPanY+(t.clientY-imageViewerStartY);clampViewerPan();applyViewerTransform()}},{passive:true});stage.addEventListener('touchend',e=>{if(imageViewerPinching&&e.touches.length<2){imageViewerPinching=false;imageViewerStartDistance=0;return}if(imageViewerScale>1)return;const t=e.changedTouches[0],dx=t.clientX-imageViewerStartX,dy=t.clientY-imageViewerStartY;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.25)changeViewerImage(dx<0?1:-1)},{passive:true});stage.addEventListener('dblclick',e=>{if(e.target.id==='imageViewerImage')setViewerZoom(imageViewerScale>1?1:2.25,0,0)});stage.addEventListener('wheel',e=>{e.preventDefault();const rect=stage.getBoundingClientRect(),fx=e.clientX-rect.left-rect.width/2,fy=e.clientY-rect.top-rect.height/2;setViewerZoom(imageViewerScale+(e.deltaY<0?.25:-.25),fx,fy)},{passive:false})}
@@ -1131,6 +1139,29 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
 <style>
 /* Carousel motion authority: the live slot transform is controlled by JS so adjacent images move with the gesture. */
 .detail-photo-slide.is-center,.detail-photo-slide.is-left,.detail-photo-slide.is-right{transform-origin:center center!important;}
+</style>
+<style>
+/* Tight lazy-Susan presentation: keep adjacent faces close to the focused face
+   while allowing their outer portions to be clipped by the viewport. */
+.detail-photo-carousel{
+  overflow:hidden!important;
+  perspective:1100px!important;
+  perspective-origin:50% 50%!important;
+  isolation:isolate!important;
+}
+.detail-photo-slide{
+  height:84%!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  backface-visibility:hidden!important;
+  transform-origin:center center!important;
+  will-change:transform!important;
+}
+.detail-photo-slide img{
+  pointer-events:auto!important;
+  cursor:zoom-in!important;
+}
 </style>
 </body>
 </html>
