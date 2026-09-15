@@ -709,6 +709,10 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
 @media(max-width:900px){.item-view-main{padding:12px}.item-view-card{padding:8px 14px 18px;border-radius:24px}.item-listing-nav{margin-top:10px}}
 @media(max-width:620px){.item-view-main{padding:8px}.item-view-card{border-radius:20px;padding:6px 10px 12px;min-height:0}.item-title-nav{grid-template-columns:34px minmax(0,1fr) 34px;gap:6px;margin:6px 0 12px}.item-title-nav .item-listing-arrow{width:34px;min-height:52px;font-size:36px}.item-view-main .related-section{margin-top:18px}.item-view-main .related-section .sectionhead{margin-bottom:6px}.item-view-top-actions{gap:0;right:0}.item-view-top-actions .item-listing-followed{padding:8px 12px;font-size:10px;flex:0 0 auto;position:absolute;right:104px}.item-view-top-actions .item-title-heart{width:46px;height:46px}.item-view-top-actions .item-title-heart svg{width:39px;height:39px}}
 @media(max-width:620px){.item-view-card{min-height:0!important}.item-view-main .related-section{margin-top:18px}.item-view-main .related-section .sectionhead{margin-bottom:6px}}
+/* Final surgical positioning: move only the followed button down; nudge heart right. */
+.item-view-top-actions .item-listing-followed{top:30px !important;}
+.item-view-top-actions .item-title-heart{transform:translateX(6px) !important;}
+@media(max-width:620px){.item-view-top-actions .item-listing-followed{top:30px !important;}.item-view-top-actions .item-title-heart{transform:translateX(6px) !important;}}
 </style>
 
 </head>
