@@ -1422,13 +1422,13 @@ async function stagePokemonInventory(){
   try{
     const cards=[];
     for(let page=1;page<=10&&cards.length<2500;page++){
-      const r=await fetch(`${API_BASE}?page=${page}&pageSize=250`,{headers:{Accept:'application/json'}});
+      const r=await fetch(`${API_BASE}?page=${page}&pageSize=200`,{headers:{Accept:'application/json'}});
       if(!r.ok)throw new Error(`Card database returned ${r.status}`);
       const d=await r.json();
       const batch=Array.isArray(d.data)?d.data.map(normalizeCard).filter(x=>x.id&&x.name):[];
       if(!batch.length)break;
       cards.push(...batch);
-      if(batch.length<250)break;
+      if(batch.length<200)break;
     }
     const usable=cards.filter(c=>c.releaseYear&&c.name&&c.setName);
     if(usable.length<250)throw new Error('Not enough card records were returned.');
