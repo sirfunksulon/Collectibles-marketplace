@@ -923,7 +923,7 @@ function itemPage(){
   const virtualPhotoIndex=photos.length>1?(savedVirtual!==null?savedVirtual:photos.length*2+photoIndex):0;
   const photoSlides=photos.map((src,actual)=>'<div class="detail-photo-slide" data-index="'+actual+'" role="button" tabindex="0" aria-label="Open photo '+(actual+1)+'"><img src="'+esc(src||'')+'" alt="'+esc(x.fullName||x.name)+' — Photo '+(actual+1)+'" draggable="false" onerror="this.style.visibility=\'hidden\';this.parentElement.classList.add(\'photo-load-error\')"></div>').join('');
   const similarOpen=state.similarListingsOpen===true;
-  const relatedHtml=related.length?'<div class="related-scroll"'+(similarOpen?'':' hidden')+'>'+related.map(itemCard).join('')+'</div>':'<div class="empty"'+(similarOpen?'':' hidden')+'>No other listings of this card are currently available.</div>';
+  const relatedHtml=related.length?'<div class="related-scroll"'+(similarOpen?'':' style="display:none"')+'>'+related.map(itemCard).join('')+'</div>':'<div class="empty"'+(similarOpen?'':' style="display:none"')+'>No other listings of this card are currently available.</div>';
   const pool=itemNavigationPool(),poolIndex=pool.findIndex(v=>v.id===x.id);
   const prevDisabled=poolIndex<=0?' disabled':''; const nextDisabled=poolIndex<0||poolIndex>=pool.length-1?' disabled':'';
   const navMode=state.itemNavMode==='followed'?'followed':'context';
