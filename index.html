@@ -1420,29 +1420,42 @@ async function stagePokemonInventory(){
   state.pokemonStageV1='loading';
   save();
   try{
+    const requests=[
+      `${API_BASE}?page=1&pageSize=200&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`,
+      `${API_BASE}?page=1&pageSize=200&orderBy=-set.releaseDate&select=id,name,set,number,images,tcgplayer`,
+      `${API_BASE}?page=1&pageSize=200&select=id,name,set,number,images,tcgplayer`
+    ];
     const cards=[];
-    for(let page=1;page<=10&&cards.length<2500;page++){
-      const r=await fetch(`${API_BASE}?page=${page}&pageSize=200`,{headers:{Accept:'application/json'}});
-      if(!r.ok)throw new Error(`Card database returned ${r.status}`);
-      const d=await r.json();
-      const batch=Array.isArray(d.data)?d.data.map(normalizeCard).filter(x=>x.id&&x.name):[];
-      if(!batch.length)break;
-      cards.push(...batch);
-      if(batch.length<200)break;
+    for(const url of requests){
+      let lastError=null,ok=false;
+      for(let attempt=0;attempt<2&&!ok;attempt++){
+        try{
+          const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+          const r=await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal});
+          clearTimeout(timer);
+          if(!r.ok)throw new Error(`Card database returned ${r.status}`);
+          const d=await r.json();
+          const batch=Array.isArray(d.data)?d.data.map(normalizeCard).filter(x=>x.id&&x.name&&x.setName&&x.releaseYear):[];
+          cards.push(...batch);ok=true;
+        }catch(e){lastError=e;if(attempt===0)await new Promise(resolve=>setTimeout(resolve,900));}
+      }
+      if(!ok&&lastError)console.warn('RapidUp Pokémon staging request failed',lastError);
     }
-    const usable=cards.filter(c=>c.releaseYear&&c.name&&c.setName);
+    const usable=[...new Map(cards.map(c=>[c.id,c])).values()];
     if(usable.length<250)throw new Error('Not enough card records were returned.');
     const byYear=new Map();usable.forEach(c=>{if(!byYear.has(c.releaseYear))byYear.set(c.releaseYear,[]);byYear.get(c.releaseYear).push(c)});
     const selected=[],used=new Set();
-    [...byYear.keys()].sort((a,b)=>a-b).forEach(y=>{const c=byYear.get(y)[0];if(c&&!used.has(c.id)){selected.push(c);used.add(c.id)}});
+    [...byYear.keys()].sort((a,b)=>a-b).forEach(y=>{const c=byYear.get(y)?.[0];if(c&&!used.has(c.id)){selected.push(c);used.add(c.id)}});
     const variants=usable.filter(c=>deriveVariants(c).some(v=>v&&v!=='Standard'));
-    for(const c of variants.slice(0,25)){if(!used.has(c.id)){selected.push(c);used.add(c.id)}}
-    let i=0;while(selected.length<500&&i<usable.length*3){const c=usable[i%usable.length];selected.push(c);i++}
+    for(const c of variants){if(selected.length>=80)break;if(!used.has(c.id)){selected.push(c);used.add(c.id)}}
+    let i=0;while(selected.length<500&&i<usable.length*4){const c=usable[i%usable.length];if(c&&!used.has(c.id)){selected.push(c);used.add(c.id)}i++}
+    if(selected.length<500)throw new Error(`Only ${selected.length} usable cards were returned.`);
     const now=Date.now(),owners=['user-hyshena','user-sirfunksulon'],methods=['buy-now','dormant-static','dormant-decay'];
     const staged=[];
     selected.slice(0,500).forEach((c,idx)=>{
       const ownerId=owners[idx%owners.length],method=methods[idx%methods.length],variantList=deriveVariants(c),variant=(idx%7===0&&variantList.find(v=>v&&v!=='Standard'))||variantList[idx%variantList.length]||'Standard';
-      const base=Number(c.raw?.tcgplayer?.prices?.[variant?.toLowerCase()]?.market||c.raw?.tcgplayer?.prices?.holofoil?.market||c.raw?.tcgplayer?.prices?.normal?.market||c.raw?.tcgplayer?.prices?.reverseHolofoil?.market||0);
+      const prices=c.raw?.tcgplayer?.prices||{};
+      const base=Number(prices[variant?.toLowerCase()]?.market||prices.holofoil?.market||prices.normal?.market||prices.reverseHolofoil?.market||0);
       const price=Math.max(1,Math.round((base||((idx%25)+1)*3)*(0.55+(idx%9)*0.08)));
       const grade=idx%19===0?'PSA 10':'Raw',condition=grade==='Raw'?'Raw':'Graded',lang=idx%13===0?'Japanese':'English',holdDays=1+(idx%5),decayAmount=Math.max(1,Math.round(price*.08)),injectedAt=now-idx*3600000;
       const isClosing=method!=='buy-now'&&idx%23===0;
