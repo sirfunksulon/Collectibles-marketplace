@@ -1055,16 +1055,52 @@ function setupItemPhotoCarousel(){
   });
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
 }
-let imageViewerIndex=0,imageViewerScale=1,imageViewerX=0,imageViewerY=0,imageViewerPinching=false,imageViewerStartDistance=0,imageViewerStartScale=1,imageViewerStartX=0,imageViewerStartY=0,imageViewerStartPanX=0,imageViewerStartPanY=0,imageViewerSwipeOffset=0,imageViewerSwipeDragging=false,imageViewerSwipeMoved=false,imageViewerSwipeAnimating=false;
-function viewerTouchDistance(touches){if(!touches||touches.length<2)return 0;const dx=touches[0].clientX-touches[1].clientX,dy=touches[0].clientY-touches[1].clientY;return Math.hypot(dx,dy)}
-function applyViewerTransform(){const img=document.getElementById('imageViewerImage');if(!img)return;img.style.setProperty('transform',`translate3d(${imageViewerX}px,${imageViewerY}px,0) scale(${imageViewerScale})`,'important')}
-function clampViewerPan(){const stage=document.querySelector('.image-viewer-stage'),img=document.getElementById('imageViewerImage');if(!stage||!img)return;const sw=stage.clientWidth,sh=stage.clientHeight,iw=img.offsetWidth*imageViewerScale,ih=img.offsetHeight*imageViewerScale;imageViewerX=Math.max(-Math.max(0,(iw-sw)/2),Math.min(Math.max(0,(iw-sw)/2),imageViewerX));imageViewerY=Math.max(-Math.max(0,(ih-sh)/2),Math.min(Math.max(0,(ih-sh)/2),imageViewerY))}
-function setViewerZoom(scale,focusX=0,focusY=0){const next=Math.max(1,Math.min(4,Number(scale)||1)),prev=imageViewerScale;if(next!==prev){imageViewerX=focusX-(focusX-imageViewerX)*(next/prev);imageViewerY=focusY-(focusY-imageViewerY)*(next/prev);imageViewerScale=next}if(next===1){imageViewerX=0;imageViewerY=0}else clampViewerPan();applyViewerTransform()}
-function openImageViewer(id,index=0){const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;imageViewerIndex=viewerWrappedIndex(Number(index)||0,photos.length);imageViewerScale=1;imageViewerX=0;imageViewerY=0;imageViewerPinching=false;imageViewerStartDistance=0;imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;imageViewerSwipeAnimating=false;state.modal={type:'imageViewer',data:id};render();requestAnimationFrame(applyViewerTransform)}
+let imageViewerIndex=0,imageViewerScale=1,imageViewerX=0,imageViewerY=0,
+imageViewerPinching=false,imageViewerStartDistance=0,imageViewerStartScale=1,imageViewerStartX=0,
+imageViewerStartY=0,imageViewerStartPanX=0,imageViewerStartPanY=0,imageViewerSwipeOffset=0,
+imageViewerSwipeDragging=false,imageViewerSwipeMoved=false,imageViewerSwipeAnimating=false;
+
+function viewerTouchDistance(touches){
+  if(!touches||touches.length<2)return 0;
+  const dx=touches[0].clientX-touches[1].clientX,dy=touches[0].clientY-touches[1].clientY;
+  return Math.hypot(dx,dy);
+}
+function applyViewerTransform(){
+  const img=document.getElementById('imageViewerImage');if(!img)return;
+  img.style.setProperty('transform',`translate3d(${imageViewerX}px,${imageViewerY}px,0) scale(${imageViewerScale})`,'important');
+}
+function clampViewerPan(){
+  const stage=document.querySelector('.image-viewer-stage'),img=document.getElementById('imageViewerImage');
+  if(!stage||!img)return;
+  const sw=stage.clientWidth,sh=stage.clientHeight;
+  const iw=img.offsetWidth*imageViewerScale,ih=img.offsetHeight*imageViewerScale;
+  const maxX=Math.max(0,(iw-sw)/2),maxY=Math.max(0,(ih-sh)/2);
+  imageViewerX=Math.max(-maxX,Math.min(maxX,imageViewerX));
+  imageViewerY=Math.max(-maxY,Math.min(maxY,imageViewerY));
+}
+function setViewerZoom(scale,focusX=0,focusY=0){
+  const prev=imageViewerScale;
+  const next=Math.max(1,Math.min(8,Number(scale)||1));
+  if(next!==prev){
+    imageViewerX=focusX-(focusX-imageViewerX)*(next/prev);
+    imageViewerY=focusY-(focusY-imageViewerY)*(next/prev);
+    imageViewerScale=next;
+  }
+  if(next===1){imageViewerX=0;imageViewerY=0;}
+  else clampViewerPan();
+  applyViewerTransform();
+}
+function resetViewerZoom(){imageViewerScale=1;imageViewerX=0;imageViewerY=0;applyViewerTransform()}
+function openImageViewer(id,index=0){
+  const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;
+  imageViewerIndex=viewerWrappedIndex(Number(index)||0,photos.length);
+  imageViewerScale=1;imageViewerX=0;imageViewerY=0;imageViewerPinching=false;imageViewerStartDistance=0;
+  imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;imageViewerSwipeAnimating=false;
+  state.modal={type:'imageViewer',data:id};render();requestAnimationFrame(()=>{updateViewerSlots();applyViewerTransform();setupImageViewerGestures()});
+}
 function viewerWrappedIndex(index,count){return ((index%count)+count)%count}
 function viewerTrackTransform(offsetPx=0,animate=false){
-  const track=document.querySelector('.image-viewer-swipe-track');
-  const stage=document.querySelector('.image-viewer-stage');
+  const track=document.querySelector('.image-viewer-swipe-track'),stage=document.querySelector('.image-viewer-stage');
   if(!track||!stage)return;
   const w=stage.clientWidth||window.innerWidth||1;
   track.style.setProperty('transition',animate?'transform .28s cubic-bezier(.22,.61,.36,1)':'none','important');
@@ -1078,112 +1114,135 @@ function updateViewerSlots(){
   const imgs=track.querySelectorAll('.image-viewer-swipe-slide img');
   if(imgs.length!==3)return;
   imgs.forEach((img,i)=>{
-    img.src=photos[indices[i]]||'';
-    img.alt=`${x.fullName||x.name} — Photo ${indices[i]+1}`;
+    img.src=photos[indices[i]]||'';img.alt=`${x.fullName||x.name} — Photo ${indices[i]+1}`;
     if(i===1)img.id='imageViewerImage';else img.removeAttribute('id');
+    img.style.removeProperty('transform');
   });
-  const count=document.querySelector('.image-viewer-count');
-  if(count)count.textContent=`${imageViewerIndex+1} / ${n}`;
+  const count=document.querySelector('.image-viewer-count');if(count)count.textContent=`${imageViewerIndex+1} / ${n}`;
 }
 function finishViewerImageChange(delta){
-  const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x);
-  if(!x||!photos.length)return;
-  imageViewerIndex=viewerWrappedIndex(imageViewerIndex+delta,photos.length);
-  imageViewerScale=1;imageViewerX=0;imageViewerY=0;
+  const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;
+  imageViewerIndex=viewerWrappedIndex(imageViewerIndex+delta,photos.length);resetViewerZoom();
   imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeAnimating=false;
-  updateViewerSlots();
-  viewerTrackTransform(0,false);
-  requestAnimationFrame(()=>applyViewerTransform());
+  updateViewerSlots();viewerTrackTransform(0,false);requestAnimationFrame(applyViewerTransform);
 }
 function animateViewerChange(delta){
   const d=delta<0?-1:1,id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x),track=document.querySelector('.image-viewer-swipe-track');
   if(!x||!photos.length||!track||imageViewerSwipeAnimating)return;
-  imageViewerSwipeAnimating=true;
-  setViewerZoom(1);
+  imageViewerSwipeAnimating=true;resetViewerZoom();
   const stage=document.querySelector('.image-viewer-stage'),w=stage?.clientWidth||window.innerWidth||1;
   viewerTrackTransform(d>0?-w:w,true);
-  window.setTimeout(()=>{
-    if(state.modal?.type==='imageViewer'&&state.modal.data===id)finishViewerImageChange(d);
-  },300);
+  window.setTimeout(()=>{if(state.modal?.type==='imageViewer'&&state.modal.data===id)finishViewerImageChange(d)},300);
 }
 function changeViewerImage(delta){animateViewerChange(Number(delta)||0)}
+
 function setupImageViewerGestures(){
   const stage=document.querySelector('.image-viewer-stage');
   if(!stage||stage.dataset.gesturesBound==='1')return;
   stage.dataset.gesturesBound='1';
-  let tracking=false,startX=0,startY=0,lastX=0,lastY=0,moved=false;
-  stage.addEventListener('touchstart',e=>{
+  let tracking=false,startX=0,startY=0,moved=false,lastTapAt=0,lastTapX=0,lastTapY=0;
+  let pinchStartDistance=0,pinchStartScale=1,pinchStartPanX=0,pinchStartPanY=0;
+  const activePointers=new Map();
+  const centerOfPointers=()=>{
+    const pts=[...activePointers.values()];
+    if(pts.length<2)return null;
+    return {x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+  };
+  const distanceOfPointers=()=>{
+    const pts=[...activePointers.values()];
+    if(pts.length<2)return 0;
+    return Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+  };
+  stage.addEventListener('pointerdown',e=>{
     if(imageViewerSwipeAnimating)return;
-    if(e.touches.length>=2){
-      imageViewerPinching=true;imageViewerStartDistance=viewerTouchDistance(e);imageViewerStartScale=imageViewerScale;
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    try{stage.setPointerCapture(e.pointerId)}catch(_){ }
+    if(activePointers.size===2){
+      imageViewerPinching=true;tracking=false;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;
+      pinchStartDistance=distanceOfPointers();pinchStartScale=imageViewerScale;pinchStartPanX=imageViewerX;pinchStartPanY=imageViewerY;
       return;
     }
-    const t=e.touches[0];if(!t)return;
-    tracking=true;moved=false;startX=lastX=t.clientX;startY=lastY=t.clientY;
-    imageViewerStartX=t.clientX;imageViewerStartY=t.clientY;
-    imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY;
-    imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;
-  },{passive:true});
-  stage.addEventListener('touchmove',e=>{
-    if(imageViewerSwipeAnimating)return;
-    if(e.touches.length>=2&&imageViewerStartDistance){
-      const d=viewerTouchDistance(e);
-      if(d){
-        const r=stage.getBoundingClientRect(),fx=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left-r.width/2,fy=(e.touches[0].clientY+e.touches[1].clientY)/2-r.top-r.height/2;
-        setViewerZoom(imageViewerStartScale*d/imageViewerStartDistance,fx,fy);
+    if(activePointers.size!==1)return;
+    tracking=true;moved=false;startX=e.clientX;startY=e.clientY;
+  });
+  stage.addEventListener('pointermove',e=>{
+    if(!activePointers.has(e.pointerId)||imageViewerSwipeAnimating)return;
+    activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(activePointers.size>=2&&pinchStartDistance){
+      const d=distanceOfPointers(),c=centerOfPointers(),r=stage.getBoundingClientRect();
+      if(d&&c){
+        const fx=c.x-r.left-r.width/2,fy=c.y-r.top-r.height/2;
+        const next=pinchStartScale*d/pinchStartDistance;
+        imageViewerX=pinchStartPanX+(fx-(fx-pinchStartPanX)*(next/pinchStartScale));
+        imageViewerY=pinchStartPanY+(fy-(fy-pinchStartPanY)*(next/pinchStartScale));
+        imageViewerScale=Math.max(1,Math.min(8,next));
+        clampViewerPan();applyViewerTransform();
       }
-      e.preventDefault();return;
+      moved=true;e.preventDefault();return;
     }
     if(imageViewerPinching||!tracking)return;
-    const t=e.touches[0];if(!t)return;
-    const dx=t.clientX-startX,dy=t.clientY-startY;
+    const dx=e.clientX-startX,dy=e.clientY-startY;
     if(imageViewerScale>1){
-      if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
-      e.preventDefault();imageViewerX=imageViewerStartPanX+dx;imageViewerY=imageViewerStartPanY+dy;clampViewerPan();applyViewerTransform();moved=true;return;
+      if(Math.abs(dx)<2&&Math.abs(dy)<2)return;
+      imageViewerX+=e.clientX-(stage.dataset.lastPanX?Number(stage.dataset.lastPanX):startX);
+      imageViewerY+=e.clientY-(stage.dataset.lastPanY?Number(stage.dataset.lastPanY):startY);
+      stage.dataset.lastPanX=e.clientX;stage.dataset.lastPanY=e.clientY;
+      clampViewerPan();applyViewerTransform();moved=true;e.preventDefault();return;
     }
-    if(Math.abs(dx)<12&&Math.abs(dy)<12)return;
-    if(Math.abs(dx)<=Math.abs(dy)*1.35){tracking=false;return;}
-    imageViewerSwipeDragging=true;imageViewerSwipeMoved=true;moved=true;
-    e.preventDefault();imageViewerSwipeOffset=dx;viewerTrackTransform(dx,false);
+    if(Math.abs(dx)<10&&Math.abs(dy)<10)return;
+    if(Math.abs(dx)<=Math.abs(dy)*1.25){tracking=false;return;}
+    imageViewerSwipeDragging=true;imageViewerSwipeMoved=true;moved=true;e.preventDefault();
+    imageViewerSwipeOffset=dx;viewerTrackTransform(dx,false);
   },{passive:false});
-  let lastTapAt=0;
-  stage.addEventListener('touchend',e=>{
-    if(imageViewerPinching){if(e.touches.length<2){imageViewerPinching=false;imageViewerStartDistance=0}return;}
-    const t=e.changedTouches[0];
-    if(!t)return;
-    const now=Date.now();
-    const tapDx=t.clientX-startX,tapDy=t.clientY-startY;
-    const isTap=Math.abs(tapDx)<12&&Math.abs(tapDy)<12;
-    if(isTap&&!imageViewerSwipeDragging){
-      if(now-lastTapAt<320){
-        setViewerZoom(imageViewerScale>1?1:2.25);
-        lastTapAt=0;
-        tracking=false;
-        moved=false;
-        imageViewerSwipeMoved=false;
-        return;
-      }
-      lastTapAt=now;
+  const endPointer=e=>{
+    if(activePointers.has(e.pointerId))activePointers.delete(e.pointerId);
+    try{stage.releasePointerCapture(e.pointerId)}catch(_){ }
+    if(imageViewerSwipeAnimating)return;
+    if(activePointers.size>=1&&imageViewerPinching){return;}
+    if(imageViewerPinching){
+      imageViewerPinching=false;pinchStartDistance=0;clampViewerPan();applyViewerTransform();
+      tracking=false;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;return;
     }
     if(!tracking&&!imageViewerSwipeDragging)return;
+    const dx=e.clientX-startX,dy=e.clientY-startY;
+    if(imageViewerScale>1){
+      tracking=false;stage.dataset.lastPanX='';stage.dataset.lastPanY='';
+      if(Math.abs(dx)<10&&Math.abs(dy)<10){
+        const now=Date.now();
+        if(now-lastTapAt<330&&Math.hypot(e.clientX-lastTapX,e.clientY-lastTapY)<32){setViewerZoom(1);lastTapAt=0;}
+        else{lastTapAt=now;lastTapX=e.clientX;lastTapY=e.clientY;}
+      }
+      return;
+    }
+    const now=Date.now(),isTap=Math.abs(dx)<12&&Math.abs(dy)<12&&!imageViewerSwipeDragging;
+    if(isTap){
+      if(now-lastTapAt<330&&Math.hypot(e.clientX-lastTapX,e.clientY-lastTapY)<32){
+        setViewerZoom(2.5,e.clientX-stage.getBoundingClientRect().left-stage.clientWidth/2,e.clientY-stage.getBoundingClientRect().top-stage.clientHeight/2);lastTapAt=0;moved=false;imageViewerSwipeMoved=false;tracking=false;return;
+      }
+      lastTapAt=now;lastTapX=e.clientX;lastTapY=e.clientY;
+      tracking=false;window.setTimeout(()=>{imageViewerSwipeMoved=false;moved=false},120);return;
+    }
     tracking=false;
-    if(imageViewerSwipeAnimating)return;
-    if(!imageViewerSwipeDragging){window.setTimeout(()=>{imageViewerSwipeMoved=false;moved=false},120);return;}
+    if(!imageViewerSwipeDragging)return;
     imageViewerSwipeDragging=false;
-    const dx=t.clientX-startX,dy=t.clientY-startY;
-    const threshold=Math.max(72,Math.min(120,stage.clientWidth*.20));
-    if(imageViewerScale===1&&Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.3){animateViewerChange(dx<0?1:-1);return;}
-    imageViewerSwipeOffset=0;viewerTrackTransform(0,true);
-    window.setTimeout(()=>{imageViewerSwipeMoved=false;moved=false},300);
-  },{passive:true});
-  stage.addEventListener('touchcancel',()=>{
-    tracking=false;imageViewerSwipeDragging=false;imageViewerSwipeOffset=0;
-    if(!imageViewerSwipeAnimating)viewerTrackTransform(0,true);
-  },{passive:true});
-  stage.addEventListener('dblclick',e=>{if(e.target.closest('#imageViewerImage'))setViewerZoom(imageViewerScale>1?1:2.25)});
-  stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect(),fx=e.clientX-r.left-r.width/2,fy=e.clientY-r.top-r.height/2;setViewerZoom(imageViewerScale+(e.deltaY<0?.25:-.25),fx,fy)},{passive:false});
+    const threshold=Math.max(64,Math.min(120,stage.clientWidth*.18));
+    if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.25){animateViewerChange(dx<0?1:-1);return;}
+    imageViewerSwipeOffset=0;viewerTrackTransform(0,true);window.setTimeout(()=>{imageViewerSwipeMoved=false;moved=false},300);
+  };
+  stage.addEventListener('pointerup',endPointer);
+  stage.addEventListener('pointercancel',endPointer);
+  stage.addEventListener('pointerleave',()=>{});
+  stage.addEventListener('dblclick',e=>{
+    if(!e.target.closest('#imageViewerImage')||imageViewerSwipeAnimating)return;
+    const r=stage.getBoundingClientRect();
+    const fx=e.clientX-r.left-r.width/2,fy=e.clientY-r.top-r.height/2;
+    setViewerZoom(imageViewerScale>1?1:2.5,fx,fy);
+  });
+  stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect(),fx=e.clientX-r.left-r.width/2,fy=e.clientY-r.top-r.height/2;setViewerZoom(imageViewerScale*Math.exp(-e.deltaY*.002),fx,fy)},{passive:false});
   stage.addEventListener('click',e=>{if(imageViewerSwipeMoved){e.preventDefault();e.stopPropagation();imageViewerSwipeMoved=false;}},true);
 }
+
 function imageViewerModal(id){
   const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return '';
   const n=photos.length,prev=photos[viewerWrappedIndex(imageViewerIndex-1,n)]||'',cur=photos[imageViewerIndex]||'',next=photos[viewerWrappedIndex(imageViewerIndex+1,n)]||'';
@@ -1396,4 +1455,16 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
 .image-viewer-swipe-slide #imageViewerImage[style*='scale(4)']{cursor:grab !important;}
 .image-viewer-stage{touch-action:none !important;}
 .image-viewer-zoom{touch-action:manipulation !important;}
+</style>
+
+<style>
+/* Authoritative photo viewer: uniform image height, native aspect ratio, gesture-first zoom. */
+.image-viewer{background:#fff!important;color:#111!important;padding:0!important;}
+.image-viewer-stage{position:relative!important;width:100%!important;height:100%!important;overflow:hidden!important;background:#fff!important;touch-action:none!important;}
+.image-viewer-swipe-track{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:flex!important;will-change:transform!important;}
+.image-viewer-swipe-slide{position:relative!important;flex:0 0 100%!important;width:100%!important;height:100%!important;display:grid!important;place-items:center!important;overflow:hidden!important;background:#fff!important;}
+.image-viewer-swipe-slide img{display:block!important;width:auto!important;height:min(90vh,900px)!important;max-width:92vw!important;max-height:90vh!important;object-fit:contain!important;object-position:center!important;background:#fff!important;border-radius:6px!important;box-shadow:0 18px 45px rgba(0,0,0,.16)!important;transform-origin:center center!important;transition:none!important;user-select:none!important;-webkit-user-drag:none!important;pointer-events:none!important;}
+#imageViewerImage{transform:translate3d(0,0,0) scale(1)!important;}
+.image-viewer-control{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border-color:rgba(0,0,0,.14)!important;box-shadow:0 4px 14px rgba(0,0,0,.08)!important;}
+.image-viewer-count{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border:1px solid rgba(0,0,0,.12)!important;}
 </style>
