@@ -611,6 +611,75 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
   .detail-photo-slide.is-right{transform:translate3d(calc(-50% + 50%),-50%,-18px) scale(1) rotateY(42deg) !important;opacity:.84 !important;}
 }
 </style>
+
+<style id="rapidup-photo-system">
+/* RapidUp photo system — one authoritative presentation layer. */
+.detail-photo-carousel{
+  position:relative!important;width:100%!important;height:340px!important;min-height:0!important;
+  overflow:hidden!important;border-radius:24px!important;background:#fff!important;
+  perspective:1250px!important;perspective-origin:50% 50%!important;
+  touch-action:pan-y!important;user-select:none!important;-webkit-user-select:none!important;isolation:isolate!important;
+}
+.detail-photo-track{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  display:block!important;transform:none!important;transform-style:preserve-3d!important;
+}
+.detail-photo-slide{
+  position:absolute!important;left:50%!important;top:50%!important;
+  width:58%!important;height:84%!important;margin:0!important;padding:0!important;min-width:0!important;
+  display:grid!important;place-items:center!important;overflow:visible!important;
+  background:transparent!important;border-radius:20px!important;box-sizing:border-box!important;
+  transition:none!important;will-change:transform!important;backface-visibility:hidden!important;
+  transform-origin:center center!important;
+}
+.detail-photo-slide img{
+  display:block!important;width:100%!important;height:100%!important;
+  max-width:100%!important;max-height:100%!important;min-width:0!important;min-height:0!important;
+  object-fit:contain!important;border-radius:14px!important;
+  pointer-events:none!important;-webkit-user-drag:none!important;user-select:none!important;
+  box-shadow:0 9px 24px rgba(0,0,0,.10)!important;
+}
+.detail-photo-slide.is-center{opacity:1!important;z-index:10!important}
+.detail-photo-slide.is-left,.detail-photo-slide.is-right{opacity:.84!important;z-index:8!important}
+.detail-photo-slide.is-far-left,.detail-photo-slide.is-far-right{opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:1!important}
+.detail-photo-slide.photo-load-error{visibility:hidden!important;opacity:0!important}
+.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none!important}
+.detail-photo-nav{z-index:20!important}
+.detail-photo-count{z-index:21!important}
+.image-viewer{
+  position:fixed!important;inset:0!important;z-index:160!important;padding:0!important;
+  background:#fff!important;color:#111!important;display:grid!important;place-items:center!important;
+}
+.image-viewer-stage{
+  position:relative!important;width:100%!important;height:100%!important;overflow:hidden!important;
+  background:#fff!important;touch-action:none!important;
+}
+.image-viewer-swipe-track{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  display:flex!important;transform:translate3d(-100%,0,0)!important;transition:none!important;
+  will-change:transform!important;
+}
+.image-viewer-swipe-slide{
+  position:relative!important;flex:0 0 100%!important;width:100%!important;height:100%!important;
+  display:grid!important;place-items:center!important;overflow:hidden!important;background:#fff!important;
+}
+.image-viewer-swipe-slide img{
+  display:block!important;width:auto!important;height:min(88vh,900px)!important;
+  max-width:92vw!important;max-height:min(88vh,900px)!important;
+  object-fit:contain!important;background:#fff!important;
+  border-radius:6px!important;box-shadow:0 18px 45px rgba(0,0,0,.16)!important;
+  transform-origin:center center!important;transition:none!important;
+  user-select:none!important;-webkit-user-drag:none!important;
+}
+#imageViewerImage{transform:translate3d(var(--viewer-x,0px),var(--viewer-y,0px),0) scale(var(--viewer-scale,1))!important;}
+.image-viewer-control{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border-color:rgba(0,0,0,.14)!important;box-shadow:0 4px 14px rgba(0,0,0,.08)!important}
+.image-viewer-count{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border:1px solid rgba(0,0,0,.12)!important}
+@media(max-width:900px){.detail{grid-template-columns:1fr!important;min-width:0!important}.detail>div{min-width:0!important;width:100%!important}}
+@media(max-width:620px){
+  .detail-photo-carousel{height:300px!important;border-radius:22px!important}
+  .detail-photo-slide{width:60%!important;height:84%!important}
+}
+</style>
 </head>
 <body>
 <div id="app"></div>
@@ -986,19 +1055,25 @@ function setupItemPhotoCarousel(){
   });
   el.querySelectorAll('.detail-photo-nav').forEach(btn=>btn.addEventListener('click',e=>e.stopPropagation()));
 }
-let imageViewerIndex=0,imageViewerScale=1,imageViewerX=0,imageViewerY=0,imageViewerPinching=false,imageViewerStartDistance=0,imageViewerStartX=0,imageViewerStartY=0,imageViewerStartPanX=0,imageViewerStartPanY=0,imageViewerSwipeOffset=0,imageViewerSwipeDragging=false,imageViewerSwipeStartX=0,imageViewerSwipeStartY=0,imageViewerSwipeMoved=false,imageViewerSwipeAnimating=false;
+let imageViewerIndex=0,imageViewerScale=1,imageViewerX=0,imageViewerY=0,imageViewerPinching=false,imageViewerStartDistance=0,imageViewerStartScale=1,imageViewerStartX=0,imageViewerStartY=0,imageViewerStartPanX=0,imageViewerStartPanY=0,imageViewerSwipeOffset=0,imageViewerSwipeDragging=false,imageViewerSwipeMoved=false,imageViewerSwipeAnimating=false;
 function viewerTouchDistance(touches){if(!touches||touches.length<2)return 0;const dx=touches[0].clientX-touches[1].clientX,dy=touches[0].clientY-touches[1].clientY;return Math.hypot(dx,dy)}
-function applyViewerTransform(){const img=document.getElementById('imageViewerImage');if(!img)return;img.style.setProperty('--viewer-x',imageViewerX+'px');img.style.setProperty('--viewer-y',imageViewerY+'px');img.style.setProperty('--viewer-scale',String(imageViewerScale));img.style.transform=`translate3d(${imageViewerX}px,${imageViewerY}px,0) scale(${imageViewerScale})`}
-function clampViewerPan(){const stage=document.querySelector('.image-viewer-stage'),img=document.getElementById('imageViewerImage');if(!stage||!img)return;const sw=stage.clientWidth,sh=stage.clientHeight,iw=img.offsetWidth*imageViewerScale,ih=img.offsetHeight*imageViewerScale;const maxX=Math.max(0,(iw-sw)/2),maxY=Math.max(0,(ih-sh)/2);imageViewerX=Math.max(-maxX,Math.min(maxX,imageViewerX));imageViewerY=Math.max(-maxY,Math.min(maxY,imageViewerY))}
-function setViewerZoom(scale,focusX=0,focusY=0){const next=Math.max(1,Math.min(4,Number(scale)||1)),prev=imageViewerScale;if(next===prev){clampViewerPan();applyViewerTransform();return}imageViewerX=focusX-(focusX-imageViewerX)*(next/prev);imageViewerY=focusY-(focusY-imageViewerY)*(next/prev);imageViewerScale=next;if(next===1){imageViewerX=0;imageViewerY=0}else clampViewerPan();applyViewerTransform()}
-function openImageViewer(id,index=0){const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;imageViewerIndex=((Number(index)||0)%photos.length+photos.length)%photos.length;imageViewerScale=1;imageViewerX=0;imageViewerY=0;imageViewerPinching=false;imageViewerStartDistance=0;imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeAnimating=false;state.modal={type:'imageViewer',data:id};render()}
+function applyViewerTransform(){const img=document.getElementById('imageViewerImage');if(!img)return;img.style.setProperty('transform',`translate3d(${imageViewerX}px,${imageViewerY}px,0) scale(${imageViewerScale})`,'important')}
+function clampViewerPan(){const stage=document.querySelector('.image-viewer-stage'),img=document.getElementById('imageViewerImage');if(!stage||!img)return;const sw=stage.clientWidth,sh=stage.clientHeight,iw=img.offsetWidth*imageViewerScale,ih=img.offsetHeight*imageViewerScale;imageViewerX=Math.max(-Math.max(0,(iw-sw)/2),Math.min(Math.max(0,(iw-sw)/2),imageViewerX));imageViewerY=Math.max(-Math.max(0,(ih-sh)/2),Math.min(Math.max(0,(ih-sh)/2),imageViewerY))}
+function setViewerZoom(scale,focusX=0,focusY=0){const next=Math.max(1,Math.min(4,Number(scale)||1)),prev=imageViewerScale;if(next!==prev){imageViewerX=focusX-(focusX-imageViewerX)*(next/prev);imageViewerY=focusY-(focusY-imageViewerY)*(next/prev);imageViewerScale=next}if(next===1){imageViewerX=0;imageViewerY=0}else clampViewerPan();applyViewerTransform()}
+function openImageViewer(id,index=0){const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;imageViewerIndex=viewerWrappedIndex(Number(index)||0,photos.length);imageViewerScale=1;imageViewerX=0;imageViewerY=0;imageViewerPinching=false;imageViewerStartDistance=0;imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;imageViewerSwipeAnimating=false;state.modal={type:'imageViewer',data:id};render();requestAnimationFrame(applyViewerTransform)}
 function viewerWrappedIndex(index,count){return ((index%count)+count)%count}
-function viewerTrackTransform(offset,animate=false){const track=document.querySelector('.image-viewer-swipe-track');if(!track)return;track.style.transition=animate?'transform .24s cubic-bezier(.22,.61,.36,1)':'none';track.style.transform=`translate3d(calc(-100% + ${offset}%),0,0)`}
-function updateViewerSlots(){const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x),track=document.querySelector('.image-viewer-swipe-track');if(!x||!photos.length||!track)return;const n=photos.length,prev=photos[viewerWrappedIndex(imageViewerIndex-1,n)],cur=photos[imageViewerIndex],next=photos[viewerWrappedIndex(imageViewerIndex+1,n)],imgs=track.querySelectorAll('.image-viewer-swipe-slide img');if(imgs.length<3)return;imgs[0].src=prev;imgs[0].alt=`${x.fullName||x.name} — Photo ${viewerWrappedIndex(imageViewerIndex-1,n)+1}`;imgs[1].src=cur;imgs[1].alt=`${x.fullName||x.name} — Photo ${imageViewerIndex+1}`;imgs[1].id='imageViewerImage';imgs[2].src=next;imgs[2].alt=`${x.fullName||x.name} — Photo ${viewerWrappedIndex(imageViewerIndex+1,n)+1}`;imgs[2].removeAttribute('id');const count=document.querySelector('.image-viewer-count');if(count)count.textContent=`${imageViewerIndex+1} / ${n}`}
-function finishViewerImageChange(delta){const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return false;imageViewerIndex=viewerWrappedIndex(imageViewerIndex+delta,photos.length);imageViewerScale=1;imageViewerX=0;imageViewerY=0;imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeAnimating=false;const track=document.querySelector('.image-viewer-swipe-track');if(track){track.style.transition='none';updateViewerSlots();track.style.transform='translate3d(-100%,0,0)'}applyViewerTransform();return true}
-function animateViewerChange(delta){const d=delta<0?-1:1,id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x),track=document.querySelector('.image-viewer-swipe-track');if(!x||!photos.length||!track||imageViewerSwipeAnimating)return;imageViewerSwipeAnimating=true;imageViewerScale=1;imageViewerX=0;imageViewerY=0;applyViewerTransform();track.style.transition='none';track.style.transform='translate3d(-100%,0,0)';requestAnimationFrame(()=>{requestAnimationFrame(()=>{if(state.modal?.type!=='imageViewer'||state.modal.data!==id)return;track.style.transition='transform .24s cubic-bezier(.22,.61,.36,1)';track.style.transform=`translate3d(${d>0?-200:0}%,0,0)`})});window.setTimeout(()=>{if(state.modal?.type==='imageViewer'&&state.modal.data===id)finishViewerImageChange(d)},250)}
+function viewerTrackTransform(offset,animate=false){const track=document.querySelector('.image-viewer-swipe-track');if(!track)return;track.style.setProperty('transition',animate?'transform .24s cubic-bezier(.22,.61,.36,1)':'none','important');track.style.setProperty('transform',`translate3d(calc(-100% + ${offset}%),0,0)`,'important')}
+function updateViewerSlots(){const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x),track=document.querySelector('.image-viewer-swipe-track');if(!x||!photos.length||!track)return;const n=photos.length,indices=[viewerWrappedIndex(imageViewerIndex-1,n),imageViewerIndex,viewerWrappedIndex(imageViewerIndex+1,n)],imgs=track.querySelectorAll('.image-viewer-swipe-slide img');if(imgs.length!==3)return;imgs.forEach((img,i)=>{img.src=photos[indices[i]];img.alt=`${x.fullName||x.name} — Photo ${indices[i]+1}`;if(i===1)img.id='imageViewerImage';else img.removeAttribute('id')});const count=document.querySelector('.image-viewer-count');if(count)count.textContent=`${imageViewerIndex+1} / ${n}`}
+function finishViewerImageChange(delta){const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;imageViewerIndex=viewerWrappedIndex(imageViewerIndex+delta,photos.length);imageViewerScale=1;imageViewerX=0;imageViewerY=0;imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeAnimating=false;updateViewerSlots();viewerTrackTransform(0,false);requestAnimationFrame(applyViewerTransform)}
+function animateViewerChange(delta){const d=delta<0?-1:1,id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x),track=document.querySelector('.image-viewer-swipe-track');if(!x||!photos.length||!track||imageViewerSwipeAnimating)return;imageViewerSwipeAnimating=true;setViewerZoom(1);viewerTrackTransform(d>0?-100:100,true);window.setTimeout(()=>{if(state.modal?.type==='imageViewer'&&state.modal.data===id)finishViewerImageChange(d)},250)}
 function changeViewerImage(delta){animateViewerChange(Number(delta)||0)}
-function setupImageViewerGestures(){const stage=document.querySelector('.image-viewer-stage');if(!stage)return;let startScale=1;stage.addEventListener('touchstart',e=>{if(e.touches.length>=2){imageViewerPinching=true;imageViewerStartDistance=viewerTouchDistance(e);imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY;startScale=imageViewerScale;return}if(imageViewerSwipeAnimating)return;const t=e.touches[0];imageViewerStartX=imageViewerSwipeStartX=t.clientX;imageViewerStartY=imageViewerSwipeStartY=t.clientY;imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY;imageViewerSwipeOffset=0;imageViewerSwipeMoved=false;imageViewerSwipeDragging=false},{passive:true});stage.addEventListener('touchmove',e=>{if(e.touches.length>=2&&imageViewerStartDistance){const d=viewerTouchDistance(e);if(d){const rect=stage.getBoundingClientRect(),focusX=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left-rect.width/2,focusY=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top-rect.height/2;setViewerZoom(startScale*(d/imageViewerStartDistance),focusX,focusY)}return}if(imageViewerSwipeAnimating)return;const t=e.touches[0],dx=t.clientX-imageViewerSwipeStartX,dy=t.clientY-imageViewerSwipeStartY;if(imageViewerScale>1){e.preventDefault();imageViewerX=imageViewerStartPanX+dx;imageViewerY=imageViewerStartPanY+dy;clampViewerPan();applyViewerTransform();return}if(Math.abs(dx)<6&&Math.abs(dy)<6)return;if(Math.abs(dx)<=Math.abs(dy)*1.08)return;imageViewerSwipeDragging=true;imageViewerSwipeMoved=true;e.preventDefault();const width=Math.max(1,stage.clientWidth);viewerTrackTransform((dx/width)*100,false)},{passive:false});stage.addEventListener('touchend',e=>{if(imageViewerPinching&&e.touches.length<2){imageViewerPinching=false;imageViewerStartDistance=0;return}if(imageViewerScale>1||!imageViewerSwipeDragging)return;imageViewerSwipeDragging=false;const t=e.changedTouches[0]||e.touches[0];if(!t)return;const dx=t.clientX-imageViewerSwipeStartX,dy=t.clientY-imageViewerSwipeStartY,threshold=Math.max(44,Math.min(90,stage.clientWidth*.18));if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.2){animateViewerChange(dx<0?1:-1);return}imageViewerSwipeOffset=0;viewerTrackTransform(0,true);window.setTimeout(()=>{imageViewerSwipeMoved=false},260)},{passive:true});stage.addEventListener('dblclick',e=>{if(e.target.closest('#imageViewerImage'))setViewerZoom(imageViewerScale>1?1:2.25,0,0)});stage.addEventListener('wheel',e=>{e.preventDefault();const rect=stage.getBoundingClientRect(),fx=e.clientX-rect.left-rect.width/2,fy=e.clientY-rect.top-rect.height/2;setViewerZoom(imageViewerScale+(e.deltaY<0?.25:-.25),fx,fy)},{passive:false})}
+function setupImageViewerGestures(){const stage=document.querySelector('.image-viewer-stage');if(!stage||stage.dataset.gesturesBound==='1')return;stage.dataset.gesturesBound='1';
+  stage.addEventListener('touchstart',e=>{if(e.touches.length>=2){imageViewerPinching=true;imageViewerStartDistance=viewerTouchDistance(e.touches);imageViewerStartScale=imageViewerScale;return}if(imageViewerSwipeAnimating)return;const t=e.touches[0];imageViewerStartX=t.clientX;imageViewerStartY=t.clientY;imageViewerStartPanX=imageViewerX;imageViewerStartPanY=imageViewerY;imageViewerSwipeOffset=0;imageViewerSwipeMoved=false;imageViewerSwipeDragging=false},{passive:true});
+  stage.addEventListener('touchmove',e=>{if(e.touches.length>=2&&imageViewerStartDistance){const d=viewerTouchDistance(e);if(d){const r=stage.getBoundingClientRect(),fx=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left-r.width/2,fy=(e.touches[0].clientY+e.touches[1].clientY)/2-r.top-r.height/2;setViewerZoom(imageViewerStartScale*d/imageViewerStartDistance,fx,fy)}e.preventDefault();return}if(imageViewerPinching||imageViewerSwipeAnimating)return;const t=e.touches[0],dx=t.clientX-imageViewerStartX,dy=t.clientY-imageViewerStartY;if(imageViewerScale>1){e.preventDefault();imageViewerX=imageViewerStartPanX+dx;imageViewerY=imageViewerStartPanY+dy;clampViewerPan();applyViewerTransform();return}if(Math.abs(dx)<6&&Math.abs(dy)<6)return;if(Math.abs(dx)<=Math.abs(dy)*1.15)return;imageViewerSwipeDragging=true;imageViewerSwipeMoved=true;e.preventDefault();imageViewerSwipeOffset=dx/Math.max(1,stage.clientWidth)*100;viewerTrackTransform(imageViewerSwipeOffset,false)},{passive:false});
+  stage.addEventListener('touchend',e=>{if(imageViewerPinching){if(e.touches.length<2){imageViewerPinching=false;imageViewerStartDistance=0}return}if(imageViewerSwipeAnimating||!imageViewerSwipeDragging)return;imageViewerSwipeDragging=false;const t=e.changedTouches[0];if(!t)return;const dx=t.clientX-imageViewerStartX,dy=t.clientY-imageViewerStartY,threshold=Math.max(48,Math.min(96,stage.clientWidth*.16));if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.2){animateViewerChange(dx<0?1:-1);return}imageViewerSwipeOffset=0;viewerTrackTransform(0,true);window.setTimeout(()=>{imageViewerSwipeMoved=false},260)},{passive:true});
+  stage.addEventListener('dblclick',e=>{if(e.target.closest('#imageViewerImage'))setViewerZoom(imageViewerScale>1?1:2.25)});
+  stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect(),fx=e.clientX-r.left-r.width/2,fy=e.clientY-r.top-r.height/2;setViewerZoom(imageViewerScale+(e.deltaY<0?.25:-.25),fx,fy)},{passive:false});
+}
 function imageViewerModal(id){const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return '';const n=photos.length,prev=photos[viewerWrappedIndex(imageViewerIndex-1,n)],cur=photos[imageViewerIndex],next=photos[viewerWrappedIndex(imageViewerIndex+1,n)];return `<div class="image-viewer" onclick="closeModal()"><div class="image-viewer-stage" onclick="event.stopPropagation()"><button class="image-viewer-close" aria-label="Close image" onclick="event.stopPropagation();closeModal()">×</button>${n>1?'<button class="image-viewer-control image-viewer-prev" aria-label="Previous photo" onclick="changeViewerImage(-1)">‹</button><button class="image-viewer-control image-viewer-next" aria-label="Next photo" onclick="changeViewerImage(1)">›</button>':''}<button class="image-viewer-control image-viewer-zoom" aria-label="Zoom image" onclick="setViewerZoom(imageViewerScale>1?1:2.25)">⌕</button><div class="image-viewer-swipe-track"><div class="image-viewer-swipe-slide"><img src="${esc(prev)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex-1,n)+1}"></div><div class="image-viewer-swipe-slide"><img id="imageViewerImage" src="${esc(cur)}" alt="${esc(x.fullName||x.name)} — Photo ${imageViewerIndex+1}"></div><div class="image-viewer-swipe-slide"><img src="${esc(next)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex+1,n)+1}"></div></div><div class="image-viewer-count">${imageViewerIndex+1} / ${n}</div></div></div>`}
 
 function offerModal(id){
@@ -1175,116 +1250,22 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
   cursor:zoom-in!important;
 }
 </style>
+
+<style id="rapidup-photo-final">
+/* Final photo-system authority: one geometry model, no competing legacy transitions. */
+.detail-photo-carousel{overflow:hidden!important;perspective:1100px!important;perspective-origin:50% 50%!important;touch-action:pan-y!important;isolation:isolate!important}
+.detail-photo-track{position:relative!important;inset:auto!important;width:100%!important;height:100%!important;display:block!important;transform:none!important;transform-style:preserve-3d!important}
+.detail-photo-slide{position:absolute!important;left:50%!important;top:50%!important;width:58%!important;height:84%!important;margin:0!important;padding:0!important;display:grid!important;place-items:center!important;box-sizing:border-box!important;flex:none!important;overflow:visible!important;opacity:1!important;filter:none!important;transition:none!important;will-change:transform!important;backface-visibility:hidden!important;transform-origin:center center!important}
+.detail-photo-slide img{display:block!important;width:auto!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;border-radius:18px!important;pointer-events:none!important;user-select:none!important;-webkit-user-drag:none!important}
+.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none!important}
+.image-viewer{background:#fff!important;color:#111!important;padding:0!important;touch-action:none!important}
+.image-viewer-stage{position:relative!important;width:100%!important;height:100%!important;overflow:hidden!important;background:#fff!important;touch-action:none!important}
+.image-viewer-swipe-track{position:absolute!important;inset:0!important;width:300%!important;height:100%!important;display:flex!important;transform:translate3d(-100%,0,0)!important;will-change:transform!important}
+.image-viewer-swipe-slide{position:relative!important;flex:0 0 33.333333%!important;width:33.333333%!important;height:100%!important;display:grid!important;place-items:center!important;overflow:hidden!important;background:#fff!important}
+.image-viewer-swipe-slide img{display:block!important;width:auto!important;height:auto!important;max-width:96vw!important;max-height:94vh!important;object-fit:contain!important;background:#fff!important;box-shadow:0 18px 45px rgba(0,0,0,.16)!important;border-radius:6px!important;transition:none!important;transform-origin:center center!important;user-select:none!important;-webkit-user-drag:none!important}
+#imageViewerImage{will-change:transform!important;cursor:zoom-in!important}
+.image-viewer-control{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border-color:rgba(0,0,0,.14)!important;box-shadow:0 4px 14px rgba(0,0,0,.08)!important}
+.image-viewer-count{z-index:20!important;background:rgba(255,255,255,.94)!important;color:#111!important;border:1px solid rgba(0,0,0,.12)!important}
+</style>
 </body>
 </html>
-
-<style>
-/* Final carousel geometry: keep side photos full-height, push them outward so only their inner portion is visible. */
-.detail-photo-slide.is-left{
-  transform:translate3d(calc(-50% - 88%),-50%,-6px) scale(1) rotateY(-42deg) !important;
-  opacity:.84 !important;
-  z-index:8 !important;
-}
-.detail-photo-slide.is-right{
-  transform:translate3d(calc(-50% + 88%),-50%,-6px) scale(1) rotateY(42deg) !important;
-  opacity:.84 !important;
-  z-index:8 !important;
-}
-@media(max-width:620px){
-  .detail-photo-slide.is-left{
-    transform:translate3d(calc(-50% - 88%),-50%,-4px) scale(1) rotateY(-42deg) !important;
-  }
-  .detail-photo-slide.is-right{
-    transform:translate3d(calc(-50% + 88%),-50%,-4px) scale(1) rotateY(42deg) !important;
-  }
-}
-
-
-/* Final lazy-Susan momentum presentation */
-.detail-photo-carousel{
-  perspective:1250px !important;
-  perspective-origin:50% 50% !important;
-  overflow:hidden !important;
-}
-.detail-photo-track{transform-style:preserve-3d !important;}
-.detail-photo-slide{
-  opacity:1 !important;
-  filter:none !important;
-  height:84% !important;
-  transform-origin:center center !important;
-  backface-visibility:hidden !important;
-  transition:transform .42s cubic-bezier(.22,.61,.36,1) !important;
-}
-.detail-photo-slide img{
-  width:100% !important;
-  height:100% !important;
-  max-width:none !important;
-  max-height:none !important;
-  object-fit:contain !important;
-  opacity:1 !important;
-}
-.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none !important;}
-@media(max-width:620px){
-  .detail-photo-carousel{height:min(68vw,320px) !important;min-height:240px !important;border-radius:22px !important;}
-  .detail-photo-slide{width:58% !important;height:84% !important;}
-  .detail-photo-slide img{width:100% !important;height:100% !important;object-fit:contain !important;}
-}
-/* Zoomed viewer: direct one-finger pan without transition lag. */
-.image-viewer-stage img{transition:none !important;}
-</style>
-
-<style>
-
-/* Authoritative carousel presentation: three live slots only, no ghost cards behind the revolving view. */
-.detail-photo-carousel{overflow:hidden!important;perspective:1100px!important;perspective-origin:50% 50%!important;touch-action:pan-y!important;isolation:isolate!important;}
-.detail-photo-track{position:relative!important;width:100%!important;height:100%!important;display:block!important;transform:none!important;transform-style:preserve-3d!important;}
-.detail-photo-slide{position:absolute!important;left:50%!important;top:50%!important;margin:0!important;width:58%!important;height:84%!important;min-width:0!important;flex:none!important;display:grid!important;place-items:center!important;overflow:hidden!important;border-radius:24px!important;background:#fff!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;backface-visibility:hidden!important;transform-origin:center center!important;will-change:transform!important;}
-.detail-photo-slide img{display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;opacity:1!important;visibility:visible!important;pointer-events:none!important;-webkit-user-drag:none!important;}
-.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none!important;}
-.detail-photo-slide.is-center{opacity:1!important;z-index:10!important;}
-.detail-photo-slide.is-left,.detail-photo-slide.is-right{opacity:1!important;z-index:8!important;}
-.detail-photo-slide.photo-load-error{visibility:visible!important;opacity:1!important;}
-@media(max-width:620px){.detail-photo-carousel{height:min(68vw,320px)!important;min-height:240px!important;border-radius:22px!important}.detail-photo-slide{width:58%!important;height:84%!important}}
-
-</style>
-
-<style>
-/* Authoritative smooth carousel interaction: geometry is controlled by JS. */
-.detail-photo-carousel{overflow:hidden!important;touch-action:pan-y!important;}
-.detail-photo-track{position:relative!important;width:100%!important;height:100%!important;display:block!important;transform:none!important;}
-.detail-photo-slide{position:absolute!important;left:50%!important;top:50%!important;width:58%!important;height:84%!important;margin:0!important;flex:none!important;transition:none!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;will-change:transform!important;backface-visibility:hidden!important;}
-.detail-photo-slide img{pointer-events:none!important;}
-.detail-photo-carousel.is-dragging .detail-photo-slide{transition:none!important;}
-</style>
-
-<style>
-/* Smooth full-screen photo swiping: the neighboring image physically travels with the current image. */
-.image-viewer-stage{overflow:hidden!important;display:block!important;touch-action:none!important;}
-.image-viewer-swipe-track{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:flex!important;transform:translate3d(0,0,0);will-change:transform;}
-.image-viewer-swipe-slide{position:relative!important;flex:0 0 100%!important;width:100%!important;height:100%!important;display:grid!important;place-items:center!important;overflow:hidden!important;}
-.image-viewer-swipe-slide img{max-width:94vw!important;max-height:86vh!important;width:auto!important;height:auto!important;object-fit:contain!important;transition:none!important;user-select:none!important;-webkit-user-drag:none!important;}
-</style>
-
-<style>
-/* Full-screen viewer: seamless three-slot loop with no black gaps. */
-.image-viewer{background:#fff!important;color:#111!important;padding:0!important;}
-.image-viewer-stage{background:#fff!important;}
-.image-viewer-swipe-track{transition:none;}
-.image-viewer-swipe-slide{background:#fff!important;}
-.image-viewer-swipe-slide img{max-width:96vw!important;max-height:94vh!important;width:auto!important;height:auto!important;object-fit:contain!important;background:#fff!important;box-shadow:0 18px 45px rgba(0,0,0,.16)!important;border-radius:6px!important;}
-.image-viewer-stage{background:#fff!important;}
-.image-viewer-swipe-track{transform:translate3d(-100%,0,0)!important;transition:none!important;}
-.image-viewer-swipe-slide{background:#fff!important;}
-.image-viewer-swipe-slide img{background:#fff!important;}
-.image-viewer-control{background:rgba(255,255,255,.94)!important;color:#111!important;border-color:rgba(0,0,0,.14)!important;box-shadow:0 4px 14px rgba(0,0,0,.08)!important;}
-.image-viewer-count{background:rgba(255,255,255,.94)!important;color:#111!important;border:1px solid rgba(0,0,0,.12)!important;}
-</style>
-
-<style>
-/* Final viewer correction: normalized image height, zoom-safe transform, and clean track control. */
-.image-viewer-stage{overflow:hidden!important;touch-action:none!important;background:#fff!important;}
-.image-viewer-swipe-track{transform:translate3d(-100%,0,0)!important;transition:none!important;}
-.image-viewer-swipe-slide{height:100%!important;min-height:100%!important;display:grid!important;place-items:center!important;}
-.image-viewer-swipe-slide img{height:min(88vh,900px)!important;max-height:min(88vh,900px)!important;width:auto!important;max-width:92vw!important;object-fit:contain!important;transform-origin:center center!important;transition:none!important;box-shadow:0 18px 45px rgba(0,0,0,.16)!important;}
-#imageViewerImage{transform:translate3d(var(--viewer-x,0px),var(--viewer-y,0px),0) scale(var(--viewer-scale,1))!important;}
-</style>
