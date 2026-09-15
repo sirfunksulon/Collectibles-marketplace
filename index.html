@@ -1146,17 +1146,33 @@ function setupImageViewerGestures(){
     imageViewerSwipeDragging=true;imageViewerSwipeMoved=true;moved=true;
     e.preventDefault();imageViewerSwipeOffset=dx;viewerTrackTransform(dx,false);
   },{passive:false});
+  let lastTapAt=0;
   stage.addEventListener('touchend',e=>{
     if(imageViewerPinching){if(e.touches.length<2){imageViewerPinching=false;imageViewerStartDistance=0}return;}
+    const t=e.changedTouches[0];
+    if(!t)return;
+    const now=Date.now();
+    const tapDx=t.clientX-startX,tapDy=t.clientY-startY;
+    const isTap=Math.abs(tapDx)<12&&Math.abs(tapDy)<12;
+    if(isTap&&!imageViewerSwipeDragging){
+      if(now-lastTapAt<320){
+        setViewerZoom(imageViewerScale>1?1:2.25);
+        lastTapAt=0;
+        tracking=false;
+        moved=false;
+        imageViewerSwipeMoved=false;
+        return;
+      }
+      lastTapAt=now;
+    }
     if(!tracking&&!imageViewerSwipeDragging)return;
     tracking=false;
     if(imageViewerSwipeAnimating)return;
-    if(!imageViewerSwipeDragging){window.setTimeout(()=>{imageViewerSwipeMoved=false},120);return;}
+    if(!imageViewerSwipeDragging){window.setTimeout(()=>{imageViewerSwipeMoved=false;moved=false},120);return;}
     imageViewerSwipeDragging=false;
-    const t=e.changedTouches[0];if(!t)return;
     const dx=t.clientX-startX,dy=t.clientY-startY;
     const threshold=Math.max(72,Math.min(120,stage.clientWidth*.20));
-    if(Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.3){animateViewerChange(dx<0?1:-1);return;}
+    if(imageViewerScale===1&&Math.abs(dx)>threshold&&Math.abs(dx)>Math.abs(dy)*1.3){animateViewerChange(dx<0?1:-1);return;}
     imageViewerSwipeOffset=0;viewerTrackTransform(0,true);
     window.setTimeout(()=>{imageViewerSwipeMoved=false;moved=false},300);
   },{passive:true});
@@ -1171,7 +1187,7 @@ function setupImageViewerGestures(){
 function imageViewerModal(id){
   const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return '';
   const n=photos.length,prev=photos[viewerWrappedIndex(imageViewerIndex-1,n)]||'',cur=photos[imageViewerIndex]||'',next=photos[viewerWrappedIndex(imageViewerIndex+1,n)]||'';
-  return `<div class="image-viewer" onclick="closeModal()"><div class="image-viewer-stage" onclick="event.stopPropagation()"><button class="image-viewer-close" aria-label="Close image" onclick="event.stopPropagation();closeModal()">×</button>${n>1?'<button class="image-viewer-control image-viewer-prev" aria-label="Previous photo" onclick="changeViewerImage(-1)">‹</button><button class="image-viewer-control image-viewer-next" aria-label="Next photo" onclick="changeViewerImage(1)">›</button>':''}<button class="image-viewer-control image-viewer-zoom" aria-label="Zoom image" onclick="setViewerZoom(imageViewerScale>1?1:2.25)">⌕</button><div class="image-viewer-swipe-track"><div class="image-viewer-swipe-slide"><img src="${esc(prev)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex-1,n)+1}"></div><div class="image-viewer-swipe-slide"><img id="imageViewerImage" src="${esc(cur)}" alt="${esc(x.fullName||x.name)} — Photo ${imageViewerIndex+1}"></div><div class="image-viewer-swipe-slide"><img src="${esc(next)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex+1,n)+1}"></div></div><div class="image-viewer-count">${imageViewerIndex+1} / ${n}</div></div></div>`}
+  return `<div class="image-viewer" onclick="closeModal()"><div class="image-viewer-stage" onclick="event.stopPropagation()"><button class="image-viewer-close" aria-label="Close image" onclick="event.stopPropagation();closeModal()">×</button>${n>1?'<button class="image-viewer-control image-viewer-prev" aria-label="Previous photo" onclick="changeViewerImage(-1)">‹</button><button class="image-viewer-control image-viewer-next" aria-label="Next photo" onclick="changeViewerImage(1)">›</button>':''}<button class="image-viewer-control image-viewer-zoom" aria-label="Zoom image" onclick="event.stopPropagation();setViewerZoom(imageViewerScale>1?1:2.25)">⌕</button><div class="image-viewer-swipe-track"><div class="image-viewer-swipe-slide"><img src="${esc(prev)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex-1,n)+1}"></div><div class="image-viewer-swipe-slide"><img id="imageViewerImage" src="${esc(cur)}" alt="${esc(x.fullName||x.name)} — Photo ${imageViewerIndex+1}"></div><div class="image-viewer-swipe-slide"><img src="${esc(next)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex+1,n)+1}"></div></div><div class="image-viewer-count">${imageViewerIndex+1} / ${n}</div></div></div>`}
 
 function offerModal(id){
   const x=items.find(v=>v.id===id);if(!x||isBuyNow(x))return '';if(x.ownerId===state.currentUserId)return '<div class="modal"><div class="modalHead"><div><div class="eyebrow">LISTING</div><h2>Your listing</h2></div><button class="close" onclick="closeModal()">×</button></div><div class="empty">You cannot make an offer or bid on your own listing.</div></div>';
@@ -1366,3 +1382,18 @@ setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);
 </style>
 </body>
 </html>
+
+<style>
+/* Authoritative image-viewer zoom: the center image owns its transform. */
+.image-viewer-swipe-slide #imageViewerImage{
+  transform-origin:50% 50% !important;
+  will-change:transform !important;
+  touch-action:none !important;
+  cursor:zoom-in !important;
+}
+.image-viewer-swipe-slide #imageViewerImage[style*='scale(2.25)'],
+.image-viewer-swipe-slide #imageViewerImage[style*='scale(3)'],
+.image-viewer-swipe-slide #imageViewerImage[style*='scale(4)']{cursor:grab !important;}
+.image-viewer-stage{touch-action:none !important;}
+.image-viewer-zoom{touch-action:manipulation !important;}
+</style>
