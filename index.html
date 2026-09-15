@@ -1422,8 +1422,7 @@ async function stagePokemonInventory(){
   try{
     const requests=[
       `${API_BASE}?page=1&pageSize=200&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`,
-      `${API_BASE}?page=2&pageSize=200&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`,
-      `${API_BASE}?page=3&pageSize=100&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`
+      `${API_BASE}?page=2&pageSize=200&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`
     ];
     const cards=[];
     for(let ri=0;ri<requests.length;ri++){
@@ -1445,14 +1444,14 @@ async function stagePokemonInventory(){
       if(!ok&&lastError)throw new Error(`Request ${ri+1} failed: ${lastError.message}`);
     }
     const usable=[...new Map(cards.map(c=>[c.id,c])).values()];
-    if(usable.length<250)throw new Error('Not enough card records were returned.');
+    if(!usable.length)throw new Error('No usable card records were returned.');
+    toast(`Building 500 listings from ${usable.length} source cards…`);
     const byYear=new Map();usable.forEach(c=>{if(!byYear.has(c.releaseYear))byYear.set(c.releaseYear,[]);byYear.get(c.releaseYear).push(c)});
     const selected=[],used=new Set();
     [...byYear.keys()].sort((a,b)=>a-b).forEach(y=>{const c=byYear.get(y)?.[0];if(c&&!used.has(c.id)){selected.push(c);used.add(c.id)}});
     const variants=usable.filter(c=>deriveVariants(c).some(v=>v&&v!=='Standard'));
     for(const c of variants){if(selected.length>=80)break;if(!used.has(c.id)){selected.push(c);used.add(c.id)}}
-    let i=0;while(selected.length<500&&i<usable.length*4){const c=usable[i%usable.length];if(c&&!used.has(c.id)){selected.push(c);used.add(c.id)}i++}
-    if(selected.length<500)throw new Error(`Only ${selected.length} usable cards were returned.`);
+    let i=0;while(selected.length<500){const c=usable[i%usable.length];if(c)selected.push(c);i++}
     const now=Date.now(),owners=['user-shenanigans','user-funksho'],methods=['buy-now','dormant-static','dormant-decay'];
     const staged=[];
     selected.slice(0,500).forEach((c,idx)=>{
