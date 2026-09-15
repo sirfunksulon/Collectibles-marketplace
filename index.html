@@ -1415,51 +1415,45 @@ function overlay(body){return `<div class="modalOverlay" onclick="if(event.targe
 function render(){const cu=currentUser();state.watchlist=Array.isArray(cu?.watchlist)?cu.watchlist.slice():[];if(state.page==='seller'&&!currentUser())state.page='market';let body=state.page==='item'?itemPage():state.page==='seller'?sellerOverview():state.page==='sellerProfile'?sellerProfile():state.page==='inbox'?inboxPage():state.page==='watchlist'?watchlistPage():state.page==='orders'?ordersPage():state.page==='channels'?renderLandingPage('channels'):state.page==='closing'?renderLandingPage('closing'):state.page==='buy'?renderLandingPage('buy'):state.page==='new'?renderLandingPage('new'):state.page==='channelPage'?channelPage():state.page==='browse'?browsePage():market();document.getElementById('app').innerHTML=header()+body+footer()+modal()+(state.menu?menuDrawer():'');if(state.page==='item'){setupItemSwipe();setupItemPhotoCarousel();}if(state.modal?.type==='imageViewer')setupImageViewerGestures();if(state.modal?.type==='search')setTimeout(renderSearchResults,0)}
 window.addEventListener('click',e=>{if(!e.target.closest('.suggestions'))document.querySelectorAll('.suggestions-box').forEach(x=>x.hidden=true);if(state.sortMenu&&!e.target.closest('.inventory-sort')){state.sortMenu=false;render()}});
 function animateConcierge(){const angle=conciergeRotationAngle();document.querySelectorAll('.concierge-star').forEach(el=>el.style.setProperty('--concierge-angle',angle+'deg'));requestAnimationFrame(animateConcierge)}
-function stagingStatus(text,kind='progress'){
-  let el=document.getElementById('rapidup-staging-status');
-  if(!el){el=document.createElement('div');el.id='rapidup-staging-status';el.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:220;background:#111;color:#fff;padding:13px 17px;border-radius:15px;font-weight:800;pointer-events:none;max-width:calc(100vw - 32px);box-shadow:0 12px 32px rgba(0,0,0,.2);font-size:14px;line-height:1.3;text-align:center';document.body.appendChild(el)}
-  el.textContent=text;
-  if(kind==='success'||kind==='error')setTimeout(()=>{const current=document.getElementById('rapidup-staging-status');if(current===el)el.remove()},5000);
-}
 async function stagePokemonInventory(){
   if(state.pokemonStageV1===true)return;
   state.pokemonStageV1='loading';
   save();
-  stagingStatus('Loading Pokémon inventory… 0 / 500');
   try{
-    const requests=[1,2,3].map(page=>`${API_BASE}?page=${page}&pageSize=200&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`);
+    const requests=[
+      `${API_BASE}?page=1&pageSize=200&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`,
+      `${API_BASE}?page=2&pageSize=200&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`,
+      `${API_BASE}?page=3&pageSize=100&orderBy=set.releaseDate&select=id,name,set,number,images,tcgplayer`
+    ];
     const cards=[];
     for(let ri=0;ri<requests.length;ri++){
       const url=requests[ri];
       let lastError=null,ok=false;
-      stagingStatus(`Loading Pokémon inventory… ${Math.min(cards.length,500)} / 500 · Request ${ri+1} of ${requests.length}`);
       for(let attempt=0;attempt<2&&!ok;attempt++){
         try{
+          toast(`Loading Pokémon inventory… ${Math.min(ri*200,500)} / 500`);
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
           const r=await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal});
           clearTimeout(timer);
           if(!r.ok)throw new Error(`Card database returned HTTP ${r.status}`);
           const d=await r.json();
           const batch=Array.isArray(d.data)?d.data.map(normalizeCard).filter(x=>x.id&&x.name&&x.setName&&x.releaseYear):[];
-          if(!batch.length)throw new Error('Card database returned no usable cards.');
           cards.push(...batch);ok=true;
-          const uniqueCount=new Set(cards.map(c=>c.id)).size;
-          stagingStatus(`Loading Pokémon inventory… ${Math.min(uniqueCount,500)} / 500 · ${batch.length} cards received`);
-        }catch(e){lastError=e;if(attempt===0){stagingStatus(`Retrying Pokémon inventory… Request ${ri+1} of ${requests.length}`);await new Promise(resolve=>setTimeout(resolve,900));}}
+          toast(`Loading Pokémon inventory… ${Math.min(cards.length,500)} / 500`);
+        }catch(e){lastError=e;if(attempt===0)await new Promise(resolve=>setTimeout(resolve,1200));}
       }
-      if(!ok)throw new Error(`Request ${ri+1} failed${lastError?.message?`: ${lastError.message}`:''}`);
+      if(!ok&&lastError)throw new Error(`Request ${ri+1} failed: ${lastError.message}`);
     }
     const usable=[...new Map(cards.map(c=>[c.id,c])).values()];
-    stagingStatus(`Preparing Pokémon listings… ${Math.min(usable.length,500)} source cards available`);
-    if(usable.length<500)throw new Error(`Only ${usable.length} unique cards were returned; 500 are required.`);
+    if(usable.length<250)throw new Error('Not enough card records were returned.');
     const byYear=new Map();usable.forEach(c=>{if(!byYear.has(c.releaseYear))byYear.set(c.releaseYear,[]);byYear.get(c.releaseYear).push(c)});
     const selected=[],used=new Set();
     [...byYear.keys()].sort((a,b)=>a-b).forEach(y=>{const c=byYear.get(y)?.[0];if(c&&!used.has(c.id)){selected.push(c);used.add(c.id)}});
     const variants=usable.filter(c=>deriveVariants(c).some(v=>v&&v!=='Standard'));
     for(const c of variants){if(selected.length>=80)break;if(!used.has(c.id)){selected.push(c);used.add(c.id)}}
     let i=0;while(selected.length<500&&i<usable.length*4){const c=usable[i%usable.length];if(c&&!used.has(c.id)){selected.push(c);used.add(c.id)}i++}
-    if(selected.length<500)throw new Error(`Only ${selected.length} usable cards were selected.`);
-    const now=Date.now(),owners=['user-hyshena','user-sirfunksulon'],methods=['buy-now','dormant-static','dormant-decay'];
+    if(selected.length<500)throw new Error(`Only ${selected.length} usable cards were returned.`);
+    const now=Date.now(),owners=['user-shenanigans','user-funksho'],methods=['buy-now','dormant-static','dormant-decay'];
     const staged=[];
     selected.slice(0,500).forEach((c,idx)=>{
       const ownerId=owners[idx%owners.length],method=methods[idx%methods.length],variantList=deriveVariants(c),variant=(idx%7===0&&variantList.find(v=>v&&v!=='Standard'))||variantList[idx%variantList.length]||'Standard';
@@ -1470,11 +1464,10 @@ async function stagePokemonInventory(){
       const isClosing=method!=='buy-now'&&idx%23===0;
       const item={id:`staged-${idx+1}-${c.id}`,name:c.name,set:`${c.setName} #${c.number}`,fullName:listingName(c.releaseYear,'Pokemon',c.setName,c.name,variant,c.number,grade),year:c.releaseYear,era:c.releaseYear>=2014?'Modern':c.releaseYear>=2003?'Mid Era':c.releaseYear>=1996?'Classic':'Unknown',category:'Pokemon',ownerId,method,type:method==='buy-now'?'Buy Now':'RapidUp Dormant Auction',price,currentOffer:isClosing?price:0,status:isClosing?'Closing':method==='buy-now'?'Buy Now':'Dormant',sold:false,injectedAt,cycleStartedAt:injectedAt,nextDecayAt:method==='dormant-decay'?now+holdDays*DAY:0,decayAmount:method==='dormant-decay'?decayAmount:0,holdDays:method==='dormant-decay'?holdDays:0,img:c.images?.large||c.images?.small||'',photos:c.images?.large?[c.images.large]:[],variant,grade,lang,presentation:'RapidUp Standard',internal:{condition,language:lang,presentation:'RapidUp Standard'},consignment:{cardId:c.id,setId:c.setId,setName:c.setName,cardNumber:c.number,cardName:c.name,releaseYear:c.releaseYear,variant}};
       staged.push(item);
-      if(isClosing)state.offers.push({id:`staged-offer-${idx+1}`,item:item.id,buyer:ownerId==='user-hyshena'?'user-sirfunksulon':'user-hyshena',mode:'actual',amount:price,max:price,current:price,status:'active',created:injectedAt,expires:0,maxManual:false});
+      if(isClosing)state.offers.push({id:`staged-offer-${idx+1}`,item:item.id,buyer:ownerId==='user-shenanigans'?'user-funksho':'user-shenanigans',mode:'actual',amount:price,max:price,current:price,status:'active',created:injectedAt,expires:0,maxManual:false});
     });
-    stagingStatus('Creating 500 Pokémon listings…');
-    items.push(...staged);state.pokemonStageV1=true;save();render();stagingStatus('500 Pokémon listings staged successfully.','success');
-  }catch(e){console.warn('RapidUp Pokémon staging failed',e);state.pokemonStageV1=false;save();stagingStatus(`Pokémon staging failed: ${e?.message||'Unknown error'}`,'error');}
+    items.push(...staged);state.pokemonStageV1=true;save();render();toast('500 Pokémon listings staged successfully.');
+  }catch(e){console.warn('RapidUp Pokémon staging failed',e);state.pokemonStageV1=false;save();toast(`Pokémon staging failed: ${e.message}`);}
 }
 setInterval(tick,1000);render();tick();requestAnimationFrame(animateConcierge);stagePokemonInventory();
 
