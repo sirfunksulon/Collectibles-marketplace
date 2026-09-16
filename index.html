@@ -881,15 +881,16 @@ function header(){
   return `<header class="topbar"><div class="header"><div class="brand"><button class="ghost" style="padding:0;border:0" aria-label="RapidUp home" onclick="route('market')"><img class="logo" src="${LOGO}" alt="RapidUp Collectibles Marketplace"></button></div><button class="icon concierge-icon header-concierge" aria-label="Concierge" onclick="openModal('concierge')"><img class="concierge-star" style="--concierge-angle:${conciergeAngle}deg" src="${PAREIDOLIC_STAR}" alt="">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length?`<span class="badge">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length}</span>`:''}</button><div class="header-actions"><button class="icon" aria-label="Search" onclick="state.modal=null;openModal('search')">⌕</button><button class="icon inbox-header-icon" aria-label="Messages" onclick="route('inbox')"><span aria-hidden="true">✉</span>${state.messages.filter(m=>m.to===state.currentUserId&&!m.read).length?`<span class="badge">${state.messages.filter(m=>m.to===state.currentUserId&&!m.read).length}</span>`:''}</button><button class="icon" aria-label="Menu" onclick="openMenu()">☰</button></div></div></header>`;
 }
 function channelVolumePlan(total){
-  if(total<50)return {min:Infinity,max:1};
-  if(total<150)return {min:Math.max(25,Math.ceil(total*.25)),max:2};
-  if(total<300)return {min:Math.max(25,Math.ceil(total*.18)),max:3};
-  if(total<500)return {min:Math.max(25,Math.ceil(total*.12)),max:4};
-  return {min:Math.max(20,Math.ceil(total*.10)),max:5};
+  if(total<50)return {min:Infinity,target:total,max:1};
+  if(total<150)return {min:25,target:Math.ceil(total/2),max:2};
+  if(total<300)return {min:25,target:Math.ceil(total/3),max:3};
+  if(total<500)return {min:25,target:Math.ceil(total/4),max:4};
+  return {min:20,target:Math.ceil(total/5),max:5};
 }
 function channelDimensions(x){
   const language=x.internal?.language||x.language||x.lang||'';
-  return {condition:x.internal?.condition||x.condition||'',era:x.era||'',language:language==='English'?'':language};
+  const year=Number(x.year||x.consignment?.releaseYear||0);
+  return {condition:x.internal?.condition||x.condition||'',era:x.era||'',language:language==='English'?'':language,year:Number.isFinite(year)&&year>0?year:null};
 }
 function channelGroupKey(x,dims){const d=channelDimensions(x);return dims.map(k=>d[k]).filter(Boolean).join(' · ')}
 function channelGroupDistinctive(group,all,dims){
@@ -900,6 +901,28 @@ function channelGroupDistinctive(group,all,dims){
     return all.filter(x=>channelDimensions(x)[dim]===value).length===group.length;
   });
 }
+function channelYearRanges(group,minSize,target){
+  const byYear=new Map();
+  group.forEach(x=>{const y=channelDimensions(x).year;if(y){if(!byYear.has(y))byYear.set(y,[]);byYear.get(y).push(x)}});
+  const years=[...byYear.keys()].sort((a,b)=>a-b);
+  if(years.length<2||group.length<=Math.ceil(target*1.35))return [];
+  const bins=[];
+  let current=[],count=0;
+  years.forEach((year,idx)=>{
+    const bucket=byYear.get(year)||[];
+    const remainingYears=years.length-idx-1;
+    const remainingCount=years.slice(idx+1).reduce((n,y)=>n+byYear.get(y).length,0);
+    const would=count+bucket.length;
+    const closeToTarget=would>=target;
+    const canClose=remainingCount===0||remainingCount>=minSize;
+    if(current.length&&closeToTarget&&canClose){bins.push({years:current.slice(),items:current.flatMap(y=>byYear.get(y))});current=[year];count=bucket.length}
+    else {current.push(year);count+=bucket.length}
+  });
+  if(current.length)bins.push({years:current.slice(),items:current.flatMap(y=>byYear.get(y))});
+  const valid=bins.filter(b=>b.items.length>=minSize);
+  if(valid.length<2)return [];
+  return valid.map(b=>({items:b.items,range:b.years.length===1?String(b.years[0]):`${b.years[0]}-${b.years[b.years.length-1]}`}));
+}
 function channels(){
   const live=items.filter(x=>!x.sold),by=new Map();
   live.forEach(x=>{const c=x.category||'Collectibles';if(!by.has(c))by.set(c,[]);by.get(c).push(x)});
@@ -907,16 +930,19 @@ function channels(){
   by.forEach((xs,cat)=>{
     const displayCat=cat==='Pokemon'?'Pokémon':cat,plan=channelVolumePlan(xs.length);
     if(xs.length<50){out.push({name:displayCat,items:xs});return;}
+
     const dimensionSets=[['condition','era','language'],['condition','era'],['era','language'],['condition','language'],['era'],['condition'],['language']];
     const candidates=[];
     dimensionSets.forEach(dims=>{
       const groups=new Map();
       xs.forEach(x=>{const key=channelGroupKey(x,dims);if(key){if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}});
       groups.forEach((g,key)=>{
-        if(g.length>=plan.min||channelGroupDistinctive(g,xs,dims))candidates.push({key,g,dims,score:dims.length*1000+(g.length/xs.length)*100});
+        if(g.length>=plan.min||channelGroupDistinctive(g,xs,dims))candidates.push({key,g,dims,score:(Math.min(g.length,plan.target)/Math.max(g.length,plan.target))*100+dims.length*8});
       });
     });
-    candidates.sort((a,b)=>b.score-a.score||b.g.length-a.g.length);
+    candidates.sort((a,b)=>b.score-a.score||Math.abs(a.g.length-plan.target)-Math.abs(b.g.length-plan.target));
+
+    // Establish broad, useful groups first. Prefer groups that cover substantial inventory without fragmenting it.
     const selected=[],used=new Set();
     for(const c of candidates){
       if(selected.length>=plan.max)break;
@@ -924,9 +950,45 @@ function channels(){
       if(ids.some(id=>used.has(id)))continue;
       selected.push(c);ids.forEach(id=>used.add(id));
     }
-    // Large inventories get meaningful subdivisions only. Unqualified remainder stays reachable through View All Listings.
-    if(selected.length>=2)selected.sort((a,b)=>b.g.length-a.g.length).forEach(c=>{const parts=c.key.split(' · ').filter(Boolean);out.push({name:[...parts,displayCat].filter(Boolean).join(' ').trim(),items:c.g})});
-    else out.push({name:displayCat,items:xs});
+
+    // If a selected group is still materially larger than its practical target, subdivide it by contiguous year ranges.
+    const refined=[];
+    selected.forEach(c=>{
+      const remainingSlots=plan.max-refined.length;
+      if(remainingSlots>1&&c.g.length>Math.ceil(plan.target*1.35)){
+        const ranges=channelYearRanges(c.g,plan.min,plan.target);
+        if(ranges.length>1&&ranges.length<=remainingSlots){
+          ranges.forEach(r=>refined.push({...c,g:r.items,yearRange:r.range}));
+          return;
+        }
+      }
+      refined.push(c);
+    });
+
+    // If broad dimension groups did not sufficiently reduce the browsing burden, use year ranges directly.
+    if(refined.length<2||refined.some(c=>c.g.length>Math.ceil(plan.target*1.65))){
+      const ranges=channelYearRanges(xs,plan.min,plan.target);
+      if(ranges.length>=2&&ranges.length<=plan.max){
+        const yearChannels=ranges.map(r=>({key:'',g:r.items,dims:[],yearRange:r.range,score:0}));
+        if(yearChannels.reduce((n,c)=>n+c.g.length,0)>=Math.ceil(xs.length*.8)){
+          const combined=yearChannels.map(c=>c.g.map(x=>x.id));
+          const covered=new Set(combined.flat());
+          if(covered.size>=Math.ceil(xs.length*.8)){
+            refined.length=0;yearChannels.forEach(c=>refined.push(c));
+          }
+        }
+      }
+    }
+
+    const finalGroups=refined.slice(0,plan.max);
+    if(finalGroups.length>=2){
+      finalGroups.sort((a,b)=>b.g.length-a.g.length).forEach(c=>{
+        const parts=c.key.split(' · ').filter(Boolean);
+        const base=[...parts,displayCat].filter(Boolean).join(' ').trim();
+        const name=c.yearRange?`${base} (${c.yearRange})`:base;
+        out.push({name,items:c.g});
+      });
+    }else out.push({name:displayCat,items:xs});
   });
   return out.sort((a,b)=>b.items.length-a.items.length);
 }
