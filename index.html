@@ -1729,7 +1729,7 @@ function modal(){if(!state.modal)return '';const m=state.modal;if(m.type==='sear
 function overlay(body){return `<div class="modalOverlay" onclick="if(event.target===this)closeModal()">${body}</div>`}
 function render(){const cu=currentUser();state.watchlist=Array.isArray(cu?.watchlist)?cu.watchlist.slice():[];if(state.page==='seller'&&!currentUser())state.page='market';let body=state.page==='item'?itemPage():state.page==='seller'?sellerOverview():state.page==='sellerProfile'?sellerProfile():state.page==='inbox'?inboxPage():state.page==='watchlist'?watchlistPage():state.page==='orders'?ordersPage():state.page==='channels'?renderChannelsPage():state.page==='closing'?renderLandingPage('closing'):state.page==='buy'?renderLandingPage('buy'):state.page==='new'?renderLandingPage('new'):state.page==='channelPage'?channelPage():state.page==='browse'?browsePage():market();document.getElementById('app').innerHTML=header()+body+footer()+modal()+(state.menu?menuDrawer():'');document.body.classList.toggle('item-view-body',state.page==='item');if(state.page==='item'){setupItemPhotoCarousel();}if(state.modal?.type==='imageViewer')setupImageViewerGestures();if(state.modal?.type==='search')setTimeout(renderSearchResults,0)}
 window.addEventListener('click',e=>{if(!e.target.closest('.suggestions'))document.querySelectorAll('.suggestions-box').forEach(x=>x.hidden=true);if(state.sortMenu&&!e.target.closest('.inventory-sort')){state.sortMenu=false;render()}});
-function animateConcierge(){document.querySelectorAll('.concierge-star').forEach(el=>el.style.setProperty('--concierge-angle','0deg'))}
+function animateConcierge(){document.querySelectorAll('.concierge-star').forEach(el=>el.style.removeProperty('--concierge-angle'))}
 async function stagePokemonInventory(){
   if(state.pokemonStageV1===true)return;
   state.pokemonStageV1='loading';save();render();
@@ -1805,7 +1805,7 @@ setInterval(tick,1000);render();tick();stagePokemonInventory();
 .detail-photo-slide.is-center{opacity:1 !important;}
 .detail-photo-slide.is-left,.detail-photo-slide.is-right{opacity:1 !important;}
 .detail-photo-slide.is-far-left,.detail-photo-slide.is-far-right{opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}
-.concierge-star{animation:none !important;transform:rotate(var(--concierge-angle,0deg)) !important;}
+.concierge-modal .concierge-logo{animation:none !important;transform:none !important;}
 @media(max-width:620px){
   .detail-photo-carousel{height:300px !important;border-radius:22px !important;}
   .detail-photo-slide{width:58% !important;height:84% !important;}
@@ -1897,10 +1897,10 @@ setInterval(tick,1000);render();tick();stagePokemonInventory();
 
 /* Concierge — conversational, meaningful updates only */
 .concierge-modal{width:min(560px,calc(100vw - 28px));max-height:min(720px,calc(100vh - 80px));overflow:auto;position:relative}
-.concierge-modal .modalHead{position:relative;min-height:46px;justify-content:center}
+.concierge-modal .modalHead{position:relative;min-height:118px;justify-content:center;align-items:center}
 .concierge-modal .modalHead h2,.concierge-modal .modalHead .eyebrow{display:none}
 .concierge-modal .modalHead .close{position:absolute;right:0;top:0}
-.concierge-logo{display:block;width:34px;height:34px;object-fit:contain;transform:rotate(0deg)!important}
+.concierge-logo{display:block;width:110px;height:110px;object-fit:contain;transform:none!important;animation:none!important;margin:0 auto 12px}
 .concierge-intro{font-size:13px;line-height:1.55;margin:8px 0 18px;text-align:center}
 .concierge-intro b{display:block;font-size:14px}.concierge-intro-sub{display:block;font-style:italic;margin-top:5px}
 .concierge-intro br + *{font-style:italic}
