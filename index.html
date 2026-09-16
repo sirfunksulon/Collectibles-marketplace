@@ -880,7 +880,56 @@ function header(){
   const conciergeAngle=conciergeRotationAngle();
   return `<header class="topbar"><div class="header"><div class="brand"><button class="ghost" style="padding:0;border:0" aria-label="RapidUp home" onclick="route('market')"><img class="logo" src="${LOGO}" alt="RapidUp Collectibles Marketplace"></button></div><button class="icon concierge-icon header-concierge" aria-label="Concierge" onclick="openModal('concierge')"><img class="concierge-star" style="--concierge-angle:${conciergeAngle}deg" src="${PAREIDOLIC_STAR}" alt="">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length?`<span class="badge">${state.notifications.filter(n=>(!n.userId||n.userId===state.currentUserId)&&!n.read).length}</span>`:''}</button><div class="header-actions"><button class="icon" aria-label="Search" onclick="state.modal=null;openModal('search')">⌕</button><button class="icon inbox-header-icon" aria-label="Messages" onclick="route('inbox')"><span aria-hidden="true">✉</span>${state.messages.filter(m=>m.to===state.currentUserId&&!m.read).length?`<span class="badge">${state.messages.filter(m=>m.to===state.currentUserId&&!m.read).length}</span>`:''}</button><button class="icon" aria-label="Menu" onclick="openMenu()">☰</button></div></div></header>`;
 }
-function channels(){const live=items.filter(x=>!x.sold),by=new Map();live.forEach(x=>{const c=x.category||'Collectibles';if(!by.has(c))by.set(c,[]);by.get(c).push(x)});const out=[];by.forEach((xs,cat)=>{const target=Math.max(6,Math.ceil(xs.length*.12)),groups=new Map();xs.forEach(x=>{const condition=x.internal?.condition||x.condition||'';const language=x.internal?.language||x.language||x.lang||'';const key=[condition,x.era||'',language&&language!=='English'?language:''].filter(Boolean).join(' · ');if(key){if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}});const viable=[...groups.entries()].filter(([,g])=>g.length>=target),displayCat=cat==='Pokemon'?'Pokémon':cat;if(viable.length>=2){viable.sort((a,b)=>b[1].length-a[1].length).forEach(([name,g])=>{const parts=name.split(' · ').filter(Boolean);out.push({name:[...parts,displayCat].filter(Boolean).join(' ').trim(),items:g})});const used=new Set(viable.flatMap(([,g])=>g.map(x=>x.id))),rem=xs.filter(x=>!used.has(x.id));if(rem.length>=target)out.push({name:displayCat,items:rem})}else out.push({name:displayCat,items:xs})});return out.sort((a,b)=>b.items.length-a.items.length)}
+function channelVolumePlan(total){
+  if(total<50)return {min:Infinity,max:1};
+  if(total<150)return {min:Math.max(25,Math.ceil(total*.25)),max:2};
+  if(total<300)return {min:Math.max(25,Math.ceil(total*.18)),max:3};
+  if(total<500)return {min:Math.max(25,Math.ceil(total*.12)),max:4};
+  return {min:Math.max(20,Math.ceil(total*.10)),max:5};
+}
+function channelDimensions(x){
+  const language=x.internal?.language||x.language||x.lang||'';
+  return {condition:x.internal?.condition||x.condition||'',era:x.era||'',language:language==='English'?'':language};
+}
+function channelGroupKey(x,dims){const d=channelDimensions(x);return dims.map(k=>d[k]).filter(Boolean).join(' · ')}
+function channelGroupDistinctive(group,all,dims){
+  if(group.length<10||group.length>19)return false;
+  return dims.some(dim=>{
+    const value=channelDimensions(group[0])[dim];
+    if(!value)return false;
+    return all.filter(x=>channelDimensions(x)[dim]===value).length===group.length;
+  });
+}
+function channels(){
+  const live=items.filter(x=>!x.sold),by=new Map();
+  live.forEach(x=>{const c=x.category||'Collectibles';if(!by.has(c))by.set(c,[]);by.get(c).push(x)});
+  const out=[];
+  by.forEach((xs,cat)=>{
+    const displayCat=cat==='Pokemon'?'Pokémon':cat,plan=channelVolumePlan(xs.length);
+    if(xs.length<50){out.push({name:displayCat,items:xs});return;}
+    const dimensionSets=[['condition','era','language'],['condition','era'],['era','language'],['condition','language'],['era'],['condition'],['language']];
+    const candidates=[];
+    dimensionSets.forEach(dims=>{
+      const groups=new Map();
+      xs.forEach(x=>{const key=channelGroupKey(x,dims);if(key){if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}});
+      groups.forEach((g,key)=>{
+        if(g.length>=plan.min||channelGroupDistinctive(g,xs,dims))candidates.push({key,g,dims,score:dims.length*1000+(g.length/xs.length)*100});
+      });
+    });
+    candidates.sort((a,b)=>b.score-a.score||b.g.length-a.g.length);
+    const selected=[],used=new Set();
+    for(const c of candidates){
+      if(selected.length>=plan.max)break;
+      const ids=c.g.map(x=>x.id);
+      if(ids.some(id=>used.has(id)))continue;
+      selected.push(c);ids.forEach(id=>used.add(id));
+    }
+    // Large inventories get meaningful subdivisions only. Unqualified remainder stays reachable through View All Listings.
+    if(selected.length>=2)selected.sort((a,b)=>b.g.length-a.g.length).forEach(c=>{const parts=c.key.split(' · ').filter(Boolean);out.push({name:[...parts,displayCat].filter(Boolean).join(' ').trim(),items:c.g})});
+    else out.push({name:displayCat,items:xs});
+  });
+  return out.sort((a,b)=>b.items.length-a.items.length);
+}
 function itemCard(x){const resolving=isResolving(x),current=Number(x.currentOffer||0),remaining=resolving?resolutionEnd(x)-Date.now():0,buyNow=isBuyNow(x),label=buyNow?'PRICE':resolving?'CURRENT BID':'HIGHEST OFFER',value=buyNow?x.price:current,sub=buyNow?'Buy Now':resolving?`Closing in ${formatRemaining(remaining)}`:'Dormant Auction';return `<article class="item-card" onclick="openItem('${esc(x.id)}')"><div class="item-image"><img src="${esc(x.img||'')}" alt="${esc(x.fullName||x.name)}"></div><div class="item-body"><div class="item-title">${esc(x.fullName||x.name)}</div><div class="item-meta"><span><span class="eyebrow">${label}</span><div class="price">${buyNow||current?money(value):'—'}</div></span><span style="text-align:right"><span class="eyebrow">${resolving?'':buyNow?'':'STARTING PRICE'}</span><div class="current">${resolving?'':buyNow?'':money(x.price)}</div></span></div><div class="tiny muted" style="margin-top:5px">${esc(sub)}</div></div></article>`}
 function market(){
   return `<main class="landing"><div class="landing-buttons">
