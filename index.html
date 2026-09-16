@@ -723,7 +723,7 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
 .message-compartment.active{background:#111;color:#fff;border-color:#111}
 .message-inbox-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 18px}
 .message-inbox-head-left{display:flex;align-items:center;gap:12px;min-width:0}
-.message-inbox-back{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;background:#fff;font-size:25px;line-height:1;cursor:pointer;flex:0 0 42px}
+.message-inbox-back{width:42px;height:42px;border:0;border-radius:0;background:transparent;font-size:30px;line-height:1;display:grid;place-items:center;padding:0;cursor:pointer;flex:0 0 42px}
 .message-inbox-title{font-size:clamp(30px,5vw,46px);font-weight:850;letter-spacing:-.045em;line-height:1;margin:0}
 .message-inbox-tools{display:flex;align-items:center;gap:8px;position:relative;flex:0 0 auto}.message-tool-wrap{position:relative}
 .message-tool{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;background:#fff;display:grid;place-items:center;cursor:pointer;font-size:19px;font-weight:850}
@@ -732,16 +732,14 @@ main{max-width:1280px;margin:auto;padding:28px 22px 90px}.market-head{display:fl
 .message-tool-panel button{display:block;width:100%;border:0;background:#fff;text-align:left;padding:10px 11px;border-radius:10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .message-tool-panel button:hover,.message-tool-panel button.active{background:var(--soft)}
 .message-thread-stack{display:grid;gap:9px}
-.message-thread-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:14px;align-items:center;border:1px solid var(--line);border-radius:17px;background:#fff;padding:14px 15px;text-align:left;cursor:pointer;min-height:86px}
+.message-thread-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 62px;gap:14px;align-items:center;border:1px solid var(--line);border-radius:17px;background:#fff;padding:11px 15px;text-align:left;cursor:pointer;min-height:70px}
 .message-thread-card.unread{border-color:#111}
 .message-thread-card.unread .message-thread-title{font-weight:950}
 .message-thread-title{font-size:15px;font-weight:850;line-height:1.25}
-.message-thread-method{font-size:11px;color:var(--muted);margin-top:5px}
-.message-thread-preview{font-size:11px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.message-thread-date{font-size:10px;color:var(--muted);margin-top:5px}
-.message-thread-thumb{width:72px;height:76px;display:grid;place-items:center;overflow:hidden;border-radius:10px;background:#fafaf7}
+.message-thread-method{font-size:11px;color:var(--muted);margin-top:4px}
+.message-thread-thumb{width:62px;height:62px;display:grid;place-items:center;overflow:hidden;border-radius:10px;background:#fafaf7}
 .message-thread-thumb img{max-width:100%;max-height:100%;object-fit:contain}
-@media(max-width:620px){.message-compartments{grid-template-columns:1fr}.message-inbox-head{margin-bottom:14px}.message-thread-card{grid-template-columns:minmax(0,1fr) 64px}.message-thread-thumb{width:64px;height:68px}}
+@media(max-width:620px){.message-compartments{grid-template-columns:1fr}.message-inbox-head{margin-bottom:14px}.message-thread-card{grid-template-columns:minmax(0,1fr) 56px;padding:10px 14px;min-height:64px}.message-thread-thumb{width:56px;height:56px}}
 </style>
 </head>
 <body>
@@ -822,7 +820,7 @@ function toast(text){
   document.body.appendChild(el);
   toastTimer=setTimeout(()=>{const current=document.getElementById('rapidup-toast');if(current)current.remove();toastTimer=null},1800);
 }
-function route(page){state.page=page||'market';state.modal=null;state.menu=false;render()}
+function route(page){state.page=page||'market';state.modal=null;state.menu=false;if(state.page==='inbox'){state.messageSide=null;state.activeThread=null;state.messageTool=null;state.threadFilter='all';state.threadSort='newest';state.messageMethodFilter='all'}render()}
 function loginAs(id){if(!state.users.some(u=>u.id===id))return;state.currentUserId=id;save();state.modal=null;state.menu=false;toast('Switched to '+userLabel()+'.')}
 function createMockAccount(){const email=(document.getElementById('accountEmail')?.value||'').trim().toLowerCase(),name=(document.getElementById('accountName')?.value||'').trim(),password=document.getElementById('accountPassword')?.value||'';if(!email||!email.includes('@'))return toast('Enter a valid email.');if(!password)return toast('Enter a password.');if(state.users.some(u=>u.email===email))return toast('That email is already in use.');const u={id:'u'+Date.now()+Math.random().toString(36).slice(2),email,name:name||email.split('@')[0],role:'member',password};state.users.push(u);state.currentUserId=u.id;save();state.modal=null;toast('Mock account created.')}
 function loginMock(){const email=(document.getElementById('loginEmail')?.value||'').trim().toLowerCase(),password=document.getElementById('loginPassword')?.value||'',u=state.users.find(x=>x.email===email&&x.password===password);if(!u)return toast('Email or password not recognized.');loginAs(u.id)}
@@ -1466,7 +1464,7 @@ function inboxPage(){
   });
   const threadRows=filtered.map(t=>{
     const ti=items.find(x=>x.id===t.item),unread=state.messages.some(m=>m.item===t.item&&m.from===t.other&&m.to===state.currentUserId&&!m.read),thumb=ti?.img||'';
-    return `<button class="message-thread-card ${unread?'unread':''}" onclick="state.activeThread='${esc(t.key)}';state.threadFilter='all';state.messageTool=null;markThreadRead('${esc(t.key)}');render()"><div><div class="message-thread-title">${esc(ti?.fullName||'Marketplace')}</div><div class="message-thread-method">${esc(methodOf(t))}</div><div class="message-thread-preview">${esc(t.last.text||'')}</div><div class="message-thread-date">${new Date(t.last.created).toLocaleDateString()}</div></div><div class="message-thread-thumb">${thumb?`<img src="${esc(thumb)}" alt="">`:''}</div></button>`;
+    return `<button class="message-thread-card ${unread?'unread':''}" onclick="state.activeThread='${esc(t.key)}';state.threadFilter='all';state.messageTool=null;markThreadRead('${esc(t.key)}');render()"><div><div class="message-thread-title">${esc(ti?.fullName||'Marketplace')}</div><div class="message-thread-method">${esc(methodOf(t))}</div></div><div class="message-thread-thumb">${thumb?`<img src="${esc(thumb)}" alt="">`:''}</div></button>`;
   }).join('');
   const filterPanel=state.messageTool==='filter'?`<div class="message-tool-panel"><button class="${methodFilter==='all'?'active':''}" onclick="state.messageMethodFilter='all';state.messageTool=null;render()">All selling methods</button><button class="${methodFilter==='Buy Now'?'active':''}" onclick="state.messageMethodFilter='Buy Now';state.messageTool=null;render()">Buy Now</button><button class="${methodFilter==='Dormant Auction'?'active':''}" onclick="state.messageMethodFilter='Dormant Auction';state.messageTool=null;render()">Dormant Auction</button><button class="${methodFilter==='Closing'?'active':''}" onclick="state.messageMethodFilter='Closing';state.messageTool=null;render()">Closing</button></div>`:'';
   const sortPanel=state.messageTool==='sort'?`<div class="message-tool-panel"><button class="${sort==='newest'?'active':''}" onclick="state.threadSort='newest';state.messageTool=null;render()">Newest</button><button class="${sort==='unread'?'active':''}" onclick="state.threadSort='unread';state.messageTool=null;render()">Unread</button><button class="${sort==='selling'?'active':''}" onclick="state.threadSort='selling';state.messageTool=null;render()">Selling method</button><button class="${sort==='age'?'active':''}" onclick="state.threadSort='age';state.messageTool=null;render()">Age</button></div>`:'';
