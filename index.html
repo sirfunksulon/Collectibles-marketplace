@@ -1068,6 +1068,7 @@ let itemSwipeStartX=0,itemSwipeStartY=0;
 function setupItemSwipe(){return}
 
 function listingPhotos(x){const photos=Array.isArray(x?.photos)?x.photos.filter(Boolean):[];return photos.length?photos:[x?.img].filter(Boolean)}
+function listingDisplayPhotos(x){const d=listingEditDraft(x);if(d&&Array.isArray(d.photos))return d.photos.filter(Boolean);return listingPhotos(x)}
 function returnFromItem(){const o=state.itemOrigin;if(!o){route('market');return;}state.page=o.page||'market';state.channelName=o.channelName||state.channelName;if(o.searchFilters)state.searchFilters=o.searchFilters;if(o.browseFilters)state.browseFilters=o.browseFilters;if(o.watchFilters)state.watchFilters=o.watchFilters;if(o.messageSide!==undefined)state.messageSide=o.messageSide;if(o.messageItem!==undefined)state.messageItem=o.messageItem;if(o.activeThread!==undefined)state.activeThread=o.activeThread;if(o.threadFilter!==undefined)state.threadFilter=o.threadFilter;if(o.threadSort!==undefined)state.threadSort=o.threadSort;if(o.messageTool!==undefined)state.messageTool=o.messageTool;if(o.messageMethodFilter!==undefined)state.messageMethodFilter=o.messageMethodFilter;state.activeItem=o.activeItem||null;state.itemOrigin=null;state.itemNavMode='context';state.itemFollowReturn=null;render()}
 function sellerListingEditable(x){return !!x&&x.ownerId===state.currentUserId&&!x.sold&&!isResolving(x)}
 function pencilIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg>'}
@@ -1079,7 +1080,7 @@ function listingEditDraftFor(x){if(!sellerListingEditable(x))return null;const d
 function listingEditDraft(x){return state.itemEditDraft?.id===x.id?state.itemEditDraft:null}
 function listingEditDraftDirty(x){const d=listingEditDraft(x);if(!d)return false;const photos=listingPhotos(x);return d.customName!==String(x.customName||x.fullName||x.name||'')||Number(d.price)!==Number(x.price||1)||String(d.method||'')!==String(x.method||'')||Number(d.decayAmount||0)!==Number(x.decayAmount||0)||Number(d.holdDays||0)!==Number(x.holdDays||0)||JSON.stringify(d.photos||[])!==JSON.stringify(photos)}
 function ensureListingEditDraft(x){const d=listingEditDraftFor(x);if(d)d.dirty=true;return d}
-function addDirectListingPhotos(input,id){const x=items.find(v=>v.id===id);if(!sellerListingEditable(x))return;const d=ensureListingEditDraft(x);const current=Array.isArray(d.photos)?d.photos.slice(0,10):[];if(current.length>=10){if(input)input.value='';return toast('You can upload up to 10 photos.')}const slots=Math.max(0,10-current.length),files=[...(input?.files||[])].slice(0,slots);if(!files.length)return;Promise.all(files.map(async file=>{try{const supported=file.type.startsWith('image/')||/\.(jpe?g|png|webp|gif)$/i.test(file.name||'');return supported?await resizeListingPhoto(file):null}catch(e){return null}})).then(added=>{const valid=added.filter(v=>typeof v==='string'&&v.startsWith('data:image/'));if(!valid.length){if(input)input.value='';return toast('That photo could not be added. Please choose a JPEG, PNG, WebP, or GIF image.')}d.photos=current.concat(valid).slice(0,10);d.dirty=true;state.itemPhotoIndex=Math.min(Number(state.itemPhotoIndex)||0,Math.max(0,d.photos.length-1));state.itemPhotoVirtualIndex=null;state.itemPhotoPositionItem=id;if(input)input.value='';render()})}
+function addDirectListingPhotos(input,id){const x=items.find(v=>v.id===id);if(!sellerListingEditable(x))return;const d=ensureListingEditDraft(x);const current=Array.isArray(d.photos)?d.photos.slice(0,10):[];if(current.length>=10){if(input)input.value='';return toast('You can upload up to 10 photos.')}const slots=Math.max(0,10-current.length),files=[...(input?.files||[])].slice(0,slots);if(!files.length)return;Promise.all(files.map(async file=>{try{const supported=file.type.startsWith('image/')||/\.(jpe?g|png|webp|gif)$/i.test(file.name||'');return supported?await resizeListingPhoto(file):null}catch(e){return null}})).then(added=>{const valid=added.filter(v=>typeof v==='string'&&v.startsWith('data:image/'));if(!valid.length){if(input)input.value='';return toast('That photo could not be added. Please choose a JPEG, PNG, WebP, or GIF image.')}const previousCount=current.length;d.photos=current.concat(valid).slice(0,10);d.dirty=true;state.itemPhotoIndex=Math.min(previousCount,Math.max(0,d.photos.length-1));state.itemPhotoVirtualIndex=null;state.itemPhotoPositionItem=id;if(input)input.value='';render()})}
 function removeDirectListingPhoto(id,index){const x=items.find(v=>v.id===id);if(!sellerListingEditable(x))return;const d=ensureListingEditDraft(x),photos=Array.isArray(d.photos)?d.photos.slice(0,10):[];if(index<0||index>=photos.length)return;photos.splice(index,1);d.photos=photos;d.dirty=true;state.itemPhotoIndex=Math.min(Number(state.itemPhotoIndex)||0,Math.max(0,photos.length-1));state.itemPhotoVirtualIndex=null;state.itemPhotoPositionItem=id;render()}
 function editListingNameModal(id){const x=items.find(v=>v.id===id);if(!sellerListingEditable(x))return '<div class="modal"><div class="empty">This listing can no longer be edited.</div></div>';const d=listingEditDraftFor(x);return `<div class="modal"><div class="modalHead"><div><div class="eyebrow">LISTING NAME</div><h2>Adjust name</h2></div><button class="close" onclick="closeModal()">×</button></div><label><span class="eyebrow">Name</span><input id="directName" class="input" value="${esc(d.customName||'')}" maxlength="256"></label><div class="actions"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" onclick="stageDirectListingName('${esc(id)}')">Done</button></div></div>`}
 function stageDirectListingName(id){const x=items.find(v=>v.id===id),name=(document.getElementById('directName')?.value||'').trim();if(!sellerListingEditable(x))return;if(!name)return toast('Enter a listing name.');const d=listingEditDraftFor(x);d.customName=name;d.dirty=String(name)!==String(x.customName||x.fullName||x.name||'')||listingEditDraftDirty(x);closeModal()}
@@ -1107,6 +1108,7 @@ function itemPage(){
   const editable=sellerListingEditable(x);
   const description=x.description?'<div class="listing-description">'+esc(x.description)+'</div>':'';
   const terminalHint=resolving?overtimeHintMarkup(x,remaining):'';
+  const primaryPriceEdit=buyNowListing&&editable?'<button type="button" class="item-price-edit" aria-label="Edit price" title="Edit price" onclick="event.stopPropagation();openModal(\'editPrice\',\''+x.id+'\')">'+pencilIcon()+'</button>':'';
   const secondary=secondaryLabel?'<div class="item-stat"><span class="eyebrow">'+secondaryLabel+(editable&&!resolving?' <button type="button" class="item-price-edit" aria-label="Edit '+(buyNowListing?'price':'starting price')+'" title="Edit '+(buyNowListing?'price':'starting price')+'" onclick="event.stopPropagation();openModal(\'editPrice\',\''+x.id+'\')">'+pencilIcon()+'</button>':'')+'</span><b class="'+(resolving?'resolve':'')+'" id="detailTimer">'+(resolving?secondaryValue:money(secondaryValue))+'</b>'+terminalHint+'</div>':'';
   const bidStatus=mine&&!isOwner?'<div class="bid-status '+statusClass+'">'+statusWord+'</div>':'';
   let actions='';
@@ -1127,7 +1129,7 @@ function itemPage(){
   const followedButton=navMode==='followed'?'<button class="item-listing-followed active" type="button" onclick="leaveFollowedListings()">Resume Browsing</button>':'<button class="item-listing-followed" type="button" onclick="enterFollowedListings()">View Followed Listings</button>';
   const backAction=navMode==='followed'?'leaveFollowedListings()':'returnFromItem()';
   const saveChangesControl=listingEditDraftDirty(x)?'<div class="item-save-changes"><button type="button" class="primary" data-id="'+esc(x.id)+'" onclick="saveListingChanges(this.dataset.id)">Save Changes</button></div>':'';
-  return '<main class="item-view-main"><div class="item-view-card"><div class="item-page-top"><button class="ghost" aria-label="Back" onclick="'+backAction+'" style="font-size:28px;padding:0;line-height:1">←</button><div class="item-view-top-actions">'+followedButton+heart+'</div></div><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'" data-virtual-index="'+virtualPhotoIndex+'"><div class="detail-photo-track">'+photoSlides+'</div>'+photoNav+photoEditControl+'</div></div><div><div class="item-title-nav"><button class="item-listing-arrow" aria-label="Previous listing" onclick="navigateItem(-1)">‹</button><div class="item-title-row"><h1>'+(editable?'<button type="button" class="item-title-edit-text" aria-label="Edit listing name" title="Edit listing name" onclick="event.stopPropagation();openModal(\'editName\',\''+x.id+'\')">'+esc(previewName)+'</button>':esc(previewName))+'</h1></div><button class="item-listing-arrow" aria-label="Next listing" onclick="navigateItem(1)">›</button></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div>'+saveChangesControl+'<section class="section related-section"><div class="sectionhead"><button class="similar-toggle'+(similarOpen?' open':'')+'" type="button" aria-expanded="'+(similarOpen?'true':'false')+'" onclick="state.similarListingsOpen=!state.similarListingsOpen;render()"><h2 style="margin:0">Similar listings <span style="font-size:.72em;font-weight:700">('+related.length+')</span></h2><span class="similar-toggle-arrow" aria-hidden="true"></span></button></div>'+relatedHtml+'</section></div></main>';
+  return '<main class="item-view-main"><div class="item-view-card"><div class="item-page-top"><button class="ghost" aria-label="Back" onclick="'+backAction+'" style="font-size:28px;padding:0;line-height:1">←</button><div class="item-view-top-actions">'+followedButton+heart+'</div></div><div class="detail" style="margin-top:8px"><div><div class="detail-photo-carousel" id="detailPhotoCarousel" data-index="'+photoIndex+'" data-virtual-index="'+virtualPhotoIndex+'"><div class="detail-photo-track">'+photoSlides+'</div>'+photoNav+photoEditControl+'</div></div><div><div class="item-title-nav"><button class="item-listing-arrow" aria-label="Previous listing" onclick="navigateItem(-1)">‹</button><div class="item-title-row"><h1>'+(editable?'<button type="button" class="item-title-edit-text" aria-label="Edit listing name" title="Edit listing name" onclick="event.stopPropagation();openModal(\'editName\',\''+x.id+'\')">'+esc(previewName)+'</button>':esc(previewName))+'</h1></div><button class="item-listing-arrow" aria-label="Next listing" onclick="navigateItem(1)">›</button></div>'+description+'<div class="item-primary-stats"><div class="item-stat"><span class="eyebrow">'+primaryLabel+primaryPriceEdit+'</span><b>'+(buyNowListing?money(primaryValue):current?money(primaryValue):'—')+'</b>'+bidStatus+'</div>'+secondary+'</div><div class="item-action-grid">'+actions+messageButton+'</div><div class="item-details"><div><span class="eyebrow">SELLER</span><button class="item-seller-link" onclick="openSeller(\''+esc(x.ownerId||'')+'\')">'+esc(seller?.name||x.ownerName||'RapidUp Seller')+'</button></div><div><span class="eyebrow">LISTING AGE</span><b>'+ageDays(x)+' day'+(ageDays(x)===1?'':'s')+'</b></div></div></div></div>'+saveChangesControl+'<section class="section related-section"><div class="sectionhead"><button class="similar-toggle'+(similarOpen?' open':'')+'" type="button" aria-expanded="'+(similarOpen?'true':'false')+'" onclick="state.similarListingsOpen=!state.similarListingsOpen;render()"><h2 style="margin:0">Similar listings <span style="font-size:.72em;font-weight:700">('+related.length+')</span></h2><span class="similar-toggle-arrow" aria-hidden="true"></span></button></div>'+relatedHtml+'</section></div></main>';
 }
 
 let itemCarouselStartX=0,itemCarouselStartY=0,itemCarouselDeltaX=0,itemCarouselDragging=false,itemCarouselStartIndex=0,itemCarouselMoved=false,itemCarouselHorizontal=false;
@@ -1156,7 +1158,7 @@ function carouselRelativeDistance(actual,virtual,n){
 function carouselTransform(el,virtualIndex,animate=false){
   const track=el?.querySelector('.detail-photo-track');if(!el||!track)return;
   const n=Number(el.dataset.photoCount||0);if(!n)return;
-  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x);if(!x||!photos.length)return;
+  const x=items.find(v=>v.id===state.activeItem),photos=listingDisplayPhotos(x);if(!x||!photos.length)return;
   const width=carouselSlideMetrics(el).width;
   const slides=[...track.querySelectorAll('.detail-photo-slide')];
   slides.forEach(slide=>{
@@ -1195,7 +1197,7 @@ function carouselTransform(el,virtualIndex,animate=false){
   if(count){const actual=carouselActualIndex(Math.round(virtualIndex),n);count.textContent=`${actual+1} / ${n}`}
 }
 function normalizeItemCarousel(animate=false){
-  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||!n)return;
+  const x=items.find(v=>v.id===state.activeItem),photos=listingDisplayPhotos(x),n=photos.length,el=document.getElementById('detailPhotoCarousel');if(!el||!n)return;
   sizeItemCarouselSlides(el);
   const saved=state.itemPhotoPositionItem===x.id&&Number.isFinite(state.itemPhotoVirtualIndex)?state.itemPhotoVirtualIndex:null;
   const actual=carouselActualIndex(saved!==null?saved:Number(state.itemPhotoIndex)||0,n);
@@ -1206,7 +1208,7 @@ function normalizeItemCarousel(animate=false){
   carouselTransform(el,virtual,animate);
 }
 function updateItemCarousel(index,animate=true){
-  const x=items.find(v=>v.id===state.activeItem),photos=listingPhotos(x),n=photos.length;if(!n)return;
+  const x=items.find(v=>v.id===state.activeItem),photos=listingDisplayPhotos(x),n=photos.length;if(!n)return;
   const el=document.getElementById('detailPhotoCarousel');if(!el)return;
   const currentVirtual=Number(el.dataset.virtualIndex||n*2+(state.itemPhotoIndex||0));
   const currentActual=carouselActualIndex(currentVirtual,n);
@@ -1336,7 +1338,7 @@ function setViewerZoom(scale,focusX=0,focusY=0){
 }
 function resetViewerZoom(){imageViewerScale=1;imageViewerX=0;imageViewerY=0;applyViewerTransform()}
 function openImageViewer(id,index=0){
-  const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;
+  const x=items.find(v=>v.id===id),photos=listingDisplayPhotos(x);if(!x||!photos.length)return;
   imageViewerIndex=viewerWrappedIndex(Number(index)||0,photos.length);
   imageViewerScale=1;imageViewerX=0;imageViewerY=0;imageViewerPinching=false;imageViewerStartDistance=0;
   imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeMoved=false;imageViewerSwipeAnimating=false;
@@ -1351,7 +1353,7 @@ function viewerTrackTransform(offsetPx=0,animate=false){
   track.style.setProperty('transform',`translate3d(${-w+Number(offsetPx||0)}px,0,0)`,'important');
 }
 function updateViewerSlots(){
-  const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x),track=document.querySelector('.image-viewer-swipe-track');
+  const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingDisplayPhotos(x),track=document.querySelector('.image-viewer-swipe-track');
   if(!x||!photos.length||!track)return;
   const n=photos.length;
   const indices=[viewerWrappedIndex(imageViewerIndex-1,n),imageViewerIndex,viewerWrappedIndex(imageViewerIndex+1,n)];
@@ -1365,13 +1367,13 @@ function updateViewerSlots(){
   const count=document.querySelector('.image-viewer-count');if(count)count.textContent=`${imageViewerIndex+1} / ${n}`;
 }
 function finishViewerImageChange(delta){
-  const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return;
+  const id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingDisplayPhotos(x);if(!x||!photos.length)return;
   imageViewerIndex=viewerWrappedIndex(imageViewerIndex+delta,photos.length);resetViewerZoom();
   imageViewerSwipeOffset=0;imageViewerSwipeDragging=false;imageViewerSwipeAnimating=false;
   updateViewerSlots();viewerTrackTransform(0,false);requestAnimationFrame(applyViewerTransform);
 }
 function animateViewerChange(delta){
-  const d=delta<0?-1:1,id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingPhotos(x),track=document.querySelector('.image-viewer-swipe-track');
+  const d=delta<0?-1:1,id=state.modal?.data,x=items.find(v=>v.id===id),photos=listingDisplayPhotos(x),track=document.querySelector('.image-viewer-swipe-track');
   if(!x||!photos.length||!track||imageViewerSwipeAnimating)return;
   imageViewerSwipeAnimating=true;resetViewerZoom();
   const stage=document.querySelector('.image-viewer-stage'),w=stage?.clientWidth||window.innerWidth||1;
@@ -1491,7 +1493,7 @@ function setupImageViewerGestures(){
 }
 
 function imageViewerModal(id){
-  const x=items.find(v=>v.id===id),photos=listingPhotos(x);if(!x||!photos.length)return '';
+  const x=items.find(v=>v.id===id),photos=listingDisplayPhotos(x);if(!x||!photos.length)return '';
   const n=photos.length,prev=photos[viewerWrappedIndex(imageViewerIndex-1,n)]||'',cur=photos[imageViewerIndex]||'',next=photos[viewerWrappedIndex(imageViewerIndex+1,n)]||'';
   return `<div class="image-viewer" onclick="closeModal()"><div class="image-viewer-stage" onclick="event.stopPropagation()"><button class="image-viewer-close" aria-label="Close image" onclick="event.stopPropagation();closeModal()">×</button>${n>1?'<button class="image-viewer-control image-viewer-prev" aria-label="Previous photo" onclick="changeViewerImage(-1)">‹</button><button class="image-viewer-control image-viewer-next" aria-label="Next photo" onclick="changeViewerImage(1)">›</button>':''}<button class="image-viewer-control image-viewer-zoom" aria-label="Zoom image" onclick="event.stopPropagation();setViewerZoom(imageViewerScale>1?1:2.25)">⌕</button><div class="image-viewer-swipe-track"><div class="image-viewer-swipe-slide"><img src="${esc(prev)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex-1,n)+1}"></div><div class="image-viewer-swipe-slide"><img id="imageViewerImage" src="${esc(cur)}" alt="${esc(x.fullName||x.name)} — Photo ${imageViewerIndex+1}"></div><div class="image-viewer-swipe-slide"><img src="${esc(next)}" alt="${esc(x.fullName||x.name)} — Photo ${viewerWrappedIndex(imageViewerIndex+1,n)+1}"></div></div><div class="image-viewer-count">${imageViewerIndex+1} / ${n}</div></div></div>`}
 
