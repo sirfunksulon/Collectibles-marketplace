@@ -1174,12 +1174,12 @@ function itemPage(){
   const x=items.find(v=>v.id===state.activeItem); if(!x)return market();
   const resolving=isResolving(x), scheduledPending=isScheduledPending(x), scheduledLive=isScheduledLive(x), current=Number(x.currentOffer||0), mine=offerCurrentForBuyer(x);
   const draft=listingEditDraft(x), previewName=draft?.customName||x.fullName||x.name, previewPrice=Number(draft?.price??x.price??1), previewMethod=draft?.method||x.method, buyNowPreview=previewMethod==='buy-now', remaining=resolving?resolutionEnd(x)-Date.now():scheduledLive?scheduledAuctionRemaining(x):0, buyNowListing=buyNowPreview, related=relatedListings(x), photos=draft?((draft.photos||[]).filter(Boolean)):listingPhotos(x), photoIndex=Math.max(0,Math.min(photos.length-1,Number(state.itemPhotoIndex)||0)),primaryPhoto=photos[photoIndex]||x.img||'';
+  const isOwner=currentUser()?.id===x.ownerId, seller=state.users.find(u=>u.id===x.ownerId);
   const ownerPreLive=isOwner&& !resolving && !scheduledLive;
   const primaryLabel=buyNowListing?'PRICE':(resolving||scheduledLive)?'CURRENT BID':ownerPreLive?'STARTING PRICE':scheduledPending?'STARTING PRICE':'HIGHEST OFFER';
   const secondaryLabel=buyNowListing?'':(resolving||scheduledLive)?'TIME REMAINING':ownerPreLive?'':'STARTING PRICE';
   const primaryValue=buyNowListing||scheduledPending||ownerPreLive?previewPrice:(current||0);
   const secondaryValue=buyNowListing?'':(resolving||scheduledLive)?formatRemaining(remaining):previewPrice;
-  const isOwner=currentUser()?.id===x.ownerId, seller=state.users.find(u=>u.id===x.ownerId);
   const watched=state.watchlist.includes(x.id);
   const statusWord=buyNowListing&&mine?'OFFER PENDING':resolving?(mine>=current?'WINNING':'OUTBID'):(mine>=current?'HIGHEST':'SURPASSED');
   const statusClass=buyNowListing&&mine?'':mine?(mine>=current?'winning':'outbid'):'';
