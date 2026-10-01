@@ -774,6 +774,9 @@ let items=[];
 let toastTimer=null;
 let state=loadState();
 let consignmentCache={pokemon:'',set:'',card:'',variant:'Standard',photos:[]};
+let listingMode='buy-now';
+let listingStrategy='static';
+let consignmentDraft=null;
 
 function initialState(){return {page:'market',activeItem:null,activeSeller:null,activeThread:null,messageSide:null,messageItem:null,messageReturnPage:'market',modal:null,menu:false,search:'',notifications:[],offers:[],proxyBids:{},activity:[],unread:0,toast:'',currentUserId:'user-demo-buyer',users:[],watchlist:[],messages:[],vault:[],reviews:[],itemPhotoPositions:{},itemOrigin:null,itemNavMode:'context',itemFollowReturn:null,similarListingsOpen:false,historySide:'seller',landingFilters:{},watchFilters:{category:'all',relationship:'all',method:'all',sort:'closingSoon'},conciergeRequests:[],itemEditDraft:null}}
 function defaultUsers(){return [{id:'user-demo-buyer',email:'buyer@rapidup.test',name:'Demo Buyer',role:'member',password:'demo',watchlist:[]},{id:'user-demo-seller',email:'seller@rapidup.test',name:'Demo Seller',role:'member',password:'demo',watchlist:[]},{id:'user-hyshena',email:'hyshena@rapidup.test',name:'Shenanigans',role:'member',password:'rapidup',watchlist:[]},{id:'user-sirfunksulon',email:'sirfunksulon@rapidup.test',name:'Funksho',role:'member',password:'rapidup',watchlist:[]}]}
